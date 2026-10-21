@@ -22,3 +22,4 @@ target/
 __pycache__/
 *.pyc
 *.orig
+/tools/verify-out/
