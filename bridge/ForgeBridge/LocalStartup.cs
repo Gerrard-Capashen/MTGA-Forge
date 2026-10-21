@@ -145,8 +145,9 @@ namespace ForgeBridge
                 + " available=" + provisioner.AvailableBundles.Count);
 
             Log.Info("stage2: PrepareLoginAssets (AssetLoader + loc DB)");
-            var loginAssets = (IEnumerator)Call(bootstrap, "PrepareLoginAssets", assetPrepScene);
-            while (loginAssets.MoveNext()) yield return loginAssets.Current;
+            // client 2026.64 returned an IEnumerator; later builds do the work synchronously (void)
+            var loginAssets = Call(bootstrap, "PrepareLoginAssets", assetPrepScene) as IEnumerator;
+            if (loginAssets != null) while (loginAssets.MoveNext()) yield return loginAssets.Current;
             FormatLoc.Install();
 
             if (!DuelMode)
