@@ -50,6 +50,8 @@ namespace ForgeBridge
         public static IEnumerator Run(Bootstrap bootstrap)
         {
             Log.Info("LocalStartup.Run entered. Original startup disabled; no Wizards network calls.");
+            Privacy.Apply();
+            bootstrap.StartCoroutine(CardArt.Pump());
             bootstrap.StartCoroutine(DebugShots.Run());
             bootstrap.StartCoroutine(DebugClicks.Run());
             IEnumerator stage = Stages(bootstrap);

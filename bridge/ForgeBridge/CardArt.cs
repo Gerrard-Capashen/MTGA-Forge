@@ -1,0 +1,145 @@
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using UnityEngine;
+
+namespace ForgeBridge
+{
+    /// <summary>
+    /// Art for the cards CardDbBuilder added (art id 9,000,000+, no art bundle). The Patcher hooks AssetLoader so their
+    /// art paths ("Assets/Core/CardArt/900000/9000123_AIF.tga") resolve here: one texture per art id, showing a spinner
+    /// right away and filled in place (Texture2D.LoadImage on the same object) when the local server's art endpoint
+    /// answers, so every card already showing it updates. Only cards actually shown are fetched, once per session;
+    /// the server caches them on disk. The client talks to loopback only (forge.mtga.art.ArtServer fetches Scryfall).
+    /// </summary>
+    public static class CardArt
+    {
+        private const int MinArtId = 9_000_000;
+        private const int Width = 128, Height = 96;
+        private static readonly Regex ArtPath = new Regex(@"^Assets/Core/CardArt/\d{6}/(\d{7,9})_AIF\.(tga|jpg|png)$", RegexOptions.Compiled);
+        public static readonly int Port = int.TryParse(Environment.GetEnvironmentVariable("FORGEBRIDGE_ARTPORT"), out var p) ? p : 30011;
+
+        private static readonly Dictionary<int, Texture2D> textures = new Dictionary<int, Texture2D>();
+        private static readonly HashSet<int> pending = new HashSet<int>();
+        private static readonly ConcurrentQueue<KeyValuePair<int, byte[]>> arrived = new ConcurrentQueue<KeyValuePair<int, byte[]>>();
+        private static readonly HttpClient http = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(90) };
+        private static Color32[] frame;
+
+        private static int ArtId(string path)
+        {
+            if (path == null || path.Length < 30 || !path.StartsWith("Assets/Core/CardArt/", StringComparison.Ordinal)) return 0;
+            var m = ArtPath.Match(path);
+            return m.Success && int.TryParse(m.Groups[1].Value, out int id) && id >= MinArtId ? id : 0;
+        }
+
+        /// <summary>Hook (AssetLoader.HaveAsset/ReleaseAsset/AddReferenceCount): the path is one of ours, not a bundle asset.</summary>
+        public static bool Owns(string path) => ArtId(path) != 0;
+
+        /// <summary>Hook (AssetLoader.AcquireAsset&lt;T&gt;): the texture for one of our paths, null for any other path.</summary>
+        public static UnityEngine.Object Acquire(string path)
+        {
+            int id = ArtId(path);
+            if (id == 0) return null;
+            if (textures.TryGetValue(id, out var tex) && tex != null) return tex;
+            tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
+            {
+                name = "ForgeArt_" + id,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontUnloadUnusedAsset,
+            };
+            textures[id] = tex;
+            pending.Add(id);
+            Draw(tex, Time.realtimeSinceStartup);
+            Task.Run(() => Fetch(id));
+            return tex;
+        }
+
+        private static async Task Fetch(int id)
+        {
+            byte[] bytes = null;
+            for (int attempt = 0; attempt < 3 && bytes == null; attempt++)
+            {
+                try
+                {
+                    using (var resp = await http.GetAsync("http://127.0.0.1:" + Port + "/art/" + id))
+                    {
+                        if (resp.StatusCode == HttpStatusCode.OK) bytes = await resp.Content.ReadAsByteArrayAsync();
+                        else break; // the server's final answer (no art for this card)
+                    }
+                }
+                catch (Exception e)
+                {
+                    // server not up (yet): try again shortly
+                    if (attempt == 2) Log.Error("CardArt " + id + ": " + e.Message);
+                    await Task.Delay(2000);
+                }
+            }
+            arrived.Enqueue(new KeyValuePair<int, byte[]>(id, bytes));
+        }
+
+        /// <summary>Main-thread loop (started by LocalStartup): applies arrived art and animates the spinners.</summary>
+        public static IEnumerator Pump()
+        {
+            float nextFrame = 0f;
+            while (true)
+            {
+                while (arrived.TryDequeue(out var a))
+                {
+                    pending.Remove(a.Key);
+                    if (!textures.TryGetValue(a.Key, out var tex) || tex == null) continue;
+                    if (a.Value == null || !tex.LoadImage(a.Value))
+                    {
+                        Fill(tex, new Color32(40, 40, 46, 255));
+                        Log.Info("CardArt " + a.Key + ": no art");
+                    }
+                }
+                float now = Time.realtimeSinceStartup;
+                if (pending.Count > 0 && now >= nextFrame)
+                {
+                    nextFrame = now + 0.08f;
+                    foreach (int id in pending)
+                    {
+                        if (textures.TryGetValue(id, out var tex) && tex != null) Draw(tex, now);
+                    }
+                }
+                yield return null;
+            }
+        }
+
+        private static void Fill(Texture2D tex, Color32 c)
+        {
+            var px = new Color32[tex.width * tex.height];
+            for (int i = 0; i < px.Length; i++) px[i] = c;
+            tex.SetPixels32(px);
+            tex.Apply(false);
+        }
+
+        /// <summary>Dark backdrop with a ring of 10 dots; the bright dot goes round about once a second.</summary>
+        private static void Draw(Texture2D tex, float time)
+        {
+            if (frame == null) frame = new Color32[Width * Height];
+            var bg = new Color32(32, 32, 38, 255);
+            for (int i = 0; i < frame.Length; i++) frame[i] = bg;
+            const int dots = 10, ring = 22, dot = 4;
+            int head = (int)(time * dots) % dots;
+            for (int d = 0; d < dots; d++)
+            {
+                double ang = 2 * Math.PI * d / dots;
+                int cx = Width / 2 + (int)Math.Round(ring * Math.Sin(ang)), cy = Height / 2 + (int)Math.Round(ring * Math.Cos(ang));
+                float fade = 1f - ((head - d + dots) % dots) / (float)dots;
+                byte v = (byte)(60 + 195 * fade * fade);
+                var c = new Color32(v, v, v, 255);
+                for (int y = -dot; y <= dot; y++)
+                for (int x = -dot; x <= dot; x++)
+                    if (x * x + y * y <= dot * dot) frame[(cy + y) * Width + cx + x] = c;
+            }
+            tex.SetPixels32(frame);
+            tex.Apply(false);
+        }
+    }
+}

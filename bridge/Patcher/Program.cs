@@ -10,6 +10,11 @@ using Mono.Cecil.Cil;
 //   1. Bootstrap.Awake: replace call Coroutine_GameStartup() with ForgeBridge.LocalStartup.Run(Bootstrap)
 //   2. WrapperDeckUtilities.TryImportDeck: rewrite the import text first (ForgeBridge.DeckImport)
 //   3. DeckFormatUtil.GetBestFormat: imported decks get the narrowest Forge-defined format (ForgeBridge.DeckFormats)
+//   4. InitConfig.GetBootstrapConfig: no BI tracker, Backtrace, Steam, Unity Services
+//   5. ManifestMetadataProvider(): no manifest pointer request to Wizards' CDN
+//   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
+// and to AK.Wwise.Unity.API.dll:
+//   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
 var managed = args[0];
 var resolver = new DefaultAssemblyResolver();
 resolver.AddSearchDirectory(managed);
@@ -59,5 +64,86 @@ foreach (var ret in getBest.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret
 }
 Console.WriteLine("patched DeckFormatUtil.GetBestFormat -> " + best.FullName);
 
+//   4. InitConfig.GetBootstrapConfig: no BI event tracker, Backtrace, Steam or Unity Services (file system utils and the
+//      rider prompt replacer stay). Bootstrap.Awake builds the application from it before our hook runs.
+var initConfig = core.GetType("Wotc.Mtga.Client.InitConfig");
+var getBootstrapConfig = initConfig.Methods.Single(m => m.Name == "GetBootstrapConfig");
+var initCtor = initConfig.Methods.Single(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 6);
+var gb = getBootstrapConfig.Body;
+gb.Instructions.Clear();
+gb.Variables.Clear();
+gb.ExceptionHandlers.Clear();
+var gp = gb.GetILProcessor();
+foreach (var on in new[] { true, true, false, false, false, false }) gp.Append(gp.Create(on ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0));
+gp.Append(gp.Create(OpCodes.Newobj, initCtor));
+gp.Append(gp.Create(OpCodes.Ret));
+Console.WriteLine("patched InitConfig.GetBootstrapConfig -> BI tracker, Backtrace, Steam, Unity Services off");
+
+//   5. ManifestMetadataProvider(): drop the PointerFileMetadataCollector (GET of a manifest pointer from Wizards' CDN);
+//      the conf-file and doorbell collectors (local manifests) stay.
+var mmpCtor = core.GetType("Core.Code.AssetBundles.Manifest.ManifestMetadataProvider").Methods.Single(m => m.IsConstructor && !m.IsStatic);
+var pointerNew = mmpCtor.Body.Instructions.Single(i =>
+    i.OpCode == OpCodes.Newobj && i.Operand is MethodReference ctor && ctor.DeclaringType.Name == "PointerFileMetadataCollector");
+var pointerLoad = pointerNew.Previous;   // ldfld _collectors (after ldarg.0)
+var pointerAdd = pointerNew.Next;        // callvirt List.Add
+if (pointerLoad.OpCode != OpCodes.Ldfld || pointerLoad.Previous.OpCode != OpCodes.Ldarg_0 || pointerAdd.OpCode != OpCodes.Callvirt)
+    throw new InvalidOperationException("ManifestMetadataProvider ctor changed shape");
+foreach (var ins in new[] { pointerLoad.Previous, pointerLoad, pointerNew, pointerAdd }) { ins.OpCode = OpCodes.Nop; ins.Operand = null; }
+Console.WriteLine("patched ManifestMetadataProvider() -> no manifest pointer request");
+
+//   6. AssetLoader: art paths of generated cards (art id 9,000,000+) come from ForgeBridge.CardArt, not bundles:
+//      HaveAsset/AddReferenceCount -> true, ReleaseAsset -> nothing, AcquireAsset<T> -> CardArt.Acquire(path) as T.
+var cardArt = bridge.GetType("ForgeBridge.CardArt");
+var owns = core.ImportReference(cardArt.Methods.Single(m => m.Name == "Owns"));
+var acquire = core.ImportReference(cardArt.Methods.Single(m => m.Name == "Acquire"));
+var assetLoader = core.GetType("AssetLoader");
+MethodDefinition Static(string name) => assetLoader.Methods.Single(m => m.Name == name && m.IsStatic && m.Parameters.Count == 1 && m.Parameters[0].ParameterType.FullName == "System.String");
+foreach (var (name, result) in new[] { ("HaveAsset", (bool?)true), ("AddReferenceCount", true), ("ReleaseAsset", null) })
+{
+    var m = Static(name);
+    var mp = m.Body.GetILProcessor();
+    var orig = m.Body.Instructions[0];
+    mp.InsertBefore(orig, mp.Create(OpCodes.Ldarg_0));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Call, owns));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Brfalse, orig));
+    if (result.HasValue) mp.InsertBefore(orig, mp.Create(result.Value ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Ret));
+    Console.WriteLine("patched AssetLoader." + name + " -> ForgeBridge.CardArt.Owns");
+}
+{
+    var m = Static("AcquireAsset");
+    var t = m.GenericParameters.Single();
+    var mp = m.Body.GetILProcessor();
+    var orig = m.Body.Instructions[0];
+    var pop = mp.Create(OpCodes.Pop);
+    mp.InsertBefore(orig, mp.Create(OpCodes.Ldarg_0));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Call, acquire));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Isinst, t));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Unbox_Any, t));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Dup));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Brfalse, pop));
+    mp.InsertBefore(orig, mp.Create(OpCodes.Ret));
+    mp.InsertBefore(orig, pop);
+    Console.WriteLine("patched AssetLoader.AcquireAsset<T> -> ForgeBridge.CardArt.Acquire");
+}
+
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
+
+// Patches applied to AK.Wwise.Unity.API.dll:
+//   7. AkUnitySoundEngine.InitCommunication: returns AK_Success without starting Wwise's profiler link (a UDP socket
+//      on every interface, discovery port 24024, for the Wwise authoring tool). Its only caller ignores the result.
+var akPath = Path.Combine(managed, "AK.Wwise.Unity.API.dll");
+var akOrig = akPath + ".orig";
+if (!File.Exists(akOrig)) File.Copy(akPath, akOrig);
+var ak = ModuleDefinition.ReadModule(akOrig, new ReaderParameters { AssemblyResolver = resolver });
+var initComm = ak.GetType("AkUnitySoundEngine").Methods.Single(m => m.Name == "InitCommunication" && m.Parameters.Count == 1);
+var akSuccess = (int)ak.GetType("AKRESULT").Fields.Single(f => f.Name == "AK_Success").Constant;
+initComm.Body.Instructions.Clear();
+initComm.Body.Variables.Clear();
+var ic = initComm.Body.GetILProcessor();
+ic.Append(ic.Create(OpCodes.Ldc_I4, akSuccess));
+ic.Append(ic.Create(OpCodes.Ret));
+Console.WriteLine("patched AkUnitySoundEngine.InitCommunication -> no Wwise comms socket");
+ak.Write(akPath);
+Console.WriteLine("wrote " + akPath);
