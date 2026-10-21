@@ -23,9 +23,10 @@ namespace ForgeBridge
 
         public static string Rewrite(string text, ICardDatabaseAdapter db)
         {
-            // test runs: the OS clipboard is not reachable from scripted sessions, FORGEBRIDGE_CLIPBOARD names a file instead
+            // scripted test runs: FORGEBRIDGE_CLIPBOARD names a file that replaces the clipboard (the OS clipboard is not
+            // reachable from a locked session, and must not leak the user's own clipboard into a test)
             string testFile = Environment.GetEnvironmentVariable("FORGEBRIDGE_CLIPBOARD");
-            if (string.IsNullOrEmpty(text) && !string.IsNullOrEmpty(testFile) && System.IO.File.Exists(testFile)) text = System.IO.File.ReadAllText(testFile);
+            if (!string.IsNullOrEmpty(testFile) && System.IO.File.Exists(testFile)) text = System.IO.File.ReadAllText(testFile);
             if (string.IsNullOrEmpty(text) || db == null) return text;
             try
             {
