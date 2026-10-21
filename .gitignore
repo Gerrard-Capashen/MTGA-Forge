@@ -1,0 +1,24 @@
+﻿# Patched MTGA client copy (~14 GB, derived from the Steam install)
+/client/
+# Upstream clones; our Forge changes live on branch "mtga" inside forge/.git
+/forge/
+/xmage/
+# Local tooling / run artefacts
+/tools/apache-maven-3.9.9/
+/tools/dl/
+/tools/shots/
+/tools/capture/
+/tools/*.log
+/tools/*.err
+/tools/shot.png
+/tools/cp.txt
+# Build output
+bin/
+obj/
+/bridge/out/
+target/
+# Per-user game data
+/data/
+__pycache__/
+*.pyc
+*.orig
