@@ -21,7 +21,8 @@ namespace ForgeBridge
             foreach (var part in spec.Split(','))
             {
                 var kv = part.Split(':');
-                if (kv.Length != 2 || !float.TryParse(kv[0], out float at)) continue;
+                // invariant culture: on a Spanish/German system "61.5" would not parse and the click was skipped
+                if (kv.Length != 2 || !float.TryParse(kv[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float at)) continue;
                 while (Time.realtimeSinceStartup < at) yield return null;
                 string needle = kv[1].ToLowerInvariant();
                 if (needle == "dump") { Dump(at); continue; }
