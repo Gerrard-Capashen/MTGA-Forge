@@ -1,0 +1,22 @@
+About
+Name Modern Import Test
+
+Deck
+4 Ragavan, Nimble Pilferer
+4 thoughtseize
+4 Inquisition of Kozilek
+4 Kolaghans Command
+4 Bloodtithe Harvester
+3 Graveyard Trespasser // Ravenous Trespasser
+4 Blade of the Bloodchief
+4 Dauthi Voidwalker
+4 Terminate
+1 Lorien Revealed
+2 Commit // Memory
+4 Fatal Push
+4 Blood Crypt
+4 Bloodstained Mire
+14 Swamp
+
+Sideboard
+2 Kroxa, Titan of Death’s Hunger

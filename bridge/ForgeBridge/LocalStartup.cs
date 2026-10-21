@@ -145,6 +145,7 @@ namespace ForgeBridge
             Log.Info("stage2: PrepareLoginAssets (AssetLoader + loc DB)");
             var loginAssets = (IEnumerator)Call(bootstrap, "PrepareLoginAssets", assetPrepScene);
             while (loginAssets.MoveNext()) yield return loginAssets.Current;
+            FormatLoc.Install();
 
             if (!DuelMode)
             {
