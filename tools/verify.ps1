@@ -1,4 +1,4 @@
-# Does a patched client folder work? Runs the scripted recipes of PROGRESS.md against a fresh Java server each, checks them by
+﻿# Does a patched client folder work? Runs the scripted recipes of PROGRESS.md against a fresh Java server each, checks them by
 # log assertions + screenshots + a socket check on MTGA.exe, runs SelfPlay, and prints a pass/fail table (exit code 1 on any FAIL).
 # Read only: it neither builds nor patches anything (use deploy.ps1 / the patcher first).
 #
@@ -25,31 +25,31 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })   # -File passes a,b as one string
-$root = (Resolve-Path "$PSScriptRoot\..").Path
+. "$PSScriptRoot\layout.ps1"      # $Root, $Dist, $JavaExe, $ServerCp, $GuiDir (dev tree or packaged distribution)
+$root = $Root
 if (-not $Client) { $Client = "$root\client" }
 $Client = (Resolve-Path $Client).Path
 if (-not $DataDir) { $DataDir = Join-Path (Split-Path $Client -Parent) 'data' }
-if (-not $ClassPath) { $ClassPath = "$root\tools\cp.txt" }
-if (-not $Out) { $Out = "$root\tools\verify-out\$(Get-Date -Format 'yyyyMMdd-HHmmss')" }
+if (-not $Out) { $Out = if ($Dist) { "$env:LOCALAPPDATA\MTGA-Forge\verify-out\$(Get-Date -Format 'yyyyMMdd-HHmmss')" } else { "$root\tools\verify-out\$(Get-Date -Format 'yyyyMMdd-HHmmss')" } }
 New-Item -ItemType Directory -Force $Out | Out-Null
-$guiDir = "$root\forge\forge-gui"
+$guiDir = $GuiDir
 $exe = Join-Path $Client 'MTGA.exe'
-$cp = (Get-Content $ClassPath -Raw).Trim() + ";$root\forge\forge-gui-mtga\target\classes"
+$cp = if ($ClassPath) { (Get-Content $ClassPath -Raw).Trim() + ";$root\forge\forge-gui-mtga\target\classes" } else { $ServerCp }
 
 # Unity writes Player.log to LocalLow\<app.info line 1>\<line 2>
 $appInfo = @(Get-Content "$Client\MTGA_Data\app.info")
 $playerLog = "$env:USERPROFILE\AppData\LocalLow\$($appInfo[0])\$($appInfo[1])\Player.log"
 
-foreach ($f in @($exe, "$Client\MTGA_Data\Managed\ForgeBridge.dll", $ClassPath)) {
+foreach ($f in @($exe, "$Client\MTGA_Data\Managed\ForgeBridge.dll") + @($ClassPath | Where-Object { $_ })) {
     if (-not (Test-Path $f)) { throw "missing: $f" }
 }
-if ($BuildServer) {
+if ($BuildServer -and -not $Dist) {
     Push-Location "$root\forge"
     & "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" -B -q -o -DskipTests -pl forge-gui-mtga -am compile
     if ($LASTEXITCODE -ne 0) { throw 'server build failed' }
     Pop-Location
 }
-if (-not (Test-Path "$root\forge\forge-gui-mtga\target\classes\forge\mtga\ForgeMtgaMain.class")) { throw 'forge-gui-mtga not built (use -BuildServer)' }
+if (-not $Dist -and -not (Test-Path "$root\forge\forge-gui-mtga\target\classes\forge\mtga\ForgeMtgaMain.class")) { throw 'forge-gui-mtga not built (use -BuildServer)' }
 
 function Stop-Ours {
     Get-Process MTGA -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe } | Stop-Process -Force
@@ -169,7 +169,7 @@ function Run-Recipe($name, $r) {
     if ($r.Rig) { $jargs += "-Dmtga.rig=$($r.Rig)" } else { $jargs += '-Dmtga.norig=1' }
     if ($r.Deck) { $jargs += "-Dmtga.deck=$($r.Deck)" } else { $jargs += '-Dmtga.nodeck=1' }
     $jargs += '-cp', "`"$cp`"", 'forge.mtga.ForgeMtgaMain', "`"$guiDir`"", "`"$Client`"", "$Port"
-    $java = Start-Process java -ArgumentList $jargs -WorkingDirectory $guiDir -RedirectStandardOutput $srvLog -RedirectStandardError "$srvLog.err" -PassThru -WindowStyle Hidden
+    $java = Start-Process $JavaExe -ArgumentList $jargs -WorkingDirectory $guiDir -RedirectStandardOutput $srvLog -RedirectStandardError "$srvLog.err" -PassThru -WindowStyle Hidden
     try {
         if (-not (Wait-ServerUp $srvLog $java)) { Check 'server starts' $false (Get-Content "$srvLog.err" -ErrorAction SilentlyContinue | Select-Object -First 3 | Out-String); return }
         if (Test-Path $playerLog) { Remove-Item $playerLog -Force }
@@ -250,7 +250,7 @@ function Run-SelfPlay($name, $format) {
     $jargs = @()
     if ($format) { $jargs += "-Dselfplay.format=$format" }
     $jargs += '-cp', "`"$cp`"", 'forge.mtga.SelfPlay', "`"$guiDir`"", "`"$Client`"", "$SelfPlayGames", '1'
-    $pr = Start-Process java -ArgumentList $jargs -WorkingDirectory $guiDir -RedirectStandardOutput "$dir\selfplay.log" -RedirectStandardError "$dir\selfplay.err" -PassThru -WindowStyle Hidden
+    $pr = Start-Process $JavaExe -ArgumentList $jargs -WorkingDirectory $guiDir -RedirectStandardOutput "$dir\selfplay.log" -RedirectStandardError "$dir\selfplay.err" -PassThru -WindowStyle Hidden
     if (-not $pr.WaitForExit(900000)) { Stop-Process -Id $pr.Id -Force; Check 'finishes within 15 min' $false; return }
     $script:cur.Secs = [int]$sw.Elapsed.TotalSeconds
     $o = @(Get-Content "$dir\selfplay.log")
@@ -269,7 +269,8 @@ try {
     Stop-Ours
     # decks the menu recipes created stay out of the user's data dir
     if (Test-Path $deckDir) {
-        Get-ChildItem $deckDir -Filter *.json | Where-Object { $decksBefore -notcontains $_.Name } | Remove-Item -Force
+        # (the starter decks "Forge: ..." are seeded by the first server start on a fresh data dir: they belong to the user, keep them)
+        Get-ChildItem $deckDir -Filter *.json | Where-Object { $decksBefore -notcontains $_.Name -and (Get-Content $_.FullName -Raw | ConvertFrom-Json).Summary.Name -notlike 'Forge: *' } | Remove-Item -Force
     }
 }
 

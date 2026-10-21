@@ -15,6 +15,7 @@ using Mono.Cecil.Cil;
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
+if (args.Length > 1 && (args[0] == "identity" || args[0] == "unityconnect" || args[0] == "check-bridge" || args[0] == "audit-bridge")) return Tools.Run(args);
 var managed = args[0];
 var resolver = new DefaultAssemblyResolver();
 resolver.AddSearchDirectory(managed);
@@ -147,3 +148,4 @@ ic.Append(ic.Create(OpCodes.Ret));
 Console.WriteLine("patched AkUnitySoundEngine.InitCommunication -> no Wwise comms socket");
 ak.Write(akPath);
 Console.WriteLine("wrote " + akPath);
+return 0;

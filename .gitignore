@@ -24,3 +24,5 @@ __pycache__/
 *.orig
 /tools/verify-out/
 /client-fresh/
+/dist/
+/bridge/patcher-out/

@@ -1,22 +1,24 @@
-# Builds a Forge-backed MTGA client in a NEW folder from a Steam install (read only), with no manual steps.
+﻿# Builds a Forge-backed MTGA client in a NEW folder from a Steam install (read only), with no manual steps.
 # Ordered, idempotent steps; every step records its result in <Target>\forge-patch\state.json together with a fingerprint of
 # the source install (Steam buildid, main manifest name, Core.dll hash). A re-run skips finished steps; a different fingerprint
 # (Steam updated) throws the results away and starts again at step 1.
 #
 # Usage: powershell -NoProfile -File tools\forge-patch.ps1 -Target D:\x\client-fresh [-Source <MTGA install>] [-From <step>] [-Only a,b]
-#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-BuildServer]
+#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-BuildServer] [-Check]
 # Steps: refresh  orig  identity  unityconnect  storeconfig  bridge  patch  carddb  manifest  firewall
 #   refresh       robocopy /MIR the install into Target (purges everything we added, incl. stale .orig files)
 #   orig          Core.dll.orig / AK.Wwise.Unity.API.dll.orig = the pristine DLLs of THIS build (ForgeBridge compiles against them)
-#   identity      app.info + globalgamemanagers company/product -> "Forge Bridge Project"/"MTGF" (tools\isolate_identity.py)
-#   unityconnect  Unity analytics/cloud services off in globalgamemanagers (tools\disable_unity_connect.py)
+#   identity      app.info + globalgamemanagers company/product -> "Forge Bridge Project"/"MTGF" (Patcher identity)
+#   unityconnect  Unity analytics/cloud services off in globalgamemanagers (Patcher unityconnect)
 #   storeconfig   StreamingAssets\StoreConfig.txt provider -> forge-bridge-local (the Steam provider restarts the app via Steam)
-#   bridge        dotnet build bridge\ForgeBridge against Target\MTGA_Data\Managed (ManagedDir parameter)
+#   bridge        ForgeBridge.dll into Managed: dist = the prebuilt one, dev = dotnet build against Target\MTGA_Data\Managed; then Patcher check-bridge
+#                 (every Core/Unity member it references must still exist in this client build)
 #   patch         bridge\Patcher: Core.dll + AK.Wwise.Unity.API.dll from the .orig files; throws if a hooked method moved
 #   carddb        forge.mtga.CardDbBuilder from the target's own pristine DB (Target\forge-patch\carddb\pristine)
 #   manifest      asserts the main manifest is plain JSON (the builder writes it decompressed) and lists the generated DB
 #   firewall      outbound block rule for Target\MTGA.exe; needs elevation, runs ONLY with -Firewall (prints the command otherwise)
-# Needs: robocopy, python (3.x), dotnet SDK, java 17+, tools\cp.txt, built forge-gui-mtga (-BuildServer compiles it).
+# -Check only compares the install with Target\forge-patch\state.json (exit 0 = patched and current, 3 = needs patching, 4 = no install found, 5 = Steam is updating MTGA).
+# Needs (dist): robocopy + Windows PowerShell 5.1 + the package (runtime\, server\, patcher\); (dev): dotnet SDK, java 17+, tools\cp.txt, built forge-gui-mtga (-BuildServer compiles it).
 param(
     [Parameter(Mandatory)][string]$Target,
     [string]$Source = '',
@@ -26,15 +28,15 @@ param(
     [switch]$Firewall,
     [switch]$SkipFirewall,
     [switch]$BuildServer,
-    [string]$Formats = 'Standard,Pioneer,Modern'
+    [string]$Formats = 'Standard,Pioneer,Modern',
+    [switch]$Check
 )
 $ErrorActionPreference = 'Stop'
 $Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
-$root = (Resolve-Path "$PSScriptRoot\..").Path
-if (-not $Source) {
-    $Source = 'D:\SteamLibrary\steamapps\common\MTGA'
-    foreach ($c in 'C:\Program Files (x86)\Steam\steamapps\common\MTGA', 'C:\Program Files\Steam\steamapps\common\MTGA') { if (-not (Test-Path $Source) -and (Test-Path $c)) { $Source = $c } }
-}
+. "$PSScriptRoot\layout.ps1"
+$root = $Root
+if (-not $Source) { $Source = Find-MtgaInstall }
+if (-not $Source) { Write-Host 'MTGA install not found; pass -Source <folder with MTGA.exe>'; exit 4 }
 $Source = (Resolve-Path $Source).Path
 New-Item -ItemType Directory -Force $Target | Out-Null
 $Target = (Resolve-Path $Target).Path
@@ -48,19 +50,31 @@ $pdir = "$Target\forge-patch"
 $statePath = "$pdir\state.json"
 $cardData = "$pdir\carddb"
 $bridgeOut = "$pdir\bridge-out"
-$guiDir = "$root\forge\forge-gui"
+$guiDir = $GuiDir
 
 function Sha($f) { (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() }
 
 # -------------------------------------------------------------------------------------------------- source fingerprint
-function Get-Fingerprint {
-    $acf = Get-ChildItem (Join-Path (Split-Path $Source -Parent | Split-Path -Parent) '*.acf') -ErrorAction SilentlyContinue |
+function Get-Acf {
+    Get-ChildItem (Join-Path (Split-Path $Source -Parent | Split-Path -Parent) '*.acf') -ErrorAction SilentlyContinue |
         Where-Object { (Get-Content $_.FullName -Raw) -match '"installdir"\s+"MTGA"' } | Select-Object -First 1
+}
+function Get-Fingerprint {
+    $acf = Get-Acf
     $build = if ($acf) { [regex]::Match((Get-Content $acf.FullName -Raw), '"buildid"\s+"(\d+)"').Groups[1].Value } else { '' }
     $mf = @(Get-ChildItem "$Source\MTGA_Data\Downloads" -Filter 'Manifest_*.mtga' | Where-Object { $_.Name -match '^Manifest_[0-9a-f]{32}\.mtga$' })
     if ($mf.Count -ne 1) { throw "expected one main manifest in $Source\MTGA_Data\Downloads, found $($mf.Count)" }
-    [ordered]@{ steamBuildId = $build; mainManifest = $mf[0].Name; coreSha256 = (Sha "$Source\MTGA_Data\Managed\Core.dll")
-                exeSize = (Get-Item "$Source\MTGA.exe").Length }
+    $fpo = [ordered]@{ steamBuildId = $build; mainManifest = $mf[0].Name; coreSha256 = (Sha "$Source\MTGA_Data\Managed\Core.dll")
+                       exeSize = (Get-Item "$Source\MTGA.exe").Length }
+    # a new package (other Patcher / ForgeBridge / CardDbBuilder) must patch again too; the dev tree is patched by hand and left out
+    if ($Dist) { $fpo.tools = (Sha $PatcherExe).Substring(0, 16) + (Sha $BridgeDll).Substring(0, 16) + (Sha "$Root\server\lib\forge-gui-mtga.jar").Substring(0, 16) }
+    $fpo
+}
+# Steam is mid-update (StateFlags 4 = fully installed): the files are not a consistent build yet
+$acf0 = Get-Acf
+if ($acf0 -and (Get-Content $acf0.FullName -Raw) -match '"StateFlags"\s+"(\d+)"' -and $Matches[1] -ne '4') {
+    Write-Host "Steam is still updating MTGA (StateFlags $($Matches[1])); wait until it is finished."
+    exit 5
 }
 $fp = Get-Fingerprint
 $fpJson = $fp | ConvertTo-Json -Compress
@@ -72,6 +86,20 @@ if (Test-Path $statePath) {
     if ($old.fingerprint -eq $fpJson) { foreach ($p in $old.steps.PSObject.Properties) { $state.steps[$p.Name] = $p.Value } }
     else { Write-Host "source install changed since the last run -> every step again`n  was: $($old.fingerprint)`n  now: $fpJson" }
 }
+# -Check: is Target patched for exactly this install? (the launcher decides between "start" and "patch again" with this)
+if ($Check) {
+    $why = ''
+    if (-not (Test-Path $statePath)) { $why = 'not patched yet' }
+    elseif (-not (Test-Path "$Target\MTGA.exe")) { $why = 'client folder is empty' }
+    elseif ((Get-Content $statePath -Raw | ConvertFrom-Json).fingerprint -ne $fpJson) { $why = "MTGA was updated (now $($fp.mainManifest), $($fp.steamBuildId))" }
+    else {
+        $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
+        if ($todo) { $why = "unfinished steps: $($todo -join ', ')" }
+    }
+    if ($why) { Write-Host "needs patching: $why"; exit 3 }
+    Write-Host "up to date ($($fp.mainManifest))"
+    exit 0
+}
 function Save-State { New-Item -ItemType Directory -Force $pdir | Out-Null; $state | ConvertTo-Json -Depth 6 | Set-Content $statePath -Encoding utf8 }
 
 # ------------------------------------------------------------------------------------------------------------ helpers
@@ -80,12 +108,16 @@ function Run($exe, [string[]]$a, $what) {
     & $exe @a 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "$what failed (exit code $LASTEXITCODE)" }
 }
-function Invoke-Py { Run 'python.exe' (@('-I') + $args) 'python' }
-function Java-Cp { (Get-Content "$root\tools\cp.txt" -Raw).Trim() + ";$root\forge\forge-gui-mtga\target\classes" }
 
 # ------------------------------------------------------------------------------------------------------------- steps
 # Each step: a scriptblock returning a detail string. Reached only when state says not done (or -Force / -From / -Only).
 $steps = [ordered]@{}
+if (-not $Dist) {
+    $newest = (Get-ChildItem "$root\bridge\Patcher" -Include *.cs, *.csproj -Recurse | Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' } | Sort-Object LastWriteTime | Select-Object -Last 1).LastWriteTime
+    if (-not (Test-Path $PatcherExe) -or (Get-Item $PatcherExe).LastWriteTime -lt $newest) {
+        Run 'dotnet' @('build', "$root\bridge\Patcher\Patcher.csproj", '-c', 'Release', '-o', (Split-Path $PatcherExe), '-nologo', '-v', 'q') 'Patcher build'
+    }
+}
 
 $steps['refresh'] = {
     # /MIR purges whatever the install lacks (our .orig files, generated DB, forge-patch is excluded); /XJ no junctions
@@ -112,10 +144,10 @@ $steps['orig'] = {
 $steps['identity'] = {
     # Unity takes LocalLow\<line 1>\<line 2> from app.info; the original has no trailing newline
     [IO.File]::WriteAllBytes("$Target\MTGA_Data\app.info", [Text.Encoding]::ASCII.GetBytes("Forge Bridge Project`nMTGF"))
-    Invoke-Py "$root\tools\isolate_identity.py" $ggm
+    Run $PatcherExe @('identity', $ggm) 'Patcher identity'
 }
 
-$steps['unityconnect'] = { Invoke-Py "$root\tools\disable_unity_connect.py" $ggm }
+$steps['unityconnect'] = { Run $PatcherExe @('unityconnect', $ggm) 'Patcher unityconnect' }
 
 $steps['storeconfig'] = {
     $f = "$Target\MTGA_Data\StreamingAssets\StoreConfig.txt"
@@ -125,21 +157,25 @@ $steps['storeconfig'] = {
 }
 
 $steps['bridge'] = {
-    # compiled against Target's Core.dll.orig + the other Managed DLLs, so a changed API breaks HERE, not at run time
-    Remove-Item $bridgeOut -Recurse -Force -ErrorAction SilentlyContinue
-    Run 'dotnet' @('build', "$root\bridge\ForgeBridge\ForgeBridge.csproj", '-c', 'Release', '--no-incremental', '-o', $bridgeOut, "-p:ManagedDir=$managed", '-nologo', '-v', 'q') 'ForgeBridge build'
-    Copy-Item "$bridgeOut\ForgeBridge.dll" $managed -Force
+    if ($BridgeDll) { Copy-Item $BridgeDll "$managed\ForgeBridge.dll" -Force }     # packaged: prebuilt against another build, checked below
+    else {
+        # dev: compiled against Target's Core.dll.orig + the other Managed DLLs, so a changed API breaks HERE, not at run time
+        Remove-Item $bridgeOut -Recurse -Force -ErrorAction SilentlyContinue
+        Run 'dotnet' @('build', "$root\bridge\ForgeBridge\ForgeBridge.csproj", '-c', 'Release', '--no-incremental', '-o', $bridgeOut, "-p:ManagedDir=$managed", '-nologo', '-v', 'q') 'ForgeBridge build'
+        Copy-Item "$bridgeOut\ForgeBridge.dll" $managed -Force
+    }
+    Run $PatcherExe @('check-bridge', $managed) 'ForgeBridge no longer fits this client build (a method it uses was removed or changed)'
     "ForgeBridge.dll $((Get-Item "$managed\ForgeBridge.dll").Length) B"
 }
 
 $steps['patch'] = {
-    Run 'dotnet' @('run', '--project', "$root\bridge\Patcher\Patcher.csproj", '-c', 'Release', '--', $managed) 'Patcher (a hooked method probably moved in this client version)'
+    Run $PatcherExe @($managed) 'Patcher (a hooked method probably moved in this client version)'
     if ((Sha "$managed\Core.dll") -eq (Sha "$managed\Core.dll.orig")) { throw 'Core.dll is unchanged after patching' }
     "Core.dll $((Get-Item "$managed\Core.dll").Length) B"
 }
 
 $steps['carddb'] = {
-    if ($BuildServer -or -not (Test-Path "$root\forge\forge-gui-mtga\target\classes\forge\mtga\CardDbBuilder.class")) {
+    if (-not $Dist -and ($BuildServer -or -not (Test-Path "$root\forge\forge-gui-mtga\target\classes\forge\mtga\CardDbBuilder.class"))) {
         Push-Location "$root\forge"
         try { Run "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" @('-B', '-q', '-o', '-DskipTests', '-pl', 'forge-gui-mtga', '-am', 'compile') 'forge-gui-mtga build' } finally { Pop-Location }
     }
@@ -154,7 +190,8 @@ $steps['carddb'] = {
     if ($db.Count -ne 1) { throw "manifest lists $($db.Count) card databases" }
     Copy-Item "$Source\MTGA_Data\Downloads\Raw\$($db[0].Name)" "$pristine\Raw"
     # the target's Downloads must hold nothing but the generated pair afterwards: the builder deletes the other main manifest / DB
-    Run 'java' @('-cp', (Java-Cp), 'forge.mtga.CardDbBuilder', $guiDir, $Target, '--carddata', $cardData, '--formats', $Formats) 'CardDbBuilder'
+    Push-Location $guiDir      # Forge finds its res\ folder from the working directory
+    try { Run $JavaExe @('-cp', $ServerCp, 'forge.mtga.CardDbBuilder', $guiDir, $Target, '--carddata', $cardData, '--formats', $Formats) 'CardDbBuilder' } finally { Pop-Location }
     $st = Get-Content "$cardData\state.json" -Raw | ConvertFrom-Json
     "$($st.db) via $($st.manifest), $($st.cardsAdded) cards added"
 }
@@ -230,4 +267,4 @@ foreach ($n in $names) {
     Write-Host "   ok ($([int]$sw.Elapsed.TotalSeconds) s) $detail"
 }
 Save-State
-Write-Host "PATCH OK: $Target  (verify: powershell -NoProfile -File tools\verify.ps1 -Client `"$Target`" -DataDir <dir>)"
+Write-Host "PATCH OK: $Target  (verify: powershell -NoProfile -File $PSScriptRoot\verify.ps1 -Client `"$Target`"; decks/data dir defaults to $(Split-Path $Target -Parent)\data)"
