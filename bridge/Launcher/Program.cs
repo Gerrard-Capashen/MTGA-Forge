@@ -477,9 +477,9 @@ namespace MtgaForgeLauncher
             foreach (Control c in new Control[] { lblKey, txtKey }) c.Visible = m != "bot";
             switch (m)
             {
-                case "bot": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Bot Match and pick a deck. Build decks in the normal deck editor."; break;
-                case "host": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Bot Match and pick a deck. It waits for your friend (start the host first). Windows may ask if Java can accept connections: allow it."; break;
-                default: lblHelp.Text = "Wait until the host is waiting in their game, press Start, then in the game: Play > Find Match > Bot Match and pick a deck. You both need the same MTGA version and the same MTGA-Forge package."; break;
+                case "bot": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Bot Play, choose Standard, Pioneer or Modern and pick a deck of that format. Build decks in the normal deck editor."; break;
+                case "host": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Casual Play, choose the format (Standard, Pioneer or Modern) and pick a deck. It waits for your friend (start the host first; your friend must pick the same format). Windows may ask if Java can accept connections: allow it."; break;
+                default: lblHelp.Text = "Wait until the host is waiting in their game, press Start, then in the game: Play > Find Match > Casual Play, choose the same format as the host and pick a deck. You both need the same MTGA version and the same MTGA-Forge package."; break;
             }
             if (m == "host")
             {
@@ -613,7 +613,7 @@ namespace MtgaForgeLauncher
             if (m.Success) { serverLog = m.Groups[1].Value; serverLogPos = 0; logTimer.Start(); lblStatus.Text = "Starting the server..."; }
             else if (l.Contains("Patching the game")) lblStatus.Text = "Updating the patched game first (a few minutes)...";
             else if (l.Contains("Server ready")) lblStatus.Text = "Server ready, starting the game...";
-            else if (l.Contains("MTGA started")) lblStatus.Text = Mode == "bot" ? "Game running. Close the game window to finish." : "Game running. Now pick Bot Match and a deck in the game.";
+            else if (l.Contains("MTGA started")) lblStatus.Text = Mode == "bot" ? "Game running. Close the game window to finish." : "Game running. Now pick Casual Play, a format and a deck in the game.";
         }
 
         /// <summary>The server's log carries the connection events: translate them into plain sentences.</summary>

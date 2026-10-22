@@ -59,7 +59,32 @@ namespace ForgeBridge
             return loc != null;
         }
 
-        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc);
+        private const string EventTitle = "Events/Event_Title_";
+        private const string EventDesc = "Events/Event_Desc_";
+
+        /// <summary>
+        /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; (Standard, Pioneer, Modern):
+        /// Bot Play is against the Forge AI, Casual Play against another player.
+        /// </summary>
+        private static bool TryQueue(string key, out string loc)
+        {
+            loc = null;
+            if (key == null) return false;
+            bool title = key.StartsWith(EventTitle), desc = key.StartsWith(EventDesc);
+            if (!title && !desc) return false;
+            string name = key.Substring(title ? EventTitle.Length : EventDesc.Length);
+            int us = name.IndexOf('_');
+            if (us < 0) return false;
+            string mode = name.Substring(0, us), format = name.Substring(us + 1);
+            if (format != "Standard" && format != "Pioneer" && format != "Modern") return false;
+            if (mode == "BotPlay")
+                loc = title ? "Bot Play: " + format : "Play a " + format + " deck against the Forge AI. Only decks legal in " + format + " can be chosen.";
+            else if (mode == "CasualPlay")
+                loc = title ? "Casual Play: " + format : "Play a casual " + format + " match against another player. Only decks legal in " + format + " can be chosen.";
+            return loc != null;
+        }
+
+        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc);
 
         public string GetLocalizedText(string key, params (string, string)[] locParams)
         {

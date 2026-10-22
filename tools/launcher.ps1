@@ -136,9 +136,9 @@ try {
             $kind = if ($_.IPAddress -match '^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.') { 'Tailscale' } elseif ($_.InterfaceAlias -like '*ZeroTier*') { 'ZeroTier' } else { $_.InterfaceAlias }
             Write-Host ("   {0}:{1}   ({2})" -f $_.IPAddress, $peerPort, $kind)
         }
-        Write-Host "In the game: play your deck from the Bot Match queue; it waits until your friend joins." -ForegroundColor Cyan
+        Write-Host "In the game: play your deck from a Casual Play queue (Standard, Pioneer or Modern); it waits until your friend joins." -ForegroundColor Cyan
     } elseif ($P2P -eq 'join') {
-        Write-Host "P2P guest: play your deck from the Bot Match queue AFTER the host started theirs; it connects to $Peer." -ForegroundColor Cyan
+        Write-Host "P2P guest: play your deck from the SAME Casual Play queue AFTER the host started theirs; it connects to $Peer." -ForegroundColor Cyan
     }
 
     # -------------------------------------------------------------------------------------------- client

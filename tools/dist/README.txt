@@ -14,13 +14,13 @@ START
 PLAY A FRIEND (two players, each with their own MTGA and this package, the same MTGA version)
   Both install Tailscale (free, tailscale.com) and sign in to the same network, or play on the same local network.
   Host:  pick "I host", Start. The window lists addresses: send your friend the Tailscale one (100.x.x.x:30012).
-         In the game: Play > Find Match > Bot Match, choose a deck, Play. It waits for your friend.
+         In the game: Play > Find Match > Casual Play > Standard, Pioneer or Modern, choose a deck, Play. It waits for your friend.
   Guest: pick "I join", paste the address, Start, and once the host is waiting do the same in the game
-         (Play > Find Match > Bot Match, deck, Play). The two of you then play a normal Magic game.
+         (Play > Find Match > Casual Play, the SAME format as the host, deck, Play). The two of you then play a normal Magic game.
   The first time the host starts, Windows asks whether "Java" may accept connections: allow it (private networks).
   Without Tailscale, the host can instead open TCP port 30012 on their router. If you are told "different card
   database", one of you has another MTGA version or another MTGA-Forge package.
-  (The queue entry still says "Bot Match": that is expected for now.)
+  (Single player: Play > Find Match > Bot Play. Each queue only accepts decks legal in its format.)
 
   Options (run from a command prompt):
     MTGA-Forge.cmd -Folder D:\MTGA-Forge      where the patched copy, your decks and the logs go (default %LOCALAPPDATA%\MTGA-Forge)
