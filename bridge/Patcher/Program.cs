@@ -13,6 +13,7 @@ using Mono.Cecil.Cil;
 //   4. InitConfig.GetBootstrapConfig: no BI tracker, Backtrace, Steam, Unity Services
 //   5. ManifestMetadataProvider(): no manifest pointer request to Wizards' CDN
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
+//   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
 if (args.Length > 1 && (args[0] == "identity" || args[0] == "unityconnect" || args[0] == "check-bridge" || args[0] == "audit-bridge")) return Tools.Run(args);
@@ -147,6 +148,20 @@ foreach (var name in new[] { "GetBillboardImagePath", "GetBladeImagePath", "GetB
     }
     Console.WriteLine("patched ClientEventDefinitionList." + name + "(EventContext) -> ForgeBridge.CardArt.EventArtPath");
 }
+
+//   6c. SettingsMenu.Open: before every return, ForgeBridge.SettingsTweaks.Apply(this) (no log out, no privacy entries, trimmed Account)
+var tweaks = core.ImportReference(bridge.GetType("ForgeBridge.SettingsTweaks").Methods.Single(m => m.Name == "Apply"));
+var settingsOpen = core.GetType("SettingsMenu").Methods.Single(m => m.Name == "Open");
+var sp = settingsOpen.Body.GetILProcessor();
+foreach (var ret in settingsOpen.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    // reuse the ret instruction itself so branches that target it run the hook too
+    ret.OpCode = OpCodes.Ldarg_0;
+    var call = sp.Create(OpCodes.Call, tweaks);
+    sp.InsertAfter(ret, call);
+    sp.InsertAfter(call, sp.Create(OpCodes.Ret));
+}
+Console.WriteLine("patched SettingsMenu.Open -> " + tweaks.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);

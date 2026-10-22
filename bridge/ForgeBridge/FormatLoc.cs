@@ -24,6 +24,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormat/Legacy", "Legacy" },
             { "MainNav/DeckFormat/Vintage", "Vintage" },
             { "MainNav/DeckFormat/Commander", "Commander" },
+            { "MainNav/Settings/ReportABug/Support_URL", "https://play.mtga-forge.workers.dev" },
             { "MainNav/Profile/Tabs/OverviewTab", "Overview" },
             { "MainNav/Profile/Tabs/CustomizationTab", "Customization" },
             { "MainNav/Profile/Tabs/FavoriteStores", "Favorite Stores" },
