@@ -2,6 +2,9 @@
 # Ordered, idempotent steps; every step records its result in <Target>\forge-patch\state.json together with a fingerprint of
 # the source install (Steam buildid, main manifest name, Core.dll hash). A re-run skips finished steps; a different fingerprint
 # (Steam updated) throws the results away and starts again at step 1.
+# The tools are tracked apart from the install: state.json also holds a hash of ForgeBridge + Patcher (packaged: the shipped files; dev tree: the
+# sources) and one of the card DB builder (packaged: the server jar). When one changes, only its steps run again (bridge + patch: seconds; card DB + manifest),
+# never the copy of the install. A folder patched before these hashes existed counts as changed once.
 #
 # Usage: powershell -NoProfile -File tools\forge-patch.ps1 -Target D:\x\client-fresh [-Source <MTGA install>] [-From <step>] [-Only a,b]
 #        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-Product MTG2] [-BuildServer] [-Check]
@@ -68,9 +71,20 @@ function Get-Fingerprint {
     if ($mf.Count -ne 1) { throw "expected one main manifest in $Source\MTGA_Data\Downloads, found $($mf.Count)" }
     $fpo = [ordered]@{ steamBuildId = $build; mainManifest = $mf[0].Name; coreSha256 = (Sha "$Source\MTGA_Data\Managed\Core.dll")
                        exeSize = (Get-Item "$Source\MTGA.exe").Length }
-    # a new package (other Patcher / ForgeBridge / CardDbBuilder) must patch again too; the dev tree is patched by hand and left out
-    if ($Dist) { $fpo.tools = (Sha $PatcherExe).Substring(0, 16) + (Sha $BridgeDll).Substring(0, 16) + (Sha "$Root\server\lib\forge-gui-mtga.jar").Substring(0, 16) }
     $fpo
+}
+
+# The tools that built the target: another ForgeBridge / Patcher only needs the bridge and patch steps again (seconds), another CardDbBuilder
+# (the server jar) the card DB; neither needs the copy of the install. Packaged: hashes of the shipped files; dev tree: of the sources
+# (the generated DB of a dev tree is left alone, db = '').
+function Get-ToolFps {
+    if ($Dist) {
+        return @{ bridge = (Sha $PatcherExe).Substring(0, 16) + (Sha $BridgeDll).Substring(0, 16); db = (Sha "$Root\server\lib\forge-gui-mtga.jar").Substring(0, 16) }
+    }
+    $files = Get-ChildItem "$root\bridge\ForgeBridge", "$root\bridge\Patcher" -Include *.cs, *.csproj -Recurse | Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' } | Sort-Object FullName
+    $text = ($files | ForEach-Object { $_.FullName.Substring($root.Length) + (Get-FileHash $_.FullName -Algorithm SHA256).Hash }) -join ''
+    $h = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($text))
+    @{ bridge = ([BitConverter]::ToString($h) -replace '-', '').ToLower().Substring(0, 32); db = '' }
 }
 # Steam is mid-update (StateFlags 4 = fully installed): the files are not a consistent build yet
 $acf0 = Get-Acf
@@ -82,10 +96,17 @@ $fp = Get-Fingerprint
 $fpJson = $fp | ConvertTo-Json -Compress
 
 # state: { fingerprint, steps: { name: { ok, at, detail } } }
-$state = [ordered]@{ fingerprint = $fpJson; steps = [ordered]@{} }
+$toolFp = Get-ToolFps
+$state = [ordered]@{ fingerprint = $fpJson; bridgeTools = $toolFp.bridge; dbTools = $toolFp.db; steps = [ordered]@{} }
+$staleTools = @()
 if (Test-Path $statePath) {
     $old = Get-Content $statePath -Raw | ConvertFrom-Json
-    if ($old.fingerprint -eq $fpJson) { foreach ($p in $old.steps.PSObject.Properties) { $state.steps[$p.Name] = $p.Value } }
+    if ($old.fingerprint -eq $fpJson) {
+        foreach ($p in $old.steps.PSObject.Properties) { $state.steps[$p.Name] = $p.Value }
+        if ($old.bridgeTools -ne $toolFp.bridge) { $staleTools += 'ForgeBridge/Patcher'; foreach ($k in 'bridge', 'patch') { $state.steps.Remove($k) } }
+        if ($toolFp.db -and $old.dbTools -ne $toolFp.db) { $staleTools += 'card database builder'; foreach ($k in 'carddb', 'manifest') { $state.steps.Remove($k) } }
+        if ($staleTools) { Write-Host "tools changed since the last run ($($staleTools -join ', ')): only their steps again" }
+    }
     else { Write-Host "source install changed since the last run -> every step again`n  was: $($old.fingerprint)`n  now: $fpJson" }
 }
 # -Check: is Target patched for exactly this install? (the launcher decides between "start" and "patch again" with this)
@@ -96,7 +117,7 @@ if ($Check) {
     elseif ((Get-Content $statePath -Raw | ConvertFrom-Json).fingerprint -ne $fpJson) { $why = "MTGA was updated (now $($fp.mainManifest), $($fp.steamBuildId))" }
     else {
         $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
-        if ($todo) { $why = "unfinished steps: $($todo -join ', ')" }
+        if ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
         elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
     }
     if ($why) { Write-Host "needs patching: $why"; exit 3 }
@@ -253,8 +274,9 @@ foreach ($n in $names) {
     if ($n -eq 'firewall' -and $SkipFirewall) { continue }
     $done = $state.steps.Contains($n) -and $state.steps[$n].ok
     if ($done -and -not $Force -and $fromIdx -lt 0 -and $Only.Count -eq 0) { Write-Host "== $n : done ($($state.steps[$n].detail))"; continue }
-    # re-running a step invalidates the steps after it (they were built on its output)
-    foreach ($k in $names[($i + 1)..($names.Count - 1)]) { if ($k -ne 'firewall') { $state.steps.Remove($k) } }
+    # re-running a step invalidates the steps built on its output: the patch is built on the bridge, nothing on the patch; the card DB does not depend on either
+    $built = if ($n -eq 'bridge') { @('patch') } elseif ($n -in 'patch', 'manifest') { @() } else { @($names[($i + 1)..($names.Count - 1)] | Where-Object { $_ -ne 'firewall' }) }
+    foreach ($k in $built) { $state.steps.Remove($k) }
     Write-Host "== $n"
     $sw = [Diagnostics.Stopwatch]::StartNew()
     try {
