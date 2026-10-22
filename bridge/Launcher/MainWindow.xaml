@@ -1,0 +1,216 @@
+<Window x:Class="MtgaForgeLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MtgaForgeLauncher"
+        Title="MTGA Forge" Width="1020" Height="720" MinWidth="900" MinHeight="640"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource Bg}" Foreground="{StaticResource Fg}"
+        FontFamily="{StaticResource Ui}" FontSize="14" UseLayoutRounding="True" TextOptions.TextFormattingMode="Ideal">
+  <Grid Background="{StaticResource Bg}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- header -->
+    <Border Grid.Row="0" Padding="24,14" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+      <DockPanel>
+        <local:ForgeIcon Width="42" Height="42" DockPanel.Dock="Left" Margin="0,0,14,0"/>
+        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+          <TextBlock FontSize="20" FontWeight="SemiBold" Text="MTGA Forge"/>
+          <TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="Unofficial fan project. Plays on the open source Forge rules engine."/>
+        </StackPanel>
+        <Border DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Background="{StaticResource Panel2}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="14" Padding="14,5">
+          <TextBlock Text="{Binding PillText}" FontSize="12" FontWeight="SemiBold"/>
+        </Border>
+      </DockPanel>
+    </Border>
+
+    <!-- body: steps on the left, the current step on the right -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+      <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Padding="24,28,16,16">
+        <ItemsControl ItemsSource="{Binding Rail}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,0,0,22">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid Width="28" Height="28" VerticalAlignment="Top" HorizontalAlignment="Left">
+                  <Ellipse x:Name="Dot" Fill="{StaticResource Panel2}" Stroke="{StaticResource Line}" StrokeThickness="1"/>
+                  <TextBlock x:Name="Num" Text="{Binding Number}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                  <TextBlock x:Name="Tick" Text="&#x2713;" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="14" FontWeight="Bold" Foreground="{StaticResource AccentInk}"/>
+                </Grid>
+                <StackPanel Grid.Column="1" Margin="0,2,0,0">
+                  <TextBlock x:Name="Title" Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                  <TextBlock Text="{Binding Hint}" FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+              </Grid>
+              <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding State}" Value="1">
+                  <Setter TargetName="Dot" Property="Fill" Value="{StaticResource Accent}"/>
+                  <Setter TargetName="Dot" Property="Stroke" Value="{StaticResource Accent}"/>
+                  <Setter TargetName="Num" Property="Foreground" Value="{StaticResource AccentInk}"/>
+                  <Setter TargetName="Title" Property="Foreground" Value="{StaticResource Fg}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding State}" Value="2">
+                  <Setter TargetName="Dot" Property="Fill" Value="{StaticResource Good}"/>
+                  <Setter TargetName="Dot" Property="Stroke" Value="{StaticResource Good}"/>
+                  <Setter TargetName="Num" Property="Visibility" Value="Collapsed"/>
+                  <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+                  <Setter TargetName="Title" Property="Foreground" Value="{StaticResource Fg}"/>
+                </DataTrigger>
+              </DataTemplate.Triggers>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+
+      <!-- setup: find MTGA, pick the folder, prepare -->
+      <Grid Grid.Column="1" Visibility="{Binding SetupVisible, Converter={StaticResource B2V}}">
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="32,28,32,16">
+            <TextBlock Text="{Binding Headline}" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Body}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,20" HorizontalAlignment="Left" MaxWidth="640"/>
+
+            <StackPanel Visibility="{Binding NotPreparing, Converter={StaticResource B2V}}">
+              <Border Style="{StaticResource Card}">
+                <StackPanel IsEnabled="{Binding CanEditFields}">
+                  <TextBlock Style="{StaticResource CardTitle}" Text="Your MTGA install (Steam version)"/>
+                  <ListBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource, Mode=TwoWay}">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel>
+                          <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding Note}" FontSize="12" Foreground="{StaticResource Muted}"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <DockPanel Margin="0,6,0,0">
+                    <Button Content="Browse..." DockPanel.Dock="Left" Click="BrowseSource_Click"/>
+                    <TextBlock Text="{Binding SourceNote}" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap"/>
+                  </DockPanel>
+                </StackPanel>
+              </Border>
+
+              <Border Style="{StaticResource Card}">
+                <StackPanel IsEnabled="{Binding CanEditFields}">
+                  <TextBlock Style="{StaticResource CardTitle}" Text="Where the patched copy goes"/>
+                  <DockPanel>
+                    <Button Content="Default" DockPanel.Dock="Right" Margin="8,0,0,0" Command="{Binding DefaultFolderCommand}"/>
+                    <Button Content="Browse..." DockPanel.Dock="Right" Margin="8,0,0,0" Click="BrowseFolder_Click"/>
+                    <TextBox Text="{Binding Folder, UpdateSourceTrigger=LostFocus}"/>
+                  </DockPanel>
+                  <TextBlock Text="{Binding FolderProblem}" Foreground="{StaticResource Bad}" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="{Binding HasFolderProblem, Converter={StaticResource B2V}}"/>
+                  <TextBlock Text="{Binding DiskInfo}" Foreground="{StaticResource Muted}" Margin="0,10,0,0">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Style.Triggers><DataTrigger Binding="{Binding DiskLow}" Value="True"><Setter Property="Foreground" Value="{StaticResource Bad}"/></DataTrigger></Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+
+            <Border Style="{StaticResource Card}" Visibility="{Binding IsPreparing, Converter={StaticResource B2V}}">
+              <StackPanel>
+                <ProgressBar Minimum="0" Maximum="{Binding ProgressMax}" Value="{Binding Progress, Mode=OneWay}" Margin="0,0,0,16"/>
+                <ItemsControl ItemsSource="{Binding Steps}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal" Margin="0,4">
+                        <TextBlock x:Name="Mark" Width="24" Text="&#x25CB;" Foreground="{StaticResource Muted}"/>
+                        <TextBlock x:Name="Label" Text="{Binding Title}" Foreground="{StaticResource Muted}"/>
+                      </StackPanel>
+                      <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding State}" Value="1">
+                          <Setter TargetName="Mark" Property="Text" Value="&#x25B6;"/>
+                          <Setter TargetName="Mark" Property="Foreground" Value="{StaticResource Accent}"/>
+                          <Setter TargetName="Label" Property="Foreground" Value="{StaticResource Fg}"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding State}" Value="2">
+                          <Setter TargetName="Mark" Property="Text" Value="&#x2713;"/>
+                          <Setter TargetName="Mark" Property="Foreground" Value="{StaticResource Good}"/>
+                        </DataTrigger>
+                      </DataTemplate.Triggers>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="32,14" Visibility="{Binding NotPreparing, Converter={StaticResource B2V}}">
+          <DockPanel>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+              <Button Content="Check again" Command="{Binding RecheckCommand}" Margin="0,0,10,0"/>
+              <Button Style="{StaticResource Primary}" Content="{Binding PrepareLabel}" Command="{Binding PrepareCommand}"/>
+            </StackPanel>
+            <TextBlock Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,24,0"
+                       Text="Done once, and again after an MTGA update. About 15 GB. Your Steam install is not touched."/>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <!-- play -->
+      <Grid Grid.Column="1" Margin="32,28,32,16" Visibility="{Binding PlayVisible, Converter={StaticResource B2V}}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock Text="Ready to play" FontSize="26" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding PlayHelp}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,8" MaxWidth="520" HorizontalAlignment="Left"/>
+
+          <StackPanel IsEnabled="{Binding CanEditFields}" MaxWidth="420" HorizontalAlignment="Left">
+            <TextBlock Style="{StaticResource Label}" Text="Your name in the game"/>
+            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="24"/>
+            <TextBlock Text="{Binding ProfileNote}" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
+
+            <TextBlock Style="{StaticResource Label}" Text="Friend code (optional)"/>
+            <TextBox Text="{Binding FriendCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="24" IsEnabled="{Binding OnlineEnabled}"/>
+            <TextBlock Text="To play one friend, both type the same code (like blue-otter-7) and pick the same Casual Play format. Empty means random opponents." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+
+            <CheckBox Content="Offline: no online play, Bot Play only" IsChecked="{Binding Offline}" Margin="0,18,0,0"/>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
+            <Button Style="{StaticResource Primary}" Content="Start" Command="{Binding StartCommand}" MinWidth="140"/>
+            <Button Content="Stop" Command="{Binding StopCommand}" Margin="10,0,0,0" MinWidth="90"/>
+          </StackPanel>
+          <TextBlock Text="{Binding PlayStatus}" Margin="0,14,0,0" TextWrapping="Wrap" MaxWidth="520" HorizontalAlignment="Left"/>
+
+          <WrapPanel Margin="0,22,0,0">
+            <Button Style="{StaticResource LinkButton}" Content="Change game location" Command="{Binding ChangeLocationCommand}" Margin="0,0,20,0"/>
+            <Button Style="{StaticResource LinkButton}" Content="Back up identity..." Click="Backup_Click" Margin="0,0,20,0"/>
+            <Button Style="{StaticResource LinkButton}" Content="Restore..." Click="Restore_Click"/>
+          </WrapPanel>
+        </StackPanel>
+        <local:ForgeIcon Grid.Column="1" Animate="True" Width="210" Height="210" VerticalAlignment="Top" Margin="0,10,0,0"/>
+      </Grid>
+    </Grid>
+
+    <!-- details: everything the launcher runs, on request -->
+    <Border Grid.Row="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+      <StackPanel>
+        <DockPanel Margin="20,8">
+          <Button Style="{StaticResource LinkButton}" Command="{Binding ToggleConsoleCommand}" DockPanel.Dock="Left" FontSize="13" Foreground="{StaticResource Fg}">
+            <TextBlock>
+              <Run Text="Details"/>
+              <Run Text="{Binding ConsoleOpen, Mode=OneWay, Converter={x:Static local:ChevronConverter.Instance}}" Foreground="{StaticResource Muted}"/>
+            </TextBlock>
+          </Button>
+          <TextBlock Text="Every command the launcher runs and what it prints." Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0" DockPanel.Dock="Left"/>
+          <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+            <Button Style="{StaticResource LinkButton}" Content="Copy" Click="CopyLog_Click" Margin="0,0,18,0"/>
+            <Button Style="{StaticResource LinkButton}" Content="Open logs folder" Click="OpenLogs_Click"/>
+          </StackPanel>
+        </DockPanel>
+        <TextBox x:Name="Console" Height="190" IsReadOnly="True" TextWrapping="NoWrap" FontFamily="{StaticResource Mono}" FontSize="12" Background="#0F1317"
+                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" BorderThickness="0,1,0,0" Padding="20,8"
+                 Visibility="{Binding ConsoleOpen, Converter={StaticResource B2V}}"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

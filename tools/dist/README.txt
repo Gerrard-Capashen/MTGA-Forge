@@ -5,8 +5,10 @@ WHAT YOU NEED
 - About 15 GB of free disk space for the patched copy of the game, plus ~1 GB for the card database built on first start.
 
 START
-  Double-click MTGA-Forge.exe: a small window opens. On the first start it prepares your game (press the button, it
-  explains the steps), then you pick how to play and press Start.
+  Double-click MTGA-Forge.exe. It walks you through four steps: it finds your MTGA install (or you browse to it), you pick a folder
+  for the patched copy (default C:MTGA Forge; programs may not write to Program Files without administrator rights), it
+  prepares the game, then you pick how to play and press Start. "Details" at the bottom shows every command it runs and what
+  it prints.
   First start (and after every MTGA update): the game is copied and patched, then the card database is generated from
   YOUR install. This takes several minutes. After that, start is a few seconds: the server starts, then the game; closing
   the game stops the server.

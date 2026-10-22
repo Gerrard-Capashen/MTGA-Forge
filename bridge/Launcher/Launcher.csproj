@@ -4,13 +4,14 @@
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <RollForward>Major</RollForward>
+    <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <StartupObject>MtgaForgeLauncher.Program</StartupObject>
     <AssemblyName>MTGA-Forge</AssemblyName>
     <RootNamespace>MtgaForgeLauncher</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Product>MTGA-Forge</Product>
-    <Description>Launcher for MTGA-Forge (unofficial, not affiliated with Wizards of the Coast)</Description>
+    <Description>Launcher for MTGA-Forge (unofficial fan project, not affiliated with the makers of MTGA)</Description>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>none</DebugType>
   </PropertyGroup>

@@ -1,0 +1,43 @@
+<UserControl x:Class="MtgaForgeLauncher.ForgeIcon"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Drawn from scratch: anvil with a hammer above it (orange palette of the site) -->
+  <UserControl.Resources>
+    <LinearGradientBrush x:Key="Ga" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#FFB04A" Offset="0"/><GradientStop Color="#E8590C" Offset="1"/></LinearGradientBrush>
+    <LinearGradientBrush x:Key="Gd" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#D4540F" Offset="0"/><GradientStop Color="#8F2F06" Offset="1"/></LinearGradientBrush>
+    <LinearGradientBrush x:Key="Gt" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#FFE2B0" Offset="0"/><GradientStop Color="#FF9F45" Offset="1"/></LinearGradientBrush>
+    <SolidColorBrush x:Key="Ink" Color="#2B1208"/>
+  </UserControl.Resources>
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="512" Height="512">
+      <Ellipse x:Name="Shadow" Canvas.Left="86" Canvas.Top="476" Width="340" Height="26" Fill="#40000000" RenderTransformOrigin="0.5,0.5">
+        <Ellipse.RenderTransform><ScaleTransform x:Name="ShadowScale"/></Ellipse.RenderTransform>
+      </Ellipse>
+      <Canvas x:Name="Floating">
+        <Canvas.RenderTransform><TranslateTransform x:Name="FloatMove"/></Canvas.RenderTransform>
+        <Path Data="M172 204 L36 214 Q20 218 30 228 Q100 296 188 322 L196 334 Q214 344 204 364 Q192 394 172 408 L412 418 Q372 398 362 374 Q356 346 372 322 Q420 268 468 222 L172 222 Z"
+              Fill="{StaticResource Ga}" Stroke="{StaticResource Ink}" StrokeThickness="12" StrokeLineJoin="Round"/>
+        <Path Data="M300 222 L468 222 Q420 268 372 322 Q356 346 362 374 Q380 392 396 404 Q330 372 300 300 Z" Fill="{StaticResource Gd}"/>
+        <Path Data="M256 214 Q340 222 478 220" Stroke="{StaticResource Ink}" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+        <Path Data="M150 206 Q178 224 180 266 Q182 292 198 302 M168 204 Q190 230 190 262" Stroke="{StaticResource Ink}" StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+        <Path Data="M176 178 H470 Q482 178 482 190 V216 Q482 224 472 224 H180 Z" Fill="{StaticResource Gt}" Stroke="{StaticResource Ink}" StrokeThickness="12" StrokeLineJoin="Round"/>
+        <Rectangle Canvas.Left="112" Canvas.Top="410" Width="302" Height="44" RadiusX="8" RadiusY="8" Fill="{StaticResource Gd}" Stroke="{StaticResource Ink}" StrokeThickness="12"/>
+        <Path Data="M124 420 H402" Stroke="#B3FFC885" StrokeThickness="5"/>
+
+        <Canvas x:Name="Hammer">
+          <Canvas.RenderTransform>
+            <TransformGroup>
+              <RotateTransform x:Name="HammerTilt" CenterX="372" CenterY="172"/>
+              <TranslateTransform x:Name="HammerMove"/>
+            </TransformGroup>
+          </Canvas.RenderTransform>
+          <Path Data="M96 90 H330 V132 H96 Q82 132 82 111 Q82 90 96 90 Z" Fill="{StaticResource Ga}" Stroke="{StaticResource Ink}" StrokeThickness="12" StrokeLineJoin="Round"/>
+          <Path Data="M92 94 Q84 111 92 128 M106 92 Q98 111 106 130 M120 92 Q112 111 120 130" Stroke="{StaticResource Ink}" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+          <Path Data="M336 56 H396 Q410 56 406 74 Q396 104 408 132 Q412 168 398 172 H336 Z" Fill="{StaticResource Gt}" Stroke="{StaticResource Ink}" StrokeThickness="12" StrokeLineJoin="Round"/>
+          <Path Data="M336 56 H352 V172 H336 Z" Fill="{StaticResource Gd}"/>
+        </Canvas>
+        <Canvas x:Name="Sparks"/>
+      </Canvas>
+    </Canvas>
+  </Viewbox>
+</UserControl>
