@@ -1,0 +1,6 @@
+name = "play"
+compatibility_date = "2025-01-01"
+
+# Pure static site: everything in public/ is served as-is.
+[assets]
+directory = "./public"

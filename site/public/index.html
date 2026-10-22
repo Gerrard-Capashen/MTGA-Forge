@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTGA Forge - Play Standard, Pioneer and Modern on the Forge rules engine</title>
+<meta name="description" content="An unofficial project that points your own Steam copy of MTG Arena at the open source Forge rules engine. Standard, Pioneer, Modern and quick drafts, free.">
+<style>
+  body { background:#1b1410; color:#e8dcc0; font-family:Georgia,"Times New Roman",serif; font-size:18px; line-height:1.55; margin:0; }
+  #page { max-width:46em; margin:0 auto; padding:1.5em 1em 3em; }
+  h1 { font-size:2.4em; text-align:center; color:#f3d98b; margin:.2em 0 0; letter-spacing:.04em; text-shadow:2px 2px 0 #000; }
+  .tag { text-align:center; font-style:italic; color:#c9b27a; margin:.2em 0 1em; }
+  h2 { color:#f3d98b; border-bottom:1px double #8a6d2f; padding-bottom:.15em; margin-top:2em; }
+  hr { border:0; border-top:3px double #8a6d2f; margin:1.5em 0; }
+  a { color:#8fc4ff; } a:visited { color:#c9a2ff; }
+  .box { border:2px ridge #8a6d2f; background:#261c15; padding:.8em 1.2em; margin:1em 0; }
+  table { border-collapse:collapse; width:100%; }
+  td, th { border:1px solid #6b5426; padding:.35em .6em; text-align:left; vertical-align:top; }
+  th { background:#33261a; color:#f3d98b; }
+  nav { text-align:center; margin:.8em 0; }
+  nav a { margin:0 .6em; }
+  .dl { text-align:center; margin:1.2em 0; }
+  .dl span { display:inline-block; border:3px outset #c9a24a; background:#4a3516; color:#f3d98b; padding:.5em 1.4em; font-weight:bold; }
+  .small { font-size:.82em; color:#a8966b; }
+  .new { color:#ff6b4a; font-weight:bold; font-size:.8em; }
+  li { margin:.25em 0; }
+</style>
+</head>
+<body>
+<div id="page">
+
+<h1>&#9876; MTGA FORGE &#9876;</h1>
+<p class="tag">Play Standard, Pioneer and Modern on your favorite client,<br>powered by the Forge rules engine.</p>
+
+<nav>
+  <a href="#what">What is this</a> |
+  <a href="#play">What you can play</a> |
+  <a href="#need">Requirements</a> |
+  <a href="#why">Why</a> |
+  <a href="#legal">Fine print</a>
+</nav>
+<hr>
+
+<h2 id="what">What is this?</h2>
+<p>MTGA Forge swaps the <em>backend</em> of Magic: The Gathering Arena. You keep the client you already know,
+with its table, its animations and its deck builder, but the game itself is refereed by
+<a href="https://github.com/Card-Forge/forge">Forge</a>, the free and open source Magic rules engine
+with thousands of cards scripted by volunteers over many years.</p>
+<p>No MTGA files are shipped or hosted here. A small patcher runs <strong>on your own computer</strong>,
+makes a modified copy of <em>your</em> Steam install, and points it at a Forge server running locally.
+Your original installation is left untouched.</p>
+
+<h2 id="play">What you can play</h2>
+<div class="box">
+<ul>
+  <li><strong>Standard, Pioneer and Modern</strong> games against the Forge AI <span class="new">NEW</span></li>
+  <li><strong>Quick Draft</strong> against AI opponents, for the latest sets <span class="new">NEW</span></li>
+  <li><strong>All cards are free</strong>: build any deck you like, no wildcards, no grind</li>
+  <li><strong>All cosmetics are free</strong>: avatars, sleeves, pets, emotes, titles</li>
+  <li>Friends, invites and direct challenges!</li>
+</ul>
+</div>
+
+<h2 id="need">Requirements</h2>
+<table>
+<tr><th>Operating system</th><td>Windows 10 or 11</td></tr>
+<tr><th>The game</th><td>MTG Arena, <strong>Steam version</strong>, installed on the same PC</td></tr>
+<tr><th>Disk space</th><td>About 15 GB free (the patched copy of the client lives next to your original)</td></tr>
+<tr><th>Internet</th><td>For matchmaking and to fetch card art from Scryfall as you play; bot games run locally</td></tr>
+<tr><th>Extras to install</th><td>None. Java and everything else come bundled</td></tr>
+</table>
+
+<div class="dl"><span>Download: coming soon</span></div>
+<p class="small" style="text-align:center">First start takes a minute or two while the patcher prepares your copy. After a Steam update it simply repeats.</p>
+
+<p><strong>Support:</strong> there are no support channels yet. This is an early, hobby-scale project: expect rough edges and missing/broken cards.</p>
+
+<h2 id="why">Why: you should be able to keep playing</h2>
+<p>Games are sold as things you own, then switched off as services. When the servers go dark, a game you paid for,
+loved, and maybe built a collection in, can simply stop existing. Players have no say, and often no copy to fall back on.</p>
+<p>The <a href="https://www.stopkillinggames.com/">Stop Killing Games</a> movement pushes back on exactly that. Its
+European Citizens' Initiative passed one million verified signatures, and its ask is modest: when a publisher ends
+support, the game should not be left unplayable. Offline modes, or tools to run your own servers, would do. Nobody is asking
+for perpetual support or to be handed the publisher's content.</p>
+<div class="box">
+<p><strong>It has already happened to Magic.</strong></p>
+<ul>
+  <li><strong>Magic: Legends</strong> (action RPG): never left open beta. Announced in June 2021, servers closed on October 31, 2021. The game no longer exists in any playable form.</li>
+  <li><strong>Magic SpellSlingers</strong> (CCG): launched in August 2022, purchases were switched off in March 2024 and the servers closed on June 4, 2024, about 18 months after launch.</li>
+  <li><strong>Magic Duels</strong> (the successor to the <em>Duels of the Planeswalkers</em> series): delisted from Steam and Xbox on November 26, 2019, with the store removed and official support ended. Those who already owned it could keep playing for the time being, but nothing new could be bought and the game was left to fade.</li>
+</ul>
+<p class="small">Each of these was a Magic game people paid for, played and collected in, and each one was ended by its publisher. Nothing guarantees Arena will be treated differently when its time comes.</p>
+</div>
+<p>MTGA Forge comes from the same belief, applied to a game we like. The rules of Magic are a long-running
+public tradition, and Forge proves they can live in an open, community-owned engine. If the day ever comes when Arena's
+servers shut down, the client, the cards and the decks you care about can still be played.</p>
+<p>It is also just a nice way to play: no queue times, no paywalled cards, and opponents that never rage-quit (well, most of the time).</p>
+
+<h2 id="legal">The fine print</h2>
+<ul>
+  <li>This is an <strong>unofficial fan project</strong>. It is not made, endorsed or supported by the makers of MTGA or by Valve.</li>
+  <li>We do not redistribute the game, its code, art, audio or card data. You need your own legitimate copy of MTG Arena on Steam,
+      and everything derived from it is produced on your machine and stays there.</li>
+  <li>The patched copy is separate from your original install and uses its own local profile. In our testing it makes no connections to MTGA's servers: telemetry and analytics are removed, and the only network traffic we saw was local play and card art from Scryfall.</li>
+  <li>Card art is fetched live from <a href="https://scryfall.com/">Scryfall</a> and is never bundled.</li>
+  <li>The rules engine is <a href="https://github.com/Card-Forge/forge">Forge</a>, licensed under the GPL; its source stays available.</li>
+  <li>Magic: The Gathering, MTG Arena and related names are trademarks of their respective owners.</li>
+  <li>Provided as is, with no warranty. We cannot speak for MTGA's terms of service, so use it at your discretion.</li>
+</ul>
+
+<hr>
+<p class="small" style="text-align:center">Built by players, for players.</p>
+</div>
+</body>
+</html>
