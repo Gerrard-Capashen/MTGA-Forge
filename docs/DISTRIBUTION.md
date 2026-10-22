@@ -7,7 +7,7 @@ Built by `tools\package.ps1`, checked by `tools\check-package.ps1` (the build fa
 
 | Path | Content |
 |------|---------|
-| `MTGA-Forge.exe` (+ `.config`) | the one start button: the launcher window (WinForms, .NET Framework 4.8, source `bridge\Launcher`). First start: explains and runs the patch with step progress; then your name (stored in the profile: the box is prefilled from `data\profile.json` and shows the player id and the `#tag` the game adds) and single player / host a friend / join a friend (address list, "can I reach them?" test, live connection status read from the server log). It only collects settings and runs the two scripts hidden |
+| `MTGA-Forge.exe` (+ `.config`) | the one start button: the launcher window (WinForms, .NET Framework 4.8, source `bridge\Launcher`). First start: explains and runs the patch with step progress; then your name (stored in the profile: the box is prefilled from `data\profile.json` and shows the player id and the `#tag` the game adds) and an optional friend code (Casual Play pairs online through the matchmaking coordinator, see `coordinator/`; the code restricts the pairing to players who typed the same one) plus an Offline switch, with live queue/match status read from the server log. It only collects settings and runs the two scripts hidden |
 | `MTGA-Forge.cmd` | command-line start: no arguments opens the exe, with arguments it runs `tools\launcher.ps1` directly |
 | `tools\` | `launcher.ps1`, `forge-patch.ps1`, `layout.ps1`, `verify.ps1`, `check-package.ps1` |
 | `patcher\Patcher.exe` + `Mono.Cecil*.dll` | Cecil patcher on .NET Framework 4.8 (part of Windows 10/11: no SDK or runtime to install). Verbs: (none) patch Core.dll + AK dll, `identity`, `unityconnect`, `check-bridge`, `audit-bridge` |

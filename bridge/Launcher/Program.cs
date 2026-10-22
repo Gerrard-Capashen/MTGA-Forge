@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 // MTGA-Forge.exe: the one window. Guides the first start (copy + patch the game), then lets the player choose single player,
-// hosting a friend or joining a friend, and shows what is happening. The work is done by tools\forge-patch.ps1 (check/patch)
+// the friend code / offline choice, and shows what is happening. The work is done by tools\forge-patch.ps1 (check/patch)
 // and tools\launcher.ps1 (server + game); this program only collects settings, runs them hidden and explains their output.
 //   MTGA-Forge.exe --selftest <shot.png>   build both pages, save pictures of them (<shot>.png, <shot>-setup.png), exit
 namespace MtgaForgeLauncher
@@ -84,7 +84,6 @@ namespace MtgaForgeLauncher
 
     sealed class MainForm : Form
     {
-        const int PeerPort = 30012;
         static readonly string[] PatchSteps = { "refresh", "orig", "identity", "unityconnect", "storeconfig", "bridge", "patch", "carddb", "manifest" };
 
         readonly string root;
@@ -92,7 +91,7 @@ namespace MtgaForgeLauncher
         readonly string homeDefault = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? ".", "MTGA-Forge");
         readonly string iniPath;
         readonly Dictionary<string, string> set = new Dictionary<string, string>
-            { { "name", "Forge Player" }, { "mode", "bot" }, { "peer", "" }, { "key", "" }, { "folder", "" }, { "source", "" } };
+            { { "name", "Forge Player" }, { "code", "" }, { "offline", "0" }, { "folder", "" }, { "source", "" } };
 
         // setup page
         readonly Panel pgSetup = new Panel();
@@ -102,11 +101,10 @@ namespace MtgaForgeLauncher
         // play page
         readonly Panel pgPlay = new Panel();
         readonly Label lblProfile = new Label();
-        readonly TextBox txtName = new TextBox(), txtPeer = new TextBox(), txtKey = new TextBox(), txtFolder = new TextBox();
-        readonly RadioButton rbBot = new RadioButton(), rbHost = new RadioButton(), rbJoin = new RadioButton();
-        readonly ListBox lstAddr = new ListBox();
-        readonly Label lblHost = new Label(), lblTs = new Label(), lblJoin = new Label(), lblKey = new Label(), lblHelp = new Label(), lblStatus = new Label(), lblTest = new Label();
-        readonly Button btnCopy = new Button(), btnTest = new Button(), btnBrowse = new Button(), btnStart = new Button(), btnStop = new Button();
+        readonly TextBox txtName = new TextBox(), txtCode = new TextBox(), txtFolder = new TextBox();
+        readonly CheckBox chkOffline = new CheckBox();
+        readonly Label lblHelp = new Label(), lblStatus = new Label();
+        readonly Button btnBrowse = new Button(), btnStart = new Button(), btnStop = new Button();
         readonly TextBox log = new TextBox();
         readonly Timer logTimer = new Timer { Interval = 700 };
 
@@ -204,8 +202,7 @@ namespace MtgaForgeLauncher
 
         void SaveSettings()
         {
-            set["name"] = txtName.Text; set["peer"] = txtPeer.Text; set["key"] = txtKey.Text; set["folder"] = txtFolder.Text;
-            set["mode"] = rbHost.Checked ? "host" : rbJoin.Checked ? "join" : "bot";
+            set["name"] = txtName.Text; set["code"] = FriendCode; set["offline"] = chkOffline.Checked ? "1" : "0"; set["folder"] = txtFolder.Text;
             try
             {
                 Directory.CreateDirectory(homeDefault);
@@ -223,13 +220,13 @@ namespace MtgaForgeLauncher
             Font = new Font("Segoe UI", 9f);
             AutoScaleDimensions = new SizeF(7f, 15f);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(640, 620);
+            ClientSize = new Size(640, 530);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
 
             // ---- setup page
-            At(pgSetup, 0, 0, 640, 620);
+            At(pgSetup, 0, 0, 640, 530);
             lblSetupTitle.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
             pgSetup.Controls.Add(At(lblSetupTitle, 20, 16, 600, 30));
             lblSetupText.AutoSize = false;
@@ -249,7 +246,7 @@ namespace MtgaForgeLauncher
             btnRecheck.Click += (s, e) => RunCheck();
 
             // ---- play page
-            At(pgPlay, 0, 0, 640, 620);
+            At(pgPlay, 0, 0, 640, 530);
             pgPlay.Controls.Add(At(new Label { Text = "Your name in the game" }, 20, 14, 300, 20));
             txtName.Text = set["name"];
             txtName.MaxLength = 24;
@@ -258,68 +255,49 @@ namespace MtgaForgeLauncher
             lblProfile.ForeColor = SystemColors.GrayText;
             pgPlay.Controls.Add(At(lblProfile, 310, 40, 310, 20));
 
-            var grp = At(new GroupBox { Text = "How do you want to play?" }, 20, 74, 600, 100);
-            rbBot.Text = "Single player: against the Forge AI";
-            rbHost.Text = "Play a friend: I host (my friend connects to me)";
-            rbJoin.Text = "Play a friend: I join (I connect to my friend)";
-            int ry = 22;
-            foreach (var r in new[] { rbBot, rbHost, rbJoin }) { grp.Controls.Add(At(r, 16, ry, 560, 22)); ry += 24; r.CheckedChanged += (s, e) => UpdateMode(); }
+            var grp = At(new GroupBox { Text = "Playing" }, 20, 74, 600, 134);
+            grp.Controls.Add(At(new Label { Text = "Bot Play (against the Forge AI) always works. Casual Play finds another player online for the same format: nothing to set up.", AutoSize = false }, 16, 22, 570, 34));
+            grp.Controls.Add(At(new Label { Text = "Friend code (optional)" }, 16, 62, 160, 20));
+            txtCode.Text = set["code"];
+            txtCode.MaxLength = 24;
+            grp.Controls.Add(At(txtCode, 180, 59, 200, 24));
+            grp.Controls.Add(At(new Label { Text = "To play a friend: both type the same code (like blue-otter-7), then both pick the same Casual Play format. Empty = random opponents.", AutoSize = false, ForeColor = SystemColors.GrayText }, 16, 88, 570, 32));
             pgPlay.Controls.Add(grp);
 
-            lblHost.Text = "Send your friend one of these addresses (the first one is the best choice):";
-            pgPlay.Controls.Add(At(lblHost, 20, 184, 600, 20));
-            pgPlay.Controls.Add(At(lstAddr, 20, 206, 480, 70));
-            btnCopy.Text = "Copy address";
-            btnCopy.Click += (s, e) => CopyAddress();
-            pgPlay.Controls.Add(At(btnCopy, 510, 206, 110, 28));
-            lblTs.AutoSize = false;
-            pgPlay.Controls.Add(At(lblTs, 20, 280, 600, 36));
-
-            lblJoin.Text = "Your friend's address (what they sent you, like 100.64.1.2:30012)";
-            pgPlay.Controls.Add(At(lblJoin, 20, 184, 600, 20));
-            txtPeer.Text = set["peer"];
-            pgPlay.Controls.Add(At(txtPeer, 20, 206, 380, 24));
-            btnTest.Text = "Can I reach them?";
-            btnTest.Click += (s, e) => TestConnection();
-            pgPlay.Controls.Add(At(btnTest, 410, 204, 130, 28));
-            lblTest.AutoSize = false;
-            pgPlay.Controls.Add(At(lblTest, 20, 236, 600, 60));
-
-            lblKey.Text = "Shared key (optional: both players type the same word)";
-            pgPlay.Controls.Add(At(lblKey, 20, 324, 600, 20));
-            txtKey.Text = set["key"];
-            pgPlay.Controls.Add(At(txtKey, 20, 346, 280, 24));
-
-            pgPlay.Controls.Add(At(new Label { Text = "Game folder (the patched copy of MTGA and your decks live here)" }, 20, 382, 600, 20));
+            pgPlay.Controls.Add(At(new Label { Text = "Game folder (the patched copy of MTGA and your decks live here)" }, 20, 218, 600, 20));
             txtFolder.Text = set["folder"];
-            pgPlay.Controls.Add(At(txtFolder, 20, 404, 480, 24));
+            pgPlay.Controls.Add(At(txtFolder, 20, 240, 480, 24));
             btnBrowse.Text = "Browse...";
             btnBrowse.Click += (s, e) =>
             {
                 using (var d = new FolderBrowserDialog { Description = "Folder for the patched game copy (about 15 GB) and your decks", SelectedPath = Folder })
                     if (d.ShowDialog(this) == DialogResult.OK) { txtFolder.Text = d.SelectedPath; RunCheck(); }
             };
-            pgPlay.Controls.Add(At(btnBrowse, 510, 402, 110, 28));
+            pgPlay.Controls.Add(At(btnBrowse, 510, 238, 110, 28));
+
+            chkOffline.Text = "Offline: no online play (Casual Play is switched off, Bot Play works)";
+            chkOffline.Checked = set["offline"] == "1";
+            pgPlay.Controls.Add(At(chkOffline, 20, 274, 600, 22));
 
             lblHelp.AutoSize = false;
-            pgPlay.Controls.Add(At(lblHelp, 20, 438, 600, 54));
+            pgPlay.Controls.Add(At(lblHelp, 20, 302, 600, 54));
             btnStart.Text = "Start";
             btnStop.Text = "Stop";
             btnStop.Enabled = false;
             btnStart.Click += (s, e) => StartGame();
             btnStop.Click += (s, e) => runner?.KillTree();
-            pgPlay.Controls.Add(At(btnStart, 20, 496, 120, 30));
-            pgPlay.Controls.Add(At(btnStop, 150, 496, 120, 30));
+            pgPlay.Controls.Add(At(btnStart, 20, 364, 120, 30));
+            pgPlay.Controls.Add(At(btnStop, 150, 364, 120, 30));
             lblStatus.AutoSize = false;
-            pgPlay.Controls.Add(At(lblStatus, 285, 496, 335, 34));
+            pgPlay.Controls.Add(At(lblStatus, 285, 364, 335, 34));
             log.Multiline = true; log.ReadOnly = true; log.ScrollBars = ScrollBars.Vertical; log.Font = new Font("Consolas", 8f);
-            pgPlay.Controls.Add(At(log, 20, 536, 600, 74));
+            pgPlay.Controls.Add(At(log, 20, 404, 600, 116));
 
             Controls.Add(pgPlay);
             Controls.Add(pgSetup);
             pgPlay.Visible = false;
 
-            switch (set["mode"]) { case "host": rbHost.Checked = true; break; case "join": rbJoin.Checked = true; break; default: rbBot.Checked = true; break; }
+            chkOffline.CheckedChanged += (s, e) => UpdateMode();
             UpdateMode();
             logTimer.Tick += (s, e) => TailServerLog();
         }
@@ -466,103 +444,23 @@ namespace MtgaForgeLauncher
         }
 
         // ---------------------------------------------------------------------------------------------- play page
-        RadioButton[] Radios { get { return new[] { rbBot, rbHost, rbJoin }; } }
-        string Mode { get { return rbHost.Checked ? "host" : rbJoin.Checked ? "join" : "bot"; } }
+        /// <summary>The friend code as typed, reduced to letters, digits, '-' and '_' (it goes on a command line and into a URL).</summary>
+        string FriendCode { get { return Regex.Replace(txtCode.Text.Trim(), "[^A-Za-z0-9_-]", ""); } }
 
         void UpdateMode()
         {
-            string m = Mode;
-            foreach (Control c in new Control[] { lblHost, lstAddr, btnCopy, lblTs }) c.Visible = m == "host";
-            foreach (Control c in new Control[] { lblJoin, txtPeer, btnTest, lblTest }) c.Visible = m == "join";
-            foreach (Control c in new Control[] { lblKey, txtKey }) c.Visible = m != "bot";
-            switch (m)
-            {
-                case "bot": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Bot Play, choose Standard, Pioneer or Modern and pick a deck of that format. Build decks in the normal deck editor."; break;
-                case "host": lblHelp.Text = "Press Start, then in the game: Play > Find Match > Casual Play, choose the format (Standard, Pioneer or Modern) and pick a deck. It waits for your friend (start the host first; your friend must pick the same format). Windows may ask if Java can accept connections: allow it."; break;
-                default: lblHelp.Text = "Wait until the host is waiting in their game, press Start, then in the game: Play > Find Match > Casual Play, choose the same format as the host and pick a deck. You both need the same MTGA version and the same MTGA-Forge package."; break;
-            }
-            if (m == "host")
-            {
-                lstAddr.Items.Clear();
-                var addrs = MyAddresses();
-                foreach (var a in addrs) lstAddr.Items.Add(a.Item1);
-                if (lstAddr.Items.Count > 0) lstAddr.SelectedIndex = 0;
-                lblTs.Text = addrs.Any(a => a.Item3 == 0)
-                    ? "Tailscale/ZeroTier found: that address works for a friend anywhere."
-                    : "No Tailscale/ZeroTier found. For a friend outside your home network install Tailscale (free, tailscale.com) on both PCs and use the 100.x address it shows. The other addresses only work inside one network.";
-            }
-        }
-
-        /// <summary>(text, address, rank) of this PC's IPv4 addresses, best first.</summary>
-        static List<Tuple<string, string, int>> MyAddresses()
-        {
-            var res = new List<Tuple<string, string, int>>();
-            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
-                foreach (var ua in nic.GetIPProperties().UnicastAddresses)
-                {
-                    if (ua.Address.AddressFamily != AddressFamily.InterNetwork) continue;
-                    string ip = ua.Address.ToString();
-                    if (ip.StartsWith("127.") || ip.StartsWith("169.254.")) continue;
-                    var b = ua.Address.GetAddressBytes();
-                    string kind = "local network"; int rank = 2;
-                    if (b[0] == 100 && b[1] >= 64 && b[1] <= 127) { kind = "Tailscale - works over the internet"; rank = 0; }
-                    else if (nic.Name.IndexOf("ZeroTier", StringComparison.OrdinalIgnoreCase) >= 0 || nic.Description.IndexOf("ZeroTier", StringComparison.OrdinalIgnoreCase) >= 0) { kind = "ZeroTier - works over the internet"; rank = 0; }
-                    else if (nic.Name.StartsWith("vEthernet") || nic.Description.IndexOf("VMware", StringComparison.OrdinalIgnoreCase) >= 0 || nic.Description.IndexOf("VirtualBox", StringComparison.OrdinalIgnoreCase) >= 0) { kind = "virtual adapter - probably not this"; rank = 3; }
-                    string addr = ip + ":" + PeerPort;
-                    res.Add(Tuple.Create(addr + "   (" + kind + ")", addr, rank));
-                }
-            }
-            return res.OrderBy(t => t.Item3).ThenBy(t => t.Item2).ToList();
-        }
-
-        void CopyAddress()
-        {
-            if (lstAddr.SelectedItem == null) return;
-            string addr = ((string)lstAddr.SelectedItem).Split(' ')[0];
-            try { Clipboard.SetText(addr); lblStatus.Text = "Address copied: " + addr; } catch { lblStatus.Text = "Could not use the clipboard; type " + addr; }
-        }
-
-        static bool SplitPeer(string text, out string host, out int port)
-        {
-            host = ""; port = PeerPort;
-            text = (text ?? "").Trim();
-            if (text == "") return false;
-            int c = text.LastIndexOf(':');
-            if (c > 0 && int.TryParse(text.Substring(c + 1), out port)) host = text.Substring(0, c);
-            else { host = text; port = PeerPort; }
-            return host != "";
-        }
-
-        async void TestConnection()
-        {
-            string host; int port;
-            if (!SplitPeer(txtPeer.Text, out host, out port)) { lblTest.Text = "Type your friend's address first."; return; }
-            lblTest.Text = "Trying " + host + ":" + port + " ...";
-            btnTest.Enabled = false;
-            bool ok = false; string why = "";
-            try
-            {
-                using (var c = new TcpClient())
-                {
-                    var t = c.ConnectAsync(host, port);
-                    if (await Task.WhenAny(t, Task.Delay(4000)) == t && t.Status == TaskStatus.RanToCompletion && c.Connected) ok = true;
-                    else why = t.IsFaulted && t.Exception != null ? t.Exception.GetBaseException().Message : "no answer within 4 seconds";
-                }
-            }
-            catch (Exception e) { why = e.Message; }
-            btnTest.Enabled = true;
-            lblTest.Text = ok
-                ? "Reached " + host + ":" + port + ": your friend's MTGA-Forge is listening. They still have to press Play in their game before you do."
-                : "Could not reach " + host + ":" + port + " (" + why + "). Check: the address is right, your friend started MTGA-Forge with \"I host\", both PCs are connected to Tailscale/ZeroTier, and their firewall allowed Java.";
+            txtCode.Enabled = !chkOffline.Checked && !busy;
+            lblHelp.Text = chkOffline.Checked
+                ? "Press Start, then in the game: Play > Find Match > Bot Play, choose Standard, Pioneer or Modern and pick a deck of that format. Build decks in the normal deck editor."
+                : "Press Start, then in the game: Play > Find Match. Bot Play: against the Forge AI. Casual Play: against another player online; choose Standard, Pioneer or Modern and a deck of that format. You both need the same MTGA version and the same MTGA-Forge package.";
         }
 
         // ---------------------------------------------------------------------------------------------- run the game
         void SetRunning(bool running)
         {
-            foreach (Control c in new Control[] { btnStart, txtName, rbBot, rbHost, rbJoin, txtPeer, txtKey, txtFolder, btnBrowse, btnTest }) c.Enabled = !running;
+            foreach (Control c in new Control[] { btnStart, txtName, txtCode, chkOffline, txtFolder, btnBrowse }) c.Enabled = !running;
             btnStop.Enabled = running;
+            if (!running) UpdateMode();
         }
 
         string BuildArgs()
@@ -570,19 +468,14 @@ namespace MtgaForgeLauncher
             var a = new StringBuilder("-NoPause -Folder " + Q(Folder));
             if (set["source"] != "") a.Append(" -Source " + Q(set["source"]));
             if (txtName.Text.Trim() != "") a.Append(" -Name " + Q(txtName.Text.Trim()));
-            if (Mode != "bot")
-            {
-                a.Append(" -P2P " + Mode);
-                if (Mode == "join") a.Append(" -Peer " + Q(txtPeer.Text.Trim()));
-                if (txtKey.Text.Trim() != "") a.Append(" -PeerKey " + Q(txtKey.Text.Trim()));
-            }
+            if (chkOffline.Checked) a.Append(" -Offline");
+            else if (FriendCode != "") a.Append(" -FriendCode " + Q(FriendCode));
             return a.ToString();
         }
 
         void StartGame()
         {
             if (busy) return;
-            if (Mode == "join" && txtPeer.Text.Trim() == "") { MessageBox.Show(this, "Type your friend's address first.", "MTGA-Forge"); return; }
             if (txtName.Text.Trim() == "") { MessageBox.Show(this, "Type a name first.", "MTGA-Forge"); return; }
             SaveSettings();
             log.Text = "";
@@ -613,7 +506,7 @@ namespace MtgaForgeLauncher
             if (m.Success) { serverLog = m.Groups[1].Value; serverLogPos = 0; logTimer.Start(); lblStatus.Text = "Starting the server..."; }
             else if (l.Contains("Patching the game")) lblStatus.Text = "Updating the patched game first (a few minutes)...";
             else if (l.Contains("Server ready")) lblStatus.Text = "Server ready, starting the game...";
-            else if (l.Contains("MTGA started")) lblStatus.Text = Mode == "bot" ? "Game running. Close the game window to finish." : "Game running. Now pick Casual Play, a format and a deck in the game.";
+            else if (l.Contains("MTGA started")) lblStatus.Text = "Game running. Pick Bot Play or Casual Play, a format and a deck. Close the game window to finish.";
         }
 
         /// <summary>The server's log carries the connection events: translate them into plain sentences.</summary>
@@ -639,11 +532,12 @@ namespace MtgaForgeLauncher
                 string l = raw.Trim();
                 if (l == "") continue;
                 Match m;
-                if (l.Contains("peer: waiting for a guest")) lblStatus.Text = "Your deck is in. Waiting for your friend to join...";
-                else if ((m = Regex.Match(l, @"peer: guest '(.+)' joined")).Success) lblStatus.Text = m.Groups[1].Value + " joined. The game is starting.";
-                else if ((m = Regex.Match(l, @"peer: rejected [^:]+: (.+)$")).Success) lblStatus.Text = "A guest was turned away: " + m.Groups[1].Value;
-                else if ((m = Regex.Match(l, @"peer: join failed: (.+)$")).Success) lblStatus.Text = "Could not join: " + m.Groups[1].Value;
-                else if (l.Contains("peer: joined ")) lblStatus.Text = "Connected to the host. The game is starting.";
+                if ((m = Regex.Match(l, @"FD online: '.*' queues in \S+ with friend code (\S+)")).Success) lblStatus.Text = "Waiting for your friend (code " + m.Groups[1].Value + ")...";
+                else if (Regex.IsMatch(l, @"FD online: '.*' queues in ")) lblStatus.Text = "In the queue. Waiting for an opponent...";
+                else if ((m = Regex.Match(l, @"FD online: paired with (.+) as (host|guest)")).Success) lblStatus.Text = "Matched with " + m.Groups[1].Value + ". The game is starting.";
+                else if ((m = Regex.Match(l, @"FD online: no match \((.+)\)")).Success) lblStatus.Text = "No match: " + m.Groups[1].Value;
+                else if ((m = Regex.Match(l, @"FD online: join failed: (.+)$")).Success) lblStatus.Text = "Could not join: " + m.Groups[1].Value;
+                else if (l.Contains("matchmaking server unreachable")) lblStatus.Text = "Can't reach the matchmaking server: check your internet connection.";
                 else if (l.Contains("[mtga] game over")) lblStatus.Text = "Game over. Close the game window to finish.";
                 else if (l.Contains("game thread died")) lblStatus.Text = "The game stopped unexpectedly (see the server log).";
                 else continue;
@@ -657,15 +551,14 @@ namespace MtgaForgeLauncher
             selfTest = true;
             var report = new StringBuilder();
             report.AppendLine("root " + root + ", tools " + (Directory.Exists(tools) ? "ok" : "MISSING"));
-            foreach (var mode in new[] { "bot", "host", "join" })
-            {
-                (mode == "host" ? rbHost : mode == "join" ? rbJoin : rbBot).Checked = true;
-                if (mode == "join") txtPeer.Text = "100.64.1.2:30012";
-                report.AppendLine(mode + ": launcher.ps1 " + BuildArgs());
-            }
+            report.AppendLine("online: launcher.ps1 " + BuildArgs());
+            txtCode.Text = "blue-otter-7";
+            report.AppendLine("friend: launcher.ps1 " + BuildArgs());
+            chkOffline.Checked = true;
+            report.AppendLine("offline: launcher.ps1 " + BuildArgs());
+            chkOffline.Checked = false;
             if (shot != null)
             {
-                rbHost.Checked = true;
                 ShowPage(true);
                 Save(shot);
                 ShowSetup("not patched yet");

@@ -1,6 +1,6 @@
 ﻿# One start button: (re)patches the client when MTGA was updated, starts the Forge server, waits for its ports, starts the patched
 # MTGA.exe and stops the server when the client exits.
-# Usage: MTGA-Forge.cmd [-Source <MTGA install>] [-Folder <folder>] [-PatchOnly] [-Repatch] [-Firewall] [-ClientArgs '-screen-width 1280 ...'] [-Instance 2 -Name Bob] [-P2P host | -P2P join -Peer <ip>]
+# Usage: MTGA-Forge.cmd [-Source <MTGA install>] [-Folder <folder>] [-PatchOnly] [-Repatch] [-Firewall] [-ClientArgs '-screen-width 1280 ...'] [-Instance 2 -Name Bob] [-FriendCode <word>] [-Offline]
 #   -Folder      where the patched client (client\), your decks and settings (data\) and the logs (logs\) live; default %LOCALAPPDATA%\MTGA-Forge
 #                (the patched client is a full copy of the game, about 14 GB: pick a drive with room; once chosen it is remembered)
 #   -Source      the MTGA install to patch from (found through Steam by default; remembered once given)
@@ -9,10 +9,11 @@
 #                identity (product MTG<N>: own PlayerPrefs and Player.log) and, without -ClientArgs, a 1280x720 window. Use a different -Folder per instance
 #                (each has its own 14 GB patched client, decks and logs). N = 0..9, default 0 = the normal single client.
 #   -Name        player name shown in the game (default 'Forge Player', with -Instance 'Forge Player N')
-#   -P2P host|join  play a friend instead of the bot: pick the bot-match queue entry with a deck. host: waits for ONE guest on the peer port
-#                (30012 + 100*Instance; prints the addresses to give your friend, e.g. your Tailscale/ZeroTier IP); join: connects to -Peer.
-#                Both need the same MTGA build and MTGA-Forge version. Start the host's game first, then the guest's.
-#   -Peer        host address for -P2P join: <ip> or <ip>:<port>        -PeerKey  optional shared secret both sides must give
+#   Casual Play (Play > Find Match > Casual Play > Standard / Pioneer / Modern) pairs you online with another player of the same format through the
+#                matchmaking coordinator: nothing to set up. Both need the same MTGA build and MTGA-Forge version.
+#   -FriendCode  only pair with players who typed the same code (play a friend: both type e.g. 'blue-otter-7'); without it you meet random players
+#   -Offline     no online play (Casual Play shows an error; Bot Play works as always)        -Coordinator  another matchmaking server (wss://...)
+#   -P2P host|join  DEPRECATED direct link to one friend over a private network (-Peer <ip>[:port], -PeerKey): host waits on the peer port (30012 + 100*Instance)
 #   -NoPause     do not wait for Enter after an error (the launcher window uses it)
 #   -Firewall    also create the outbound-block firewall rule for the patched MTGA.exe (asks for administrator rights once)
 # Exit code: 0 = the client ran and was closed, 1 = problem (message printed), 2 = another instance is running.
@@ -27,6 +28,9 @@ param(
     [ValidateSet('', 'host', 'join')][string]$P2P = '',
     [string]$Peer = '',
     [string]$PeerKey = '',
+    [string]$FriendCode = '',
+    [switch]$Offline,
+    [string]$Coordinator = '',
     [string]$ClientArgs = '',
     [switch]$NoPause
 )
@@ -112,6 +116,11 @@ try {
     if ($busy) { Stop-WithMessage "Port $(($busy.LocalPort | Sort-Object -Unique) -join ', ') is used by another program ($((Get-Process -Id $busy[0].OwningProcess -ErrorAction SilentlyContinue).ProcessName)). Close it and start again." }
 
     $p2pArgs = @()
+    if ($Offline) { $p2pArgs += '-Dmtga.p2p=off' }
+    elseif (-not $P2P) {
+        if ($Coordinator) { $p2pArgs += "-Dmtga.coordinator=$Coordinator" }
+        if ($FriendCode) { $p2pArgs += "-Dmtga.friendcode=`"$FriendCode`"" }
+    }
     if ($P2P) {
         $p2pArgs += "-Dmtga.p2p=$P2P", "-Dmtga.peerport=$peerPort"
         if ($Peer) { $p2pArgs += "-Dmtga.peer=$Peer" }

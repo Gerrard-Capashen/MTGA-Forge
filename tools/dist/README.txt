@@ -1,4 +1,4 @@
-MTGA-Forge: play Magic Arena's client against the Forge rules engine, offline.
+MTGA-Forge: play Magic Arena's client against the Forge rules engine (Bot Play offline, Casual Play online).
 
 WHAT YOU NEED
 - Windows 10/11 and MTGA installed (Steam). Nothing else: Java and the patch tools are in this folder.
@@ -11,15 +11,15 @@ START
   YOUR install. This takes several minutes. After that, start is a few seconds: the server starts, then the game; closing
   the game stops the server.
 
-PLAY A FRIEND (two players, each with their own MTGA and this package, the same MTGA version)
-  Both install Tailscale (free, tailscale.com) and sign in to the same network, or play on the same local network.
-  Host:  pick "I host", Start. The window lists addresses: send your friend the Tailscale one (100.x.x.x:30012).
-         In the game: Play > Find Match > Casual Play > Standard, Pioneer or Modern, choose a deck, Play. It waits for your friend.
-  Guest: pick "I join", paste the address, Start, and once the host is waiting do the same in the game
-         (Play > Find Match > Casual Play, the SAME format as the host, deck, Play). The two of you then play a normal Magic game.
-  The first time the host starts, Windows asks whether "Java" may accept connections: allow it (private networks).
-  Without Tailscale, the host can instead open TCP port 30012 on their router. If you are told "different card
-  database", one of you has another MTGA version or another MTGA-Forge package.
+PLAY ONLINE (each player with their own MTGA and this package, the same MTGA version)
+  In the game: Play > Find Match > Casual Play > Standard, Pioneer or Modern, choose a deck of that format, Play. You are
+  paired with another player waiting in the same format; the one who waited longest runs the game on their PC. Nothing to
+  set up: no addresses, no router ports. Only the pairing and the game messages go through a small matchmaking server (a free
+  Cloudflare Worker); no deck lists or accounts are stored there.
+  To play a specific friend: both type the same Friend code in the window (like blue-otter-7) before pressing Start, then both
+  pick the same Casual Play format. Without a code you meet random players.
+  If you are told "different card database", one of you has another MTGA version or another MTGA-Forge package.
+  "Offline" in the window (or -Offline) switches online play off.
   (Single player: Play > Find Match > Bot Play. Each queue only accepts decks legal in its format.)
 
   Options (run from a command prompt):
@@ -27,13 +27,14 @@ PLAY A FRIEND (two players, each with their own MTGA and this package, the same 
     MTGA-Forge.cmd -Source "D:\Games\MTGA"    MTGA install to use when Steam is not where we look (remembered)
     MTGA-Forge.cmd -PatchOnly                 patch, do not start
     MTGA-Forge.cmd -Repatch                   patch again from scratch
-    MTGA-Forge.cmd -P2P host                  (or: -P2P join -Peer <address>) a friend game without the window
+    MTGA-Forge.cmd -FriendCode blue-otter-7   only meet players with the same code (play a friend) without the window
+    MTGA-Forge.cmd -Offline                   no online play
     MTGA-Forge.cmd -Firewall                  also add a firewall rule that blocks the patched MTGA.exe from the internet (asks for admin once)
 
 WHAT IT DOES TO YOUR GAME
   Nothing. Your Steam install is only read. The patched game is a separate copy in <Folder>\client; it uses its own
   settings, never signs in to Wizards and sends nothing to them (the patch switches off its network calls; the optional
-  firewall rule blocks it as well). Card art of cards that MTGA does not have is fetched from Scryfall on demand.
+  firewall rule blocks it as well). Online play only talks to the matchmaking server, from the Forge server process. Card art of cards that MTGA does not have is fetched from Scryfall on demand.
 
 AFTER AN MTGA UPDATE
   The launcher notices the new version and patches again before starting. If a new MTGA build changed something the patch
