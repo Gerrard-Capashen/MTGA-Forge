@@ -278,7 +278,7 @@ namespace MtgaForgeLauncher
             try
             {
                 string full = Path.GetFullPath(folder);
-                if (!Path.IsPathRooted(folder)) problem = "Type a full path, like C:\\MTGA Forge.";
+                if (!Path.IsPathRooted(folder)) problem = "Type a full path, like D:\\Games\\MTGA Forge.";
                 else if (full.IndexOf("steamapps", StringComparison.OrdinalIgnoreCase) >= 0) problem = "Not inside a Steam library: Steam would treat it as part of the game.";
                 else if (SourcePath != "" && (full.StartsWith(SourcePath.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase) || SamePath(full, SourcePath)))
                     problem = "That is the MTGA install itself. Choose another folder.";
@@ -573,7 +573,7 @@ namespace MtgaForgeLauncher
                 FolderProblem = "";
                 name = "QuickOtter"; Raise("Name");
                 profileNote = "Player ID 791602cb, shown as QuickOtter#85191"; Raise("ProfileNote");
-                foreach (var line in new[] { "> launcher.ps1 -NoPause -Folder \"C:\\MTGA Forge\"", "Starting the Forge server (log: C:\\MTGA Forge\\logs\\server.log)", "[QuickOtter, instance 0] Server ready on ports 30003, 30010, 30011.", "MTGA started (pid 4120). Close the game window to stop the server." }) Log(line);
+                foreach (var line in new[] { "> launcher.ps1 -NoPause -Folder \"C:\\Users\\you\\AppData\\Local\\Programs\\MTGA Forge\"", "Starting the Forge server (log: ...\\MTGA Forge\\logs\\server.log)", "[QuickOtter, instance 0] Server ready on ports 30003, 30010, 30011.", "MTGA started (pid 4120). Close the game window to stop the server." }) Log(line);
             }
             switch (s)
             {

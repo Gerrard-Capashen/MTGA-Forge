@@ -7,7 +7,7 @@ WHAT YOU NEED
 START
   Double-click MTGA-Forge.exe. The window walks you through four steps:
     1. It finds your MTGA install (Steam libraries on any drive), or you press Browse and pick the folder.
-    2. You choose where the patched copy goes (default C:\MTGA Forge; any folder you can write to works, but not Program Files).
+    2. You choose where the patched copy goes (default C:\Users\<you>\AppData\Local\Programs\MTGA Forge; any folder you can write to works, but not Program Files).
     3. It prepares the game: copies it, patches it, builds the card database from YOUR install.
     4. You pick how to play and press Start.
   Preparing takes several minutes the first time and again after an MTGA update. After that, Start takes a few seconds: the server

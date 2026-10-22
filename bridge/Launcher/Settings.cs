@@ -13,10 +13,10 @@ namespace MtgaForgeLauncher
         public static readonly string Home = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? ".", "MTGA-Forge");
 
         /// <summary>
-        /// Default place for the patched copy. Not Program Files: Windows does not let a normal program write there, and the
-        /// patched game writes into its own folder.
+        /// Default place for the patched copy: the per-user programs folder (%LOCALAPPDATA%\Programs, where VS Code and Discord install).
+        /// Not Program Files: Windows does not let a normal program write there, and the patched game writes into its own folder.
         /// </summary>
-        public static string DefaultFolder { get { return Path.Combine(Path.GetPathRoot(Environment.SystemDirectory), "MTGA Forge"); } }
+        public static string DefaultFolder { get { return Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? ".", "Programs", "MTGA Forge"); } }
 
         readonly string iniPath = Path.Combine(Home, "ui.ini");
 
