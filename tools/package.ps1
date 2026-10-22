@@ -1,7 +1,8 @@
 # Builds the patch distribution (no Wizards files, no card art) from the dev tree.
 # Usage: powershell -NoProfile -File tools\package.ps1 [-Out dist\MTGA-Forge] [-ManagedDir <client Managed folder>] [-BuildServer] [-Zip]
 #   dist\MTGA-Forge\
-#     MTGA-Forge.cmd, README.txt, dist.json           start script / what it is
+#     MTGA-Forge.exe(+.config)                        the launcher window (bridge\Launcher): first-start guidance, single player / host / join a friend
+#     MTGA-Forge.cmd, README.txt, dist.json           command-line start (tools\launcher.ps1) / what it is
 #     tools\                                          launcher.ps1 forge-patch.ps1 layout.ps1 verify.ps1 check-package.ps1
 #     patcher\                                        Patcher.exe (.NET Framework 4.8, ships with Windows) + Mono.Cecil, ForgeBridge.dll (our client code)
 #     runtime\                                        jlink JRE (java.exe), only the modules the server needs
@@ -39,9 +40,11 @@ Write-Host '== patcher'
 $tmp = "$root\dist\build"
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 Run 'dotnet' @('build', "$root\bridge\Patcher\Patcher.csproj", '-c', 'Release', '-o', "$tmp\patcher", '-nologo', '-v', 'q') 'Patcher build'
+Run 'dotnet' @('build', "$root\bridge\Launcher\Launcher.csproj", '-c', 'Release', '-o', "$tmp\launcher", '-nologo', '-v', 'q') 'Launcher build'
 Run 'dotnet' @('build', "$root\bridge\ForgeBridge\ForgeBridge.csproj", '-c', 'Release', '--no-incremental', '-o', "$tmp\bridge", "-p:ManagedDir=$ManagedDir", '-nologo', '-v', 'q') 'ForgeBridge build'
 Copy-Item "$tmp\patcher\*" "$Out\patcher" -Exclude '*.pdb', 'Mono.Cecil.Mdb.dll', 'Mono.Cecil.Rocks.dll'
 Copy-Item "$tmp\bridge\ForgeBridge.dll" "$Out\patcher"
+Copy-Item "$tmp\launcher\MTGA-Forge.exe", "$tmp\launcher\MTGA-Forge.exe.config" $Out
 
 # ---- server jars: our class folders become jars, dependencies are copied as they are
 Write-Host '== server jars'

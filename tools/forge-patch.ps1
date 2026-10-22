@@ -4,11 +4,12 @@
 # (Steam updated) throws the results away and starts again at step 1.
 #
 # Usage: powershell -NoProfile -File tools\forge-patch.ps1 -Target D:\x\client-fresh [-Source <MTGA install>] [-From <step>] [-Only a,b]
-#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-BuildServer] [-Check]
+#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-Product MTG2] [-BuildServer] [-Check]
 # Steps: refresh  orig  identity  unityconnect  storeconfig  bridge  patch  carddb  manifest  firewall
 #   refresh       robocopy /MIR the install into Target (purges everything we added, incl. stale .orig files)
 #   orig          Core.dll.orig / AK.Wwise.Unity.API.dll.orig = the pristine DLLs of THIS build (ForgeBridge compiles against them)
-#   identity      app.info + globalgamemanagers company/product -> "Forge Bridge Project"/"MTGF" (Patcher identity)
+#   identity      app.info + globalgamemanagers company/product -> "Forge Bridge Project"/-Product (default "MTGF"; 4 characters; a second client on the
+#                 same machine needs its own, e.g. MTG2: PlayerPrefs registry key and LocalLow\Player.log follow it)  (Patcher identity)
 #   unityconnect  Unity analytics/cloud services off in globalgamemanagers (Patcher unityconnect)
 #   storeconfig   StreamingAssets\StoreConfig.txt provider -> forge-bridge-local (the Steam provider restarts the app via Steam)
 #   bridge        ForgeBridge.dll into Managed: dist = the prebuilt one, dev = dotnet build against Target\MTGA_Data\Managed; then Patcher check-bridge
@@ -29,6 +30,7 @@ param(
     [switch]$SkipFirewall,
     [switch]$BuildServer,
     [string]$Formats = 'Standard,Pioneer,Modern',
+    [ValidatePattern('^[A-Za-z0-9]{4}$')][string]$Product = 'MTGF',
     [switch]$Check
 )
 $ErrorActionPreference = 'Stop'
@@ -95,6 +97,7 @@ if ($Check) {
     else {
         $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
         if ($todo) { $why = "unfinished steps: $($todo -join ', ')" }
+        elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
     }
     if ($why) { Write-Host "needs patching: $why"; exit 3 }
     Write-Host "up to date ($($fp.mainManifest))"
@@ -143,8 +146,9 @@ $steps['orig'] = {
 
 $steps['identity'] = {
     # Unity takes LocalLow\<line 1>\<line 2> from app.info; the original has no trailing newline
-    [IO.File]::WriteAllBytes("$Target\MTGA_Data\app.info", [Text.Encoding]::ASCII.GetBytes("Forge Bridge Project`nMTGF"))
-    Run $PatcherExe @('identity', $ggm) 'Patcher identity'
+    [IO.File]::WriteAllBytes("$Target\MTGA_Data\app.info", [Text.Encoding]::ASCII.GetBytes("Forge Bridge Project`n$Product"))
+    Run $PatcherExe @('identity', $ggm, $Product) 'Patcher identity'
+    "Forge Bridge Project/$Product"
 }
 
 $steps['unityconnect'] = { Run $PatcherExe @('unityconnect', $ggm) 'Patcher unityconnect' }

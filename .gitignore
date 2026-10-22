@@ -26,3 +26,4 @@ __pycache__/
 /client-fresh/
 /dist/
 /bridge/patcher-out/
+/bridge/launcher-out/

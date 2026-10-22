@@ -15,7 +15,7 @@ function Warn($m) { Write-Host "  NOTE: $m" -ForegroundColor Yellow }
 function Pass($m) { Write-Host "  ok: $m" }
 
 # 1. Only the known top-level layout
-$topAllowed = 'MTGA-Forge.cmd', 'README.txt', 'dist.json', 'LICENSE-Forge.txt', 'tools', 'patcher', 'runtime', 'server'
+$topAllowed = 'MTGA-Forge.exe', 'MTGA-Forge.exe.config', 'MTGA-Forge.cmd', 'README.txt', 'dist.json', 'LICENSE-Forge.txt', 'tools', 'patcher', 'runtime', 'server'
 foreach ($e in Get-ChildItem $Package -Force) { if ($topAllowed -notcontains $e.Name) { Fail "unexpected top-level entry: $($e.Name)" } }
 foreach ($d in 'tools', 'patcher', 'runtime', 'server') { if (-not (Test-Path "$Package\$d")) { Fail "missing $d" } }
 $files = @(Get-ChildItem $Package -Recurse -File -Force)

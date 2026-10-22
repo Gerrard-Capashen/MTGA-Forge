@@ -12,7 +12,8 @@ namespace ForgeBridge
     public class LocalAccountClient : IAccountClient
     {
         public const string PersonaId = "LOCALPLAYER0000000000000001";
-        public const string DisplayName = "Forge Player#00001";
+        // FORGEBRIDGE_NAME: the launcher's -Name, so two clients on one machine show different names
+        public static readonly string DisplayName = (Environment.GetEnvironmentVariable("FORGEBRIDGE_NAME") ?? "Forge Player") + "#00001";
 
         private readonly AccountInformation _info;
         private LoginState _state = LoginState.FullyRegisteredLogin;

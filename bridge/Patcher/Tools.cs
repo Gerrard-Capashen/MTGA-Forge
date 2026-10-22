@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using Mono.Cecil;
 
 // Extra verbs of the Patcher (replace the Python scripts of the first patcher so a user machine needs no Python):
-//   Patcher identity     <globalgamemanagers>   company/product "Wizards Of The Coast"/"MTGA" -> "Forge Bridge Project"/"MTGF"
+//   Patcher identity     <globalgamemanagers> [product]   company/product "Wizards Of The Coast"/"MTGA" -> "Forge Bridge Project"/product (4 characters, default "MTGF")
 //   Patcher unityconnect <globalgamemanagers>   Unity analytics / cloud services off (UnityConnectSettings)
 //   Patcher check-bridge <ManagedDir>           every Core/Unity member ForgeBridge.dll references still resolves in ManagedDir
 //   Patcher audit-bridge <ForgeBridge.dll>      the dll defines only our own namespace and embeds no resources (nothing copied from the game)
@@ -19,7 +19,7 @@ static class Tools
         {
             switch (args[0])
             {
-                case "identity": Identity(args[1]); return 0;
+                case "identity": Identity(args[1], args.Length > 2 ? args[2] : "MTGF"); return 0;
                 case "unityconnect": UnityConnect(args[1]); return 0;
                 case "check-bridge": return CheckBridge(args[1]);
                 case "audit-bridge": return AuditBridge(args[1]);
@@ -46,15 +46,30 @@ static class Tools
     static void BackupOnce(string path) { if (!File.Exists(path + ".orig")) File.Copy(path, path + ".orig"); }
 
     // Unity takes the LocalLow log directory and the registry key from these (same length: no offset moves)
-    static void Identity(string path)
+    // product must be 4 characters (several clients on one machine use "MTGF", "MTG2", ...: own registry key and LocalLow folder)
+    static void Identity(string path, string product)
     {
-        byte[] Pat(string company, string product) => new byte[] { 0x14, 0, 0, 0 }.Concat(Encoding.ASCII.GetBytes(company))
-            .Concat(new byte[] { 4, 0, 0, 0 }).Concat(Encoding.ASCII.GetBytes(product)).ToArray();
-        var old = Pat("Wizards Of The Coast", "MTGA");
-        var nw = Pat("Forge Bridge Project", "MTGF");
+        if (product.Length != 4) throw new Exception("product must be 4 characters: " + product);
+        byte[] Pat(string company, string prod) => new byte[] { 0x14, 0, 0, 0 }.Concat(Encoding.ASCII.GetBytes(company))
+            .Concat(new byte[] { 4, 0, 0, 0 }).Concat(Encoding.ASCII.GetBytes(prod)).ToArray();
+        var nw = Pat("Forge Bridge Project", product);
         var b = File.ReadAllBytes(path);
         if (Count(b, nw) == 1) { Console.WriteLine("already patched"); return; }
+        // the original, or a client patched with another product name
+        var old = Pat("Wizards Of The Coast", "MTGA");
         int n = Count(b, old);
+        if (n == 0)
+        {
+            // keep the prefix, replace the 4 product bytes
+            var prefix = Pat("Forge Bridge Project", "");
+            int pi = Find(b, prefix);
+            if (pi < 0 || Find(b, prefix, pi + 1) >= 0) throw new Exception("expected exactly one identity occurrence, found none or several");
+            BackupOnce(path);
+            Array.Copy(Encoding.ASCII.GetBytes(product), 0, b, pi + prefix.Length, 4);
+            File.WriteAllBytes(path, b);
+            Console.WriteLine("product changed at offset " + pi);
+            return;
+        }
         if (n != 1) throw new Exception("expected exactly one identity occurrence, found " + n);
         BackupOnce(path);
         int i = Find(b, old);
