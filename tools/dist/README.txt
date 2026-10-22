@@ -5,19 +5,21 @@ WHAT YOU NEED
 - About 15 GB of free disk space for the patched copy of the game, plus ~1 GB for the card database built on first start.
 
 START
-  Double-click MTGA-Forge.exe. It walks you through four steps: it finds your MTGA install (or you browse to it), you pick a folder
-  for the patched copy (default C:MTGA Forge; programs may not write to Program Files without administrator rights), it
-  prepares the game, then you pick how to play and press Start. "Details" at the bottom shows every command it runs and what
-  it prints.
-  First start (and after every MTGA update): the game is copied and patched, then the card database is generated from
-  YOUR install. This takes several minutes. After that, start is a few seconds: the server starts, then the game; closing
-  the game stops the server.
+  Double-click MTGA-Forge.exe. The window walks you through four steps:
+    1. It finds your MTGA install (Steam libraries on any drive), or you press Browse and pick the folder.
+    2. You choose where the patched copy goes (default C:\MTGA Forge; any folder you can write to works, but not Program Files).
+    3. It prepares the game: copies it, patches it, builds the card database from YOUR install.
+    4. You pick how to play and press Start.
+  Preparing takes several minutes the first time and again after an MTGA update. After that, Start takes a few seconds: the server
+  starts, then the game; closing the game stops the server. "Details" at the bottom shows every command it runs and what it prints
+  (the window grows to fit it; "Copy log" is handy if something goes wrong).
+  You never need a command prompt.
 
 PLAY ONLINE (each player with their own MTGA and this package, the same MTGA version)
   In the game: Play > Find Match > Casual Play > Standard, Pioneer or Modern, choose a deck of that format, Play. You are
   paired with another player waiting in the same format; the one who waited longest runs the game on their PC. Nothing to
-  set up: no addresses, no router ports. Only the pairing and the game messages go through a small matchmaking server (a free
-  Cloudflare Worker); no deck lists or accounts are stored there.
+  set up: no addresses, no router ports. Only the pairing and the game messages go through a small matchmaking server;
+  no deck lists or accounts are stored there.
   To play a specific friend: both type the same Friend code in the window (like blue-otter-7) before pressing Start, then both
   pick the same Casual Play format. Without a code you meet random players.
   Friends: the game's own Friends list (bottom left corner) works: add a friend by typing their Name#12345 (the number is part of
@@ -31,30 +33,35 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   (identity.json): use "Back up identity..." in the window to keep a copy, "Restore..." to get your name back on another PC.
   (Single player: Play > Find Match > Bot Play. Each queue only accepts decks legal in its format.)
 
-  Options (run from a command prompt):
-    MTGA-Forge.cmd -Folder D:\MTGA-Forge      where the patched copy, your decks and the logs go (default %LOCALAPPDATA%\MTGA-Forge)
-    MTGA-Forge.cmd -Source "D:\Games\MTGA"    MTGA install to use when Steam is not where we look (remembered)
-    MTGA-Forge.cmd -PatchOnly                 patch, do not start
-    MTGA-Forge.cmd -Repatch                   patch again from scratch
-    MTGA-Forge.cmd -FriendCode blue-otter-7   only meet players with the same code (play a friend) without the window
-    MTGA-Forge.cmd -Offline                   no online play
-    MTGA-Forge.cmd -Firewall                  also add a firewall rule that blocks the patched MTGA.exe from the internet (asks for admin once)
+  Settings in the window: your name, a friend code, Offline, "Back up identity" / "Restore", and a switch to block the patched
+  game from the internet with a Windows Firewall rule (asks for administrator once; only affects the patched MTGA.exe, not the
+  Forge server or matchmaking; it is for those who want to be 100% sure the game itself never contacts anything).
 
 WHAT IT DOES TO YOUR GAME
   Nothing. Your Steam install is only read. The patched game is a separate copy in <Folder>\client; it uses its own
-  settings, never signs in to Wizards and sends nothing to them (the patch switches off its network calls; the optional
+  settings, never signs in to MTGA's servers and sends nothing to them (the patch switches off its network calls; the optional
   firewall rule blocks it as well). Online play only talks to the matchmaking server, from the Forge server process. Card art of cards that MTGA does not have is fetched from Scryfall on demand.
 
-AFTER AN MTGA UPDATE
-  The launcher notices the new version and patches again before starting. If a new MTGA build changed something the patch
+UPDATES
+  MTGA-Forge: when the window opens it asks our website for the latest release (one plain request, nothing about you is sent). If
+  yours is older, a banner links to the new download. Nothing is downloaded or installed automatically.
+  After an MTGA update: the launcher notices and prepares again before starting. If a new MTGA build changed something the patch
   depends on, patching stops with an error and nothing is started; you need a newer MTGA-Forge then. Your decks stay
   (<Folder>\data).
 
 FILES
   <Folder>\client     the patched game copy (can be deleted any time; it is rebuilt)
-  <Folder>\data       your decks and preferences, the card database snapshot
+  <Folder>\data       your decks and preferences, the card database snapshot, your identity
   <Folder>\logs       server logs (the 20 newest)
   The game's own log: %USERPROFILE%\AppData\LocalLow\Forge Bridge Project\MTGF\Player.log
+
+UNINSTALL
+  Press "Uninstall..." in the window: tick what to remove (the game copy, logs, your decks and identity, the game's saved
+  preferences, the launcher's settings). Nothing outside those is touched, and your Steam MTGA is never modified.
+
+COMMAND LINE (optional, for scripting)
+  MTGA-Forge.cmd -Folder D:\MTGA-Forge -Source "D:\Games\MTGA" -PatchOnly -Repatch -FriendCode blue-otter-7 -Offline -Firewall
+  Without -Folder the command-line start uses %LOCALAPPDATA%\MTGA-Forge; the window uses the folder you chose.
 
 THIS PACKAGE CONTAINS
   Our code (patcher, bridge, server), Forge's rules engine and card scripts (GPL), a Java runtime. It contains no file of
