@@ -2,7 +2,7 @@
 # Usage: powershell -File tools\deploy.ps1 [-Run] [-Mock] [-Forge] [-Duel] [-Seconds 40] [-Shot N] [-Clicks "t:needle,..."]
 # Client mode: menus through the local Front Door by default; straight into a duel with -Duel (implied by MTGA_RIG / MTGA_DECK,
 # i.e. the scripted regression recipes).
-# -FreshPrefs deletes data\preferences.json (server-side player prefs such as the last play-blade tab) so scripted
+# -FreshPrefs empties the preferences in data\profile.json (server-side player prefs such as the last play-blade tab) so scripted
 # menu clicks always start from the same UI state.
 param([switch]$Run, [switch]$Mock, [switch]$Forge, [switch]$Duel, [switch]$FreshPrefs, [int]$Seconds = 40, [int]$Shot = 0, [string]$Shots = "", [string]$Clicks = "")
 $ErrorActionPreference = 'Stop'
@@ -41,7 +41,7 @@ if ($Run) {
         $rigArg = if ($env:MTGA_RIG) { "-Dmtga.rig=$env:MTGA_RIG" } else { '-Dmtga.norig=1' }
         $deckArg = if ($env:MTGA_DECK) { "-Dmtga.deck=$env:MTGA_DECK" } else { '-Dmtga.nodeck=1' }
         $capArg = "-Dmtga.capture=`"$root\tools\capture\deploy.log`""
-        if ($FreshPrefs) { Remove-Item "$root\data\preferences.json" -Force -ErrorAction SilentlyContinue }
+        if ($FreshPrefs) { . "$root\tools\layout.ps1"; Clear-ProfilePrefs "$root\data" }
         Remove-Item $javaLog, "$root\tools\capture\deploy.log" -Force -ErrorAction SilentlyContinue
         $javaProc = Start-Process java -ArgumentList $rigArg, $deckArg, $capArg, '-cp', "`"$cp`"", 'forge.mtga.ForgeMtgaMain', "`"$guiDir`"", "`"$root\client`"", '30003' `
             -WorkingDirectory $guiDir -RedirectStandardOutput $javaLog -RedirectStandardError "$javaLog.err" -PassThru -WindowStyle Hidden

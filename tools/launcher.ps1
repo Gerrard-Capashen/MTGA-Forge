@@ -142,8 +142,11 @@ try {
     }
 
     # -------------------------------------------------------------------------------------------- client
+    # a clean client environment; the developer aids for scripted runs (clicks, screenshots) are kept when set
+    $aids = @{}; foreach ($n in 'CLICKS', 'SHOTS', 'SHOT_DIR', 'CLICKTYPE') { $v = [Environment]::GetEnvironmentVariable("FORGEBRIDGE_$n"); if ($v) { $aids["FORGEBRIDGE_$n"] = $v } }
     Get-ChildItem Env: | Where-Object { $_.Name -like 'FORGEBRIDGE_*' } | ForEach-Object { Remove-Item "Env:$($_.Name)" }
-    $env:FORGEBRIDGE_FDPORT = "$($ports[1])"; $env:FORGEBRIDGE_ARTPORT = "$($ports[2])"; $env:FORGEBRIDGE_NAME = $Name
+    foreach ($k in $aids.Keys) { Set-Item "Env:$k" $aids[$k] }
+    $env:FORGEBRIDGE_FDPORT = "$($ports[1])"; $env:FORGEBRIDGE_ARTPORT = "$($ports[2])"; $env:FORGEBRIDGE_NAME = $Name; $env:FORGEBRIDGE_DATA = $dataDir
     if ($Instance -gt 0 -and -not $ClientArgs) { $ClientArgs = '-screen-fullscreen 0 -screen-width 1280 -screen-height 720' }
     $sp = @{ FilePath = "$client\MTGA.exe"; WorkingDirectory = $client; PassThru = $true }
     if ($ClientArgs) { $sp.ArgumentList = $ClientArgs }

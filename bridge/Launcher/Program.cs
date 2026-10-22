@@ -101,6 +101,7 @@ namespace MtgaForgeLauncher
         readonly Button btnPrepare = new Button(), btnSource = new Button(), btnRecheck = new Button();
         // play page
         readonly Panel pgPlay = new Panel();
+        readonly Label lblProfile = new Label();
         readonly TextBox txtName = new TextBox(), txtPeer = new TextBox(), txtKey = new TextBox(), txtFolder = new TextBox();
         readonly RadioButton rbBot = new RadioButton(), rbHost = new RadioButton(), rbJoin = new RadioButton();
         readonly ListBox lstAddr = new ListBox();
@@ -167,6 +168,38 @@ namespace MtgaForgeLauncher
                 catch { }
             }
             if (string.IsNullOrEmpty(set["folder"])) set["folder"] = homeDefault;
+            // the player's name lives in the profile (data\profile.json, written by the server); what was typed last is only the fallback
+            string profName, profId, profTag;
+            if (ReadProfile(set["folder"], out profName, out profId, out profTag) && profName != "") set["name"] = profName;
+        }
+
+        /// <summary>The player's profile of this install: name, player id and the #tag the game shows after the name.</summary>
+        static bool ReadProfile(string folder, out string name, out string id, out string tag)
+        {
+            name = id = tag = "";
+            try
+            {
+                string file = Path.Combine(folder, "data", "profile.json");
+                if (!File.Exists(file)) return false;
+                string json = File.ReadAllText(file);
+                name = JsonString(json, "displayName"); id = JsonString(json, "playerId"); tag = JsonString(json, "tag");
+                return id != "";
+            }
+            catch { return false; }
+        }
+
+        static string JsonString(string json, string key)
+        {
+            var m = Regex.Match(json, "\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+            return m.Success ? Regex.Unescape(m.Groups[1].Value) : "";
+        }
+
+        /// <summary>"Player ID 791602cb · shown as Name#85191" under the name box (nothing before the first game).</summary>
+        string ProfileNote()
+        {
+            string n, id, tag;
+            if (!ReadProfile(Folder, out n, out id, out tag)) return "A player ID is made the first time you start the game.";
+            return "Player ID " + (id.Length > 8 ? id.Substring(0, 8) : id) + (tag != "" ? "  -  shown as " + n + "#" + tag : "");
         }
 
         void SaveSettings()
@@ -219,7 +252,11 @@ namespace MtgaForgeLauncher
             At(pgPlay, 0, 0, 640, 620);
             pgPlay.Controls.Add(At(new Label { Text = "Your name in the game" }, 20, 14, 300, 20));
             txtName.Text = set["name"];
+            txtName.MaxLength = 24;
             pgPlay.Controls.Add(At(txtName, 20, 36, 280, 24));
+            lblProfile.Text = ProfileNote();
+            lblProfile.ForeColor = SystemColors.GrayText;
+            pgPlay.Controls.Add(At(lblProfile, 310, 40, 310, 20));
 
             var grp = At(new GroupBox { Text = "How do you want to play?" }, 20, 74, 600, 100);
             rbBot.Text = "Single player: against the Forge AI";

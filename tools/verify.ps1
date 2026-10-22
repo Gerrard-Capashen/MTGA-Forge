@@ -4,7 +4,7 @@
 #
 # Usage: powershell -NoProfile -File tools\verify.ps1 [-Client <folder>] [-Only nc,bolt,...] [-SkipSelfPlay] [-SkipClient]
 #        [-Port 30003 -FdPort 30010 -ArtPort 30011] [-DataDir <dir>] [-ClassPath <file>] [-Out <dir>] [-BuildServer]
-# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern
+# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-pvp sp-peer sp-profile
 # Needs: java + built forge-gui-mtga (-BuildServer compiles it), tools\cp.txt, a card DB in <Client>\MTGA_Data\Downloads, the
 # player's window (Unity renders only on an unlocked desktop), Scryfall access for the "art served" check.
 # Evidence per recipe in <Out>\<recipe>\ (player.log, server.log, capture.log, net.txt, shots\). The data dir (decks) is shared with
@@ -174,12 +174,12 @@ function Run-Recipe($name, $r) {
         if (-not (Wait-ServerUp $srvLog $java)) { Check 'server starts' $false (Get-Content "$srvLog.err" -ErrorAction SilentlyContinue | Select-Object -First 3 | Out-String); return }
         if (Test-Path $playerLog) { Remove-Item $playerLog -Force }
         $env:FORGEBRIDGE_MODE = if ($r.Menu) { 'menu' } else { 'duel' }
-        $env:FORGEBRIDGE_PORT = "$Port"; $env:FORGEBRIDGE_FDPORT = "$FdPort"; $env:FORGEBRIDGE_ARTPORT = "$ArtPort"
+        $env:FORGEBRIDGE_PORT = "$Port"; $env:FORGEBRIDGE_FDPORT = "$FdPort"; $env:FORGEBRIDGE_ARTPORT = "$ArtPort"; $env:FORGEBRIDGE_DATA = $DataDir
         $env:FORGEBRIDGE_CLICKS = $r.Clicks
         $env:FORGEBRIDGE_SHOTS = $r.Shots; $env:FORGEBRIDGE_SHOT_DIR = "$dir\shots"
         if ($r.Clipboard) { $env:FORGEBRIDGE_CLIPBOARD = $r.Clipboard }
         $p = Start-Process $exe -WorkingDirectory $Client -ArgumentList '-screen-width 1280 -screen-height 720 -screen-fullscreen 0' -PassThru
-        Remove-Item Env:FORGEBRIDGE_MODE, Env:FORGEBRIDGE_PORT, Env:FORGEBRIDGE_FDPORT, Env:FORGEBRIDGE_ARTPORT, Env:FORGEBRIDGE_CLICKS, Env:FORGEBRIDGE_SHOTS, Env:FORGEBRIDGE_SHOT_DIR, Env:FORGEBRIDGE_CLIPBOARD -ErrorAction SilentlyContinue
+        Remove-Item Env:FORGEBRIDGE_DATA, Env:FORGEBRIDGE_MODE, Env:FORGEBRIDGE_PORT, Env:FORGEBRIDGE_FDPORT, Env:FORGEBRIDGE_ARTPORT, Env:FORGEBRIDGE_CLICKS, Env:FORGEBRIDGE_SHOTS, Env:FORGEBRIDGE_SHOT_DIR, Env:FORGEBRIDGE_CLIPBOARD -ErrorAction SilentlyContinue
 
         # run, sampling the client's sockets (MTGA.exe and its children) the whole time
         $seen = New-Object 'System.Collections.Generic.HashSet[string]'; $badNet = @(); $samples = 0
@@ -242,19 +242,33 @@ function Run-Recipe($name, $r) {
 }
 
 # ------------------------------------------------------------------------------------------------------------- SelfPlay
-function Run-SelfPlay($name, $format) {
+function Run-SelfPlay($name, $format, $prop = $null, $okLine = 'SELFPLAY OK') {
     Start-Entry $name
     $dir = "$Out\$name"; New-Item -ItemType Directory -Force $dir | Out-Null
     Write-Host "== $name : headless games with a fake client ($SelfPlayGames games)"
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $jargs = @()
     if ($format) { $jargs += "-Dselfplay.format=$format" }
+    if ($prop) { $jargs += $prop }
     $jargs += '-cp', "`"$cp`"", 'forge.mtga.SelfPlay', "`"$guiDir`"", "`"$Client`"", "$SelfPlayGames", '1'
     $pr = Start-Process $JavaExe -ArgumentList $jargs -WorkingDirectory $guiDir -RedirectStandardOutput "$dir\selfplay.log" -RedirectStandardError "$dir\selfplay.err" -PassThru -WindowStyle Hidden
     if (-not $pr.WaitForExit(900000)) { Stop-Process -Id $pr.Id -Force; Check 'finishes within 15 min' $false; return }
     $script:cur.Secs = [int]$sw.Elapsed.TotalSeconds
     $o = @(Get-Content "$dir\selfplay.log")
-    Check 'SELFPLAY OK' (($o -match '^SELFPLAY OK').Count -gt 0) (($o -match '^SELFPLAY' | Select-Object -First 1) -join '')
+    Check $okLine (($o -match "^$okLine").Count -gt 0) (($o -match '^SELFPLAY' | Select-Object -First 1) -join '')
+}
+
+# The player profile without a game: store, cosmetics API, public view (forge.mtga.fd.ProfileCheck, reads the client's cosmetic catalogue)
+function Run-ProfileCheck($name) {
+    Start-Entry $name
+    $dir = "$Out\$name"; New-Item -ItemType Directory -Force $dir | Out-Null
+    Write-Host "== $name : profile store and cosmetics (headless)"
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $pr = Start-Process $JavaExe -ArgumentList '-cp', "`"$cp`"", 'forge.mtga.fd.ProfileCheck', "`"$Client`"" -WorkingDirectory $guiDir -RedirectStandardOutput "$dir\profilecheck.log" -RedirectStandardError "$dir\profilecheck.err" -PassThru -WindowStyle Hidden
+    if (-not $pr.WaitForExit(300000)) { Stop-Process -Id $pr.Id -Force; Check 'finishes within 5 min' $false; return }
+    $script:cur.Secs = [int]$sw.Elapsed.TotalSeconds
+    $o = @(Get-Content "$dir\profilecheck.log")
+    Check 'PROFILE CHECK OK' (($o -match '^PROFILE CHECK OK').Count -gt 0) (($o -match '^PROFILE CHECK|  FAIL' | Select-Object -First 3) -join '; ')
 }
 
 # ----------------------------------------------------------------------------------------------------------------- run
@@ -264,6 +278,9 @@ try {
     if (-not $SkipSelfPlay) {
         if (Wanted 'sp-default') { Run-SelfPlay 'sp-default' $null }
         foreach ($f in 'Standard', 'Pioneer', 'Modern') { if (Wanted "sp-$f") { Run-SelfPlay "sp-$f" $f } }
+        if (Wanted 'sp-pvp') { Run-SelfPlay 'sp-pvp' $null '-Dselfplay.pvp=true' 'SELFPLAY PVP OK' }
+        if (Wanted 'sp-peer') { Run-SelfPlay 'sp-peer' $null '-Dselfplay.peer=true' 'SELFPLAY PEER OK' }
+        if (Wanted 'sp-profile') { Run-ProfileCheck 'sp-profile' }
     }
 } finally {
     Stop-Ours

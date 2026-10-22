@@ -7,7 +7,7 @@ Built by `tools\package.ps1`, checked by `tools\check-package.ps1` (the build fa
 
 | Path | Content |
 |------|---------|
-| `MTGA-Forge.exe` (+ `.config`) | the one start button: the launcher window (WinForms, .NET Framework 4.8, source `bridge\Launcher`). First start: explains and runs the patch with step progress; then single player / host a friend / join a friend (address list, "can I reach them?" test, live connection status read from the server log). It only collects settings and runs the two scripts hidden |
+| `MTGA-Forge.exe` (+ `.config`) | the one start button: the launcher window (WinForms, .NET Framework 4.8, source `bridge\Launcher`). First start: explains and runs the patch with step progress; then your name (stored in the profile: the box is prefilled from `data\profile.json` and shows the player id and the `#tag` the game adds) and single player / host a friend / join a friend (address list, "can I reach them?" test, live connection status read from the server log). It only collects settings and runs the two scripts hidden |
 | `MTGA-Forge.cmd` | command-line start: no arguments opens the exe, with arguments it runs `tools\launcher.ps1` directly |
 | `tools\` | `launcher.ps1`, `forge-patch.ps1`, `layout.ps1`, `verify.ps1`, `check-package.ps1` |
 | `patcher\Patcher.exe` + `Mono.Cecil*.dll` | Cecil patcher on .NET Framework 4.8 (part of Windows 10/11: no SDK or runtime to install). Verbs: (none) patch Core.dll + AK dll, `identity`, `unityconnect`, `check-bridge`, `audit-bridge` |
@@ -24,7 +24,7 @@ Nothing is on PATH or installed: only Windows PowerShell 5.1 and `robocopy` (bot
 | Path | Content | Created by |
 |------|---------|-----------|
 | `<Folder>\client\` | patched copy of the user's own install (about 14 GB) incl. `forge-patch\state.json`, `forge-patch\carddb\` (pristine manifest + DB of that build, ~600 MB with the generated one) | patcher |
-| `<Folder>\data\` | decks (Forge precons seeded on first start + the user's), `preferences.json` | server |
+| `<Folder>\data\` | decks (Forge precons seeded on first start + the user's), **`profile.json`**: the player's profile (GUID player id made on the first start, name, equipped and owned cosmetics, preferences; replaces `preferences.json`, which is imported once; fields in `docs\profile.md`) | server |
 | `<Folder>\logs\` | `server-<time>.log(.err)`, 20 newest | launcher |
 | `%APPDATA%\Forge`, `%LOCALAPPDATA%\Forge\Cache\pics` | Forge profile and the on-demand Scryfall art cache (card art is fetched at run time from Scryfall, never shipped) | server |
 | `%USERPROFILE%\AppData\LocalLow\Forge Bridge Project\MTGF` | the client's `Player.log` (own identity, the real MTGA's folder is untouched) | client |
@@ -46,7 +46,8 @@ Forge's `res\` is read from the package (working directory of the server = `serv
 2. Any byte-identical copy of a file of the user's install under another name (hash comparison against the install).
 3. Decompiled Wizards code or anything derived from it by tooling: `docs\decompiled\`, descriptor dumps, the original mock server (`tools\mock`), capture logs, Player.log excerpts.
 4. Card art or any images, audio or video: no `.jpg .png .gif .bmp .webp .tga .dds .psd .ico .svg .tif .ogg .mp3 .wav .flac .mp4 ...`, not even inside the jars (one allowed library exception: Jetty's own `favicon.ico`). That excludes Forge's UI skins, fonts, adventure mode sprites, sounds, music and `res\defaults` / `res\effects` pictures. Card art comes from Scryfall at run time, art ids of cards the client lacks are served by our server.
-5. The user's data or ours: decks, `preferences.json`, `state.json`, Player.log, tokens, e-mail, absolute paths of the dev machine (`C:\Users\...`, `D:\Development`).
+4b. The cosmetic catalogue (avatar, sleeve, pet, emote and title ids): not shipped. `forge.mtga.profile.CosmeticCatalog` reads the ids at run time from the user's own install (`MTGA_Data\Downloads\ALT\*.mtga`, `Raw_ClientLocalization`), the same way the card DB comes from it; the package holds only that reader (`docs\profile.md` section 2).
+5. The user's data or ours: decks, `profile.json`, `preferences.json`, `state.json`, Player.log, tokens, e-mail, absolute paths of the dev machine (`C:\Users\...`, `D:\Development`).
 6. Binaries other than: `Patcher.exe`, `Mono.Cecil*.dll`, `ForgeBridge.dll` (no types outside `ForgeBridge`, no embedded resources: nothing copied from the game), the jlink runtime, and the jars.
 7. Top-level entries other than `MTGA-Forge.cmd README.txt dist.json LICENSE-Forge.txt tools patcher runtime server`.
 

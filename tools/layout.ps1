@@ -34,3 +34,14 @@ function Find-MtgaInstall {
     foreach ($c in $cands) { if (Test-Path "$c\MTGA.exe") { return (Resolve-Path $c).Path } }
     return ''
 }
+
+# The server keeps the client's player preferences inside the player's profile (data\profile.json): empty them
+# (scripted menu runs start from the same play-blade tab). The profile id, name and cosmetics stay.
+function Clear-ProfilePrefs([string]$DataDir) {
+    Remove-Item (Join-Path $DataDir 'preferences.json') -Force -ErrorAction SilentlyContinue
+    $f = Join-Path $DataDir 'profile.json'
+    if (-not (Test-Path $f)) { return }
+    $j = Get-Content $f -Raw | ConvertFrom-Json
+    $j.preferences = New-Object psobject
+    [IO.File]::WriteAllText($f, ($j | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
+}

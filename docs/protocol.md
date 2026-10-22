@@ -75,14 +75,17 @@ Bootstrap.cs and WrapperController.cs, and verified against the running client.
 | CmdType | enc | answer / notes |
 |---|---|---|
 | Authenticate, Attach | JSON | FrontDoorSessionResp{SessionId, Attached:true, PlayerConditions:0} |
-| StartHook | proto | StartHookResponseV2: InventoryInfo (0 gold/gems), DeckLimit 1000, **DeckSummaries + DecksInternal (all decks)**, kill switches, empty cosmetics/achievements, ServerTimeInternal. The client builds its deck cache from this list and marks it clean; it only calls DeckGetDeckSummariesV3 after something marks it dirty, so the decks MUST be here. |
+| StartHook | proto | StartHookResponseV2: InventoryInfo (0 gold/gems), DeckLimit 1000, **DeckSummaries + DecksInternal (all decks)**, kill switches, `PreferredCosmetics` + `InventoryInfo.Cosmetics` from the player profile (docs/profile.md), empty achievements, ServerTimeInternal. The client builds its deck cache from this list and marks it clean; it only calls DeckGetDeckSummariesV3 after something marks it dirty, so the decks MUST be here. |
 | CardGetAllCards | JSON | `{cacheVersion, cards:{grpId:4}}`: every primary non-token printing whose name Forge knows (20,121 of 20,159; the rest are Y25/Y26 digital cards). Titles: Localizations_enUS Formatted=0 else 1, tags stripped, split "A /// B" -> "A // B" |
 | GetFormats | proto | `ForgeFormats`: Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Commander, Historic (Forge `res/formats`), Alchemy + Timeless (every Forge card). Legality = exact `allowedTitleIds` (Forge `getFilterRules`) + `bannedTitleIds` + `individualCardQuotas` (Vintage restricted) + one unique placeholder `legalSets` entry per format (else the client's `IsSame` shares legal-title sets); Commander: main 99, `commandZoneQuota` 1-2, singleton, CompanionOnly. Groups ConstructedSortOrder + EvergreenFormats. Labels for Modern/Legacy/Vintage/Commander come from the bridge (`FormatLoc`) |
 | GetSets | proto | SetMetadataResponse: one SetMetadata per expansion (Available, published, major, ReleaseDate = Forge's edition date, Arena-only codes the day after the set before them by GrpId; one collation named like the set) + an empty sentinel set `FORGE` dated last, so the home page's "new set" announcement (LastPublishedMajorSet with a known CollationMapping) never fires; SetGroup **"AllFilters"** (required: KeyNotFound otherwise and boot hangs at "Requesting format data"), SetCollectionGroup set -> GrpIds (the profile's set-collection badge NREs without it and the Profile page hangs) |
 | GetDesignerMetadata | JSON | empty lists |
 | Graph_GetGraphDefinitions / GraphGetGraphState / GraphProcessV2 | JSON | three graphs, all nodes Completed: `NPE_Tutorial` (node in "Completed_Group" -> NodeNpeStrategy Initialized, tutorial complete), `ColorChallenge` (node `UnlockPlayMode` completed -> SparkyTourState.ClientForcedToUnlock: every play mode unlocked), `NewPlayerExperience` (milestones OpenDualColorPreconEvent, OpenSparkQueue, GraduateSparkRank, NPE_Completed) |
-| GetKillSwitchData (+ StartHook) | JSON / proto | KillSwitches = UxKillSwitches = WPNFavoriteStoreStatus, PlayerReportingStatus, HasbroGoAddRemoveFriends, Social*Status, AchievementSceneStatus, TournamentStatus, BoosterStatus (true = feature off: no Wizards web calls; Achievements hidden, Packs locked) |
-| GetPlayerPreferences / SetPlayerPreferences | JSON | string map persisted in `data/preferences.json` (play-blade selection etc.) |
+| GetKillSwitchData (+ StartHook) | JSON / proto | KillSwitches = UxKillSwitches = WPNFavoriteStoreStatus, PlayerReportingStatus, HasbroGoAddRemoveFriends, Social*Status, AchievementSceneStatus, TournamentStatus, BoosterStatus, StoreStatus (true = feature off: no Wizards web calls; Achievements hidden, Packs locked) |
+| GetPlayerPreferences / SetPlayerPreferences | JSON | string map, part of the profile document `data/profile.json` (play-blade selection etc.; `preferences.json` is imported once) |
+| StaticContent | JSON | `AvailableCosmetics{Hash, Object{Avatars, Sleeves, Pets, Emotes, Titles, ArtStyles}}` read from the user's install (docs/profile.md section 2) |
+| CosmeticsGetPlayerOwnedCosmetics, CosmeticsGetPreferredCosmetics, CosmeticsSetPreferredAvatar/Sleeve/Pet/Title/Emotes | proto | owned / equipped cosmetics from the profile; Set* validate against catalogue + ownership, persist and answer the new `PreferredCosmetics` |
+| MercGetSkusAndListings | JSON | success with every listing type empty (the client builds its cosmetic catalogues from it; the store itself is off through the `StoreStatus` kill switch) |
 | DeckGetDeckSummariesV3 / DeckGetDeck / DeckUpsertDeckV3 / DeckDeleteDeck | JSON | `data/decks/<id>.json` = {Summary, Deck} exactly as the client sent them in UpsertDeckReqV3; upsert returns the Summary, delete returns the raw string "Success" |
 | GetPlayBladeQueueConfig | JSON | `[{Id:"forge-ai", QueueType:"Unranked", LocTitle:"Events/Event_Title_AIBotMatch", EventNameBO1:"AIBotMatch"}]` |
 | EventGetActiveEventsV2 | JSON | `AiBotMatches:[AIBotMatch (Timeless: any deck), AIBotMatch_Rebalanced (Alchemy)]`; the client builds the bot events itself (AwsEventHelpers.ConvertToEventInfoV2) and only treats these two internal names as bot matches |
@@ -90,9 +93,9 @@ Bootstrap.cs and WrapperController.cs, and verified against the running client.
 | EventAiBotMatch | JSON | `{deckId, botDeckId, botMatchType}` -> Forge match set up (`forge.mtga.MatchSetup`; AI deck generated by Forge for the deck's `Format` attribute when it is a Forge 60-card format), reply = match id string, then MatchCreated push (1.5 s later) for 127.0.0.1:30003 |
 | EventGetMatchResultReport | JSON | `{CurrentModule:"Complete", FoundMatch:true, questUpdates:[]}` (the end screen retries up to 8 s until FoundMatch) |
 | EventGetActiveMatches | JSON | `{MatchesV3:[]}` (no reconnect into a running match) |
-| Rank*, Renewal*, Quest*, PeriodicRewards*, Carousel*, PrizeWalls, NetDeckFolders, PreferredPrintings, StaticContent, StoreGetEntitlementsV2, MercGetStoreStatusV2 | JSON | neutral/empty objects (see FrontDoor.java) |
-| GetVoucherDefinitions, GetPlayerInbox, GetWpnNotificationPreferences, ChallengeReconnectAll, Cosmetics* | proto | default instances |
-| MercGetSkusAndListings, RankEvaluatePayoutsV2 | - | ServerError on purpose: keeps the Store tab locked (an empty catalogue opens a Store page that hangs) / no season payout popup |
+| Rank*, Renewal*, Quest*, PeriodicRewards*, Carousel*, PrizeWalls, NetDeckFolders, PreferredPrintings, StoreGetEntitlementsV2, MercGetStoreStatusV2 | JSON | neutral/empty objects (see FrontDoor.java) |
+| GetVoucherDefinitions, GetPlayerInbox, GetWpnNotificationPreferences, ChallengeReconnectAll | proto | default instances |
+| RankEvaluatePayoutsV2 | - | ServerError on purpose: no season payout popup |
 | LogBusinessEvents(V2) | JSON | "" |
 | anything else | - | ServerError + `FD UNHANDLED <cmd>` in the capture and server log |
 
@@ -105,6 +108,10 @@ Match Door connection plays. After the game: IntermissionReq/MatchCompleted -> e
 -> exit -> wrapper reload (StartHook again) -> home page.
 GRE detail found on the way: the client replaces its GameInfo with any GameInfo a diff carries, so a diff with only
 `stage=Play` reset MatchState to None and hid Concede for the whole game; StateSync now always sends a complete GameInfo.
+
+Player identity and cosmetics (docs/profile.md): `MatchCreated.MatchInfoV4.PlayerInfos[]` also carries `CosmeticsSelection` (`PreferredCosmetics` as JSON:
+`{Avatar:{Id}, Sleeve:{Id}, Pet:{Id,Name,Variant}, Title:{Id}, Emotes:[{Id}]}`); the client takes both seats' avatar, sleeve, pet, title and emotes from it (the GRE
+carries no cosmetics). Emotes in a game are GRE `UIMessage{onChat{text}}`: client -> server as `ClientToGREUIMessage`, relayed to the other human seat as `GREMessageType_UIMessage`.
 
 ## Match Door (GRE)
 - Same framing. Body = `ClientToMatchServiceMessage` / `MatchServiceToClientMessage` (MatchServiceMessages.proto).
