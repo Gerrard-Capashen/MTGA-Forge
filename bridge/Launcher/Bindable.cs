@@ -9,7 +9,7 @@ namespace MtgaForgeLauncher
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void Raise(string name) { var h = PropertyChanged; if (h != null) h(this, new PropertyChangedEventArgs(name)); }
+        public void Raise(string name) { var h = PropertyChanged; if (h != null) h(this, new PropertyChangedEventArgs(name)); }
 
         protected bool Set<T>(ref T field, T value, [CallerMemberName] string name = null)
         {

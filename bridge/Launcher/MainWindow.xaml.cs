@@ -84,6 +84,13 @@ namespace MtgaForgeLauncher
             Info(Model.RestoreIdentity(dir));
         }
 
+        void Uninstall_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new UninstallWindow(Model.Folder, Model.CurrentSource) { Owner = this };
+            dialog.ShowDialog();
+            if (dialog.Changed) Model.AfterUninstall();
+        }
+
         void CopyLog_Click(object sender, RoutedEventArgs e)
         {
             try { Clipboard.SetText(Model.AllLog); } catch { Info("Could not use the clipboard."); }

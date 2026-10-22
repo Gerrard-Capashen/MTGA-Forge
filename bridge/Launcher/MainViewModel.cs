@@ -161,6 +161,8 @@ namespace MtgaForgeLauncher
         public bool PlayVisible { get { return !SetupVisible; } }
         public bool IsPreparing { get { return stage == Stage.Preparing; } }
         public bool NotPreparing { get { return stage != Stage.Preparing; } }
+        public bool CanUninstall { get { return !busy && stage != Stage.Running && stage != Stage.Preparing && stage != Stage.Checking; } }
+        public string CurrentSource { get { return SourcePath; } }
         public bool IsRunning { get { return stage == Stage.Running; } }
         public bool CanEditFields { get { return stage != Stage.Running && stage != Stage.Preparing && stage != Stage.Checking; } }
         public string PrepareLabel { get { return stage == Stage.Problem ? "Try again" : "Prepare my game"; } }
@@ -193,7 +195,7 @@ namespace MtgaForgeLauncher
 
         void RaiseStage()
         {
-            foreach (var p in new[] { "Stage", "SetupVisible", "PlayVisible", "IsPreparing", "NotPreparing", "IsRunning", "CanEditFields", "PrepareLabel", "PillText" }) Raise(p);
+            foreach (var p in new[] { "Stage", "SetupVisible", "PlayVisible", "IsPreparing", "NotPreparing", "IsRunning", "CanEditFields", "CanUninstall", "PrepareLabel", "PillText" }) Raise(p);
             UpdateRail();
             CommandManager.InvalidateRequerySuggested();
         }
@@ -443,6 +445,15 @@ namespace MtgaForgeLauncher
         }
 
         // ------------------------------------------------------------------------------------------ identity backup
+        /// <summary>The uninstall removed things: look at the game again.</summary>
+        public void AfterUninstall()
+        {
+            profileNote = Profile.Note(folder); Raise("ProfileNote");
+            ValidateFolder(); UpdateDisk();
+            editing = false;
+            Recheck();
+        }
+
         public bool HasIdentity { get { return Profile.HasIdentity(folder); } }
 
         public string BackupIdentity(string target)

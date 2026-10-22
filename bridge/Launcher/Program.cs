@@ -60,6 +60,10 @@ namespace MtgaForgeLauncher
                 vm.ConsoleOpen = s == Stage.Running || s == Stage.Preparing;
                 Idle(); Save(w, Path.Combine(dir, s.ToString().ToLowerInvariant() + ".png"));
             }
+            var dlg = new UninstallWindow(Path.Combine(dir, "no-such-folder"), "") { Owner = w };
+            dlg.Show();
+            Idle(); Save(dlg, Path.Combine(dir, "uninstall.png"));
+            dlg.Close();
             w.Close();
             return 0;
         }

@@ -203,6 +203,7 @@
           </Button>
           <TextBlock Text="Every command the launcher runs and what it prints." Foreground="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0" DockPanel.Dock="Left"/>
           <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+            <Button Style="{StaticResource LinkButton}" Content="Uninstall..." Click="Uninstall_Click" IsEnabled="{Binding CanUninstall}" Margin="0,0,18,0"/>
             <Button Style="{StaticResource LinkButton}" Content="Copy" Click="CopyLog_Click" Margin="0,0,18,0"/>
             <Button Style="{StaticResource LinkButton}" Content="Open logs folder" Click="OpenLogs_Click"/>
           </StackPanel>
