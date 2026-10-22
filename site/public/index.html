@@ -5,111 +5,237 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MTGA Forge - Play Standard, Pioneer and Modern on the Forge rules engine</title>
 <meta name="description" content="An unofficial project that points your own Steam copy of MTG Arena at the open source Forge rules engine. Standard, Pioneer, Modern and quick drafts, free.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
-  body { background:#1b1410; color:#e8dcc0; font-family:Georgia,"Times New Roman",serif; font-size:18px; line-height:1.55; margin:0; }
-  #page { max-width:46em; margin:0 auto; padding:1.5em 1em 3em; }
-  h1 { font-size:2.4em; text-align:center; color:#f3d98b; margin:.2em 0 0; letter-spacing:.04em; text-shadow:2px 2px 0 #000; }
-  .tag { text-align:center; font-style:italic; color:#c9b27a; margin:.2em 0 1em; }
-  h2 { color:#f3d98b; border-bottom:1px double #8a6d2f; padding-bottom:.15em; margin-top:2em; }
-  hr { border:0; border-top:3px double #8a6d2f; margin:1.5em 0; }
-  a { color:#8fc4ff; } a:visited { color:#c9a2ff; }
-  .box { border:2px ridge #8a6d2f; background:#261c15; padding:.8em 1.2em; margin:1em 0; }
-  table { border-collapse:collapse; width:100%; }
-  td, th { border:1px solid #6b5426; padding:.35em .6em; text-align:left; vertical-align:top; }
-  th { background:#33261a; color:#f3d98b; }
-  nav { text-align:center; margin:.8em 0; }
-  nav a { margin:0 .6em; }
-  .dl { text-align:center; margin:1.2em 0; }
-  .dl span { display:inline-block; border:3px outset #c9a24a; background:#4a3516; color:#f3d98b; padding:.5em 1.4em; font-weight:bold; }
-  .small { font-size:.82em; color:#a8966b; }
-  .new { color:#ff6b4a; font-weight:bold; font-size:.8em; }
-  li { margin:.25em 0; }
+:root {
+  --bg: #f3f1ec; --panel: #e9e6df; --line: #d3cec3; --fg: #1c2026; --muted: #5a616b;
+  --accent: #b4540d; --link: #1f5f8a;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14181d; --panel: #1d232a; --line: #2e3640; --fg: #e7e5e0; --muted: #98a1ab; --accent: #ee9f4d; --link: #7db4dc; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--body); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+a { color: var(--link); text-underline-offset: 3px; }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1, h2 { font-family: var(--display); line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -.015em; }
+p { margin: 0 0 1em; max-width: 64ch; }
+
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 0; }
+.logo { font: 700 1.2rem var(--display); color: var(--fg); text-decoration: none; }
+.logo span { color: var(--accent); }
+header nav { display: flex; gap: 20px; font-size: .92rem; }
+header nav a { color: var(--muted); text-decoration: none; }
+header nav a:hover { color: var(--fg); }
+
+.hero { padding: 40px 0 56px; display: grid; grid-template-columns: 1fr minmax(180px, 300px); gap: 32px; align-items: center; }
+.icon { perspective: 900px; }
+.icon svg { display: block; width: 100%; height: auto; overflow: visible; animation: sway 8s ease-in-out infinite; }
+.icon .float { animation: bob 4.8s ease-in-out infinite; }
+.icon .hammer { transform-origin: 372px 172px; animation: strike 2.4s infinite; }
+.icon .shadow { transform-origin: 256px 488px; animation: shade 4.8s ease-in-out infinite; }
+.icon .spark { transform-box: fill-box; opacity: 0; animation: spark 2.4s infinite; }
+@keyframes bob { 50% { transform: translateY(-9px); } }
+@keyframes shade { 50% { transform: scale(.86); opacity: .55; } }
+@keyframes sway { 0%, 100% { transform: rotateY(-14deg) rotateX(5deg); } 50% { transform: rotateY(12deg) rotateX(2deg); } }
+@keyframes strike {
+  0%, 12% { transform: translateY(-30px) rotate(-7deg); animation-timing-function: cubic-bezier(.6,0,1,.6); }
+  36%, 44% { transform: translateY(0) rotate(0); animation-timing-function: ease-out; }
+  70%, 100% { transform: translateY(-30px) rotate(-7deg); }
+}
+@keyframes spark {
+  0%, 35% { opacity: 0; transform: translate(0, 0); }
+  37% { opacity: 1; }
+  80% { opacity: .9; transform: translate(calc(var(--x) * .8px), calc(var(--y) * .8px)); }
+  100% { opacity: 0; transform: translate(calc(var(--x) * 1px), calc(var(--y) * 1px + 22px)); }
+}
+@media (prefers-reduced-motion: reduce) { .icon svg, .icon .float, .icon .hammer, .icon .shadow { animation: none; } .icon svg { transform: rotateY(-8deg) rotateX(4deg); } .icon .hammer { transform: translateY(-14px) rotate(-4deg); } .icon .spark { display: none; } }
+.hero h1 { font-size: clamp(2.4rem, 7vw, 4.6rem); max-width: 14ch; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p.lead { font-size: 1.2rem; color: var(--muted); margin-top: 20px; }
+.get { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 28px; }
+.btn { display: inline-block; padding: 13px 26px; border-radius: 6px; background: var(--accent); color: var(--bg); font-weight: 600; opacity: .5; cursor: not-allowed; }
+.get small { color: var(--muted); }
+
+figure { margin: 0 0 24px; background: var(--panel); border-radius: 10px; padding: 18px; }
+figure svg { display: block; width: 100%; height: auto; }
+figcaption { color: var(--muted); font-size: .9rem; margin-top: 8px; }
+
+.row { display: grid; grid-template-columns: 190px 1fr; gap: 12px 32px; padding: 36px 0; border-top: 1px solid var(--line); }
+.row h2 { font-size: 1.35rem; }
+.row > div { min-width: 0; }
+.row ul { margin: 0 0 1em; padding-left: 1.1em; }
+.row li { margin: .35em 0; }
+dl { margin: 0 0 1em; display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; }
+dt { color: var(--muted); } dd { margin: 0; }
+code { font: .85rem Consolas, monospace; background: var(--panel); padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+.dates { list-style: none; padding: 0; }
+.dates li { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.dates time { color: var(--accent); font-weight: 600; font-size: .92rem; }
+details { border-top: 1px solid var(--line); padding: 12px 0; }
+details:last-of-type { border-bottom: 1px solid var(--line); }
+summary { cursor: pointer; font-weight: 600; }
+details p { margin: 8px 0 0; color: var(--muted); }
+footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--muted); font-size: .88rem; }
+footer p { max-width: 78ch; }
+
+@media (max-width: 720px) {
+  .hero { grid-template-columns: 1fr; }
+  .icon { max-width: 200px; order: -1; }
+  .row { grid-template-columns: 1fr; gap: 10px; padding: 28px 0; }
+  .hero { padding: 16px 0 36px; }
+  .dates li { grid-template-columns: 1fr; gap: 0; }
+  dl { grid-template-columns: 1fr; gap: 0; } dd { margin-bottom: 8px; }
+}
 </style>
 </head>
 <body>
-<div id="page">
+<div class="wrap">
 
-<h1>&#9876; MTGA FORGE &#9876;</h1>
-<p class="tag">Play Standard, Pioneer and Modern on your favorite client,<br>powered by the Forge rules engine.</p>
+<header>
+  <a class="logo" href="#">MTGA<span>/</span>Forge</a>
+  <nav><a href="#play">Play</a><a href="#install">Install</a><a href="#why">Why</a><a href="#faq">FAQ</a></nav>
+</header>
 
-<nav>
-  <a href="#what">What is this</a> |
-  <a href="#play">What you can play</a> |
-  <a href="#need">Requirements</a> |
-  <a href="#why">Why</a> |
-  <a href="#legal">Fine print</a>
-</nav>
-<hr>
-
-<h2 id="what">What is this?</h2>
-<p>MTGA Forge swaps the <em>backend</em> of Magic: The Gathering Arena. You keep the client you already know,
-with its table, its animations and its deck builder, but the game itself is refereed by
-<a href="https://github.com/Card-Forge/forge">Forge</a>, the free and open source Magic rules engine
-with thousands of cards scripted by volunteers over many years.</p>
-<p>No MTGA files are shipped or hosted here. A small patcher runs <strong>on your own computer</strong>,
-makes a modified copy of <em>your</em> Steam install, and points it at a Forge server running locally.
-Your original installation is left untouched.</p>
-
-<h2 id="play">What you can play</h2>
-<div class="box">
-<ul>
-  <li><strong>Standard, Pioneer and Modern</strong> games against the Forge AI <span class="new">NEW</span></li>
-  <li><strong>Quick Draft</strong> against AI opponents, for the latest sets <span class="new">NEW</span></li>
-  <li><strong>All cards are free</strong>: build any deck you like, no wildcards, no grind</li>
-  <li><strong>All cosmetics are free</strong>: avatars, sleeves, pets, emotes, titles</li>
-  <li>Friends, invites and direct challenges!</li>
-</ul>
+<div class="hero">
+  <div>
+  <h1>The client you know. <em>A rules engine you can keep.</em></h1>
+  <p class="lead">Play Standard, Pioneer, Modern and quick drafts in your own copy of MTG Arena, with the open source Forge engine running the game. Free cards, free cosmetics, friends and community matchmaking.</p>
+  <div class="get"><span class="btn" aria-disabled="true">Download for Windows</span><small>Coming soon. Unofficial fan project.</small></div>
+  </div>
+  <div class="icon" aria-hidden="true">
+    <svg viewBox="0 0 512 512">
+      <defs>
+        <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb04a"/><stop offset="1" stop-color="#e8590c"/></linearGradient>
+        <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4540f"/><stop offset="1" stop-color="#8f2f06"/></linearGradient>
+        <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2b0"/><stop offset="1" stop-color="#ff9f45"/></linearGradient>
+        <radialGradient id="gs"><stop offset="0" stop-color="#000" stop-opacity=".4"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse class="shadow" cx="256" cy="490" rx="170" ry="13" fill="url(#gs)"/>
+      <g class="float" stroke="#2b1208" stroke-width="12" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M172 204 L36 214 Q20 218 30 228 Q100 296 188 322 L196 334 Q214 344 204 364 Q192 394 172 408 L412 418 Q372 398 362 374 Q356 346 372 322 Q420 268 468 222 L172 222 Z" fill="url(#ga)"/>
+        <path d="M300 222 L468 222 Q420 268 372 322 Q356 346 362 374 Q380 392 396 404 Q330 372 300 300 Z" fill="url(#gd)" stroke="none"/>
+        <path d="M256 214 Q340 222 478 220" fill="none" stroke-width="7"/>
+        <path d="M150 206 Q178 224 180 266 Q182 292 198 302 M168 204 Q190 230 190 262" fill="none" stroke-width="8"/>
+        <path d="M176 178 H470 Q482 178 482 190 V216 Q482 224 472 224 H180 Z" fill="url(#gt)"/>
+        <rect x="112" y="410" width="302" height="44" rx="8" fill="url(#gd)"/>
+        <path d="M124 420 H402" stroke="#ffc885" stroke-width="5" opacity=".7"/>
+        <g class="hammer">
+          <path d="M96 90 H330 V132 H96 Q82 132 82 111 Q82 90 96 90 Z" fill="url(#ga)"/>
+          <path d="M92 94 Q84 111 92 128 M106 92 Q98 111 106 130 M120 92 Q112 111 120 130" fill="none" stroke-width="6"/>
+          <path d="M336 56 H396 Q410 56 406 74 Q396 104 408 132 Q412 168 398 172 H336 Z" fill="url(#gt)"/>
+          <path d="M336 56 H352 V172 H336 Z" fill="url(#gd)" stroke="none"/>
+        </g>
+        <g stroke="none">
+          <rect class="spark" x="370" y="168" width="8" height="8" rx="2" fill="#fff3c4" style="--x:40;--y:-70;animation-delay:0s"/>
+          <rect class="spark" x="370" y="168" width="5" height="5" rx="2" fill="#ffd27a" style="--x:72;--y:-96;animation-delay:0.015s"/>
+          <rect class="spark" x="370" y="168" width="8" height="8" rx="2" fill="#fff3c4" style="--x:104;--y:-60;animation-delay:0.03s"/>
+          <rect class="spark" x="370" y="168" width="5" height="5" rx="2" fill="#ffd27a" style="--x:128;--y:-100;animation-delay:0.045s"/>
+          <rect class="spark" x="370" y="168" width="8" height="8" rx="2" fill="#fff3c4" style="--x:-24;--y:-60;animation-delay:0.06s"/>
+          <rect class="spark" x="370" y="168" width="5" height="5" rx="2" fill="#ffd27a" style="--x:150;--y:-36;animation-delay:0.075s"/>
+          <rect class="spark" x="370" y="168" width="8" height="8" rx="2" fill="#fff3c4" style="--x:88;--y:-124;animation-delay:0.09s"/>
+          <rect class="spark" x="370" y="168" width="5" height="5" rx="2" fill="#ffd27a" style="--x:-6;--y:-96;animation-delay:0.105s"/>
+        </g>
+      </g>
+    </svg>
+  </div>
 </div>
 
-<h2 id="need">Requirements</h2>
-<table>
-<tr><th>Operating system</th><td>Windows 10 or 11</td></tr>
-<tr><th>The game</th><td>MTG Arena, <strong>Steam version</strong>, installed on the same PC</td></tr>
-<tr><th>Disk space</th><td>About 15 GB free (the patched copy of the client lives next to your original)</td></tr>
-<tr><th>Internet</th><td>For matchmaking and to fetch card art from Scryfall as you play; bot games run locally</td></tr>
-<tr><th>Extras to install</th><td>None. Java and everything else come bundled</td></tr>
-</table>
+<figure>
+  <svg viewBox="0 0 880 250" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
+    <style>
+      .b { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+      .h { fill: var(--fg); font: 600 15px var(--body); }
+      .s { fill: var(--muted); font: 400 13px var(--body); }
+      .l { stroke: var(--accent); stroke-width: 2; fill: none; }
+      .d { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; fill: none; }
+      .g { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 5; }
+    </style>
+    <rect x="10" y="30" width="400" height="200" rx="12" class="g"/>
+    <text x="26" y="24" class="s">YOUR PC</text>
+    <rect x="30" y="52" width="170" height="64" rx="8" class="b"/>
+    <text x="44" y="80" class="h">Steam install</text><text x="44" y="100" class="s">read only</text>
+    <rect x="30" y="148" width="170" height="64" rx="8" class="b"/>
+    <text x="44" y="176" class="h">Patched client</text><text x="44" y="196" class="s">own profile</text>
+    <path d="M115 116v32" class="d"/>
+    <rect x="228" y="148" width="162" height="64" rx="8" class="b" style="stroke:var(--accent)"/>
+    <text x="242" y="176" class="h">Forge engine</text><text x="242" y="196" class="s">plays the game</text>
+    <path d="M200 180h28" class="l"/>
+    <rect x="470" y="148" width="170" height="64" rx="8" class="b" style="stroke:var(--accent)"/>
+    <text x="484" y="176" class="h">Matchmaking</text><text x="484" y="196" class="s">friends and queue</text>
+    <path d="M390 180h80" class="l"/>
+    <rect x="700" y="148" width="170" height="64" rx="8" class="b"/>
+    <text x="714" y="176" class="h">Other players</text><text x="714" y="196" class="s">the community</text>
+    <path d="M640 180h60" class="l"/>
+    <text x="470" y="100" class="s">Card art loads from Scryfall.</text>
+  </svg>
+  <figcaption>Games are refereed by Forge. Matchmaking only introduces you to friends and opponents.</figcaption>
+</figure>
 
-<div class="dl"><span>Download: coming soon</span></div>
-<p class="small" style="text-align:center">First start takes a minute or two while the patcher prepares your copy. After a Steam update it simply repeats.</p>
-
-<p><strong>Support:</strong> there are no support channels yet. This is an early, hobby-scale project: expect rough edges and missing/broken cards.</p>
-
-<h2 id="why">Why: you should be able to keep playing</h2>
-<p>Games are sold as things you own, then switched off as services. When the servers go dark, a game you paid for,
-loved, and maybe built a collection in, can simply stop existing. Players have no say, and often no copy to fall back on.</p>
-<p>The <a href="https://www.stopkillinggames.com/">Stop Killing Games</a> movement pushes back on exactly that. Its
-European Citizens' Initiative passed one million verified signatures, and its ask is modest: when a publisher ends
-support, the game should not be left unplayable. Offline modes, or tools to run your own servers, would do. Nobody is asking
-for perpetual support or to be handed the publisher's content.</p>
-<div class="box">
-<p><strong>It has already happened to Magic.</strong></p>
-<ul>
-  <li><strong>Magic: Legends</strong> (action RPG): never left open beta. Announced in June 2021, servers closed on October 31, 2021. The game no longer exists in any playable form.</li>
-  <li><strong>Magic SpellSlingers</strong> (CCG): launched in August 2022, purchases were switched off in March 2024 and the servers closed on June 4, 2024, about 18 months after launch.</li>
-  <li><strong>Magic Duels</strong> (the successor to the <em>Duels of the Planeswalkers</em> series): delisted from Steam and Xbox on November 26, 2019, with the store removed and official support ended. Those who already owned it could keep playing for the time being, but nothing new could be bought and the game was left to fade.</li>
-</ul>
-<p class="small">Each of these was a Magic game people paid for, played and collected in, and each one was ended by its publisher. Nothing guarantees Arena will be treated differently when its time comes.</p>
+<div class="row" id="play">
+  <h2>What you can play</h2>
+  <div>
+    <ul>
+      <li><strong>Standard, Pioneer and Modern</strong> against the Forge AI or other players</li>
+      <li><strong>Quick Draft</strong> against AI, for the latest sets</li>
+      <li><strong>Every card and cosmetic is free.</strong> No wildcards, no grind</li>
+      <li><strong>Friends, invites and direct challenges</strong></li>
+    </ul>
+    <p>It is an early project. Expect rough edges and some missing or broken cards. There are no support channels yet.</p>
+  </div>
 </div>
-<p>MTGA Forge comes from the same belief, applied to a game we like. The rules of Magic are a long-running
-public tradition, and Forge proves they can live in an open, community-owned engine. If the day ever comes when Arena's
-servers shut down, the client, the cards and the decks you care about can still be played.</p>
-<p>It is also just a nice way to play: no queue times, no paywalled cards, and opponents that never rage-quit (well, most of the time).</p>
 
-<h2 id="legal">The fine print</h2>
-<ul>
-  <li>This is an <strong>unofficial fan project</strong>. It is not made, endorsed or supported by the makers of MTGA or by Valve.</li>
-  <li>We do not redistribute the game, its code, art, audio or card data. You need your own legitimate copy of MTG Arena on Steam,
-      and everything derived from it is produced on your machine and stays there.</li>
-  <li>The patched copy is separate from your original install and uses its own local profile. In our testing it makes no connections to MTGA's servers: telemetry and analytics are removed, and the only network traffic we saw was local play and card art from Scryfall.</li>
-  <li>Card art is fetched live from <a href="https://scryfall.com/">Scryfall</a> and is never bundled.</li>
-  <li>The rules engine is <a href="https://github.com/Card-Forge/forge">Forge</a>, licensed under the GPL; its source stays available.</li>
-  <li>Magic: The Gathering, MTG Arena and related names are trademarks of their respective owners.</li>
-  <li>Provided as is, with no warranty. We cannot speak for MTGA's terms of service, so use it at your discretion.</li>
-</ul>
+<div class="row" id="install">
+  <h2>Install</h2>
+  <div>
+    <dl>
+      <dt>System</dt><dd>Windows 10 or 11</dd>
+      <dt>Game</dt><dd>MTG Arena, Steam version, on the same PC</dd>
+      <dt>Disk</dt><dd>About 15 GB free</dd>
+      <dt>Extras</dt><dd>None. Java and the rest are bundled</dd>
+    </dl>
+    <p>Unzip and run the launcher. The first start takes a minute or two while it makes a patched copy of your install. It repeats after a Steam update. Your original install is never changed.</p>
+    <p>The launcher is not code-signed yet, so Windows SmartScreen may warn. Check the file first:</p>
+    <p><code>SHA-256: published with the first release</code></p>
+    <p>Each release gets a VirusTotal report, and the launcher and patcher source will be public.</p>
+  </div>
+</div>
 
-<hr>
-<p class="small" style="text-align:center">Built by players, for players.</p>
+<div class="row" id="why">
+  <h2>Why this exists</h2>
+  <div>
+    <p>Games are sold as things you own, then switched off as services. <a href="https://www.stopkillinggames.com/">Stop Killing Games</a> argues that a game should not be left unplayable when support ends. Its European initiative passed one million verified signatures. It asks for a way to keep playing, not for endless support.</p>
+    <p>MTGA Forge applies that to a game we like. Magic has already lost titles this way:</p>
+    <ul class="dates">
+      <li><time datetime="2019-11-26">Nov 2019</time><span><strong>Magic Duels</strong> delisted from Steam and Xbox, support ended.</span></li>
+      <li><time datetime="2021-10-31">Oct 2021</time><span><strong>Magic: Legends</strong> servers closed, never left beta.</span></li>
+      <li><time datetime="2024-06-04">Jun 2024</time><span><strong>Magic SpellSlingers</strong> servers closed, 18 months after launch.</span></li>
+    </ul>
+    <p>Nothing guarantees Arena will be treated differently. With Forge, your games and decks keep working.</p>
+  </div>
+</div>
+
+<div class="row" id="faq">
+  <h2>Questions</h2>
+  <div>
+    <details><summary>Is this official?</summary><p>No. It is not made, endorsed or supported by the makers of MTGA or by Valve.</p></details>
+    <details><summary>Does it connect to MTGA's servers?</summary><p>In our testing it does not. Telemetry and analytics are removed. The only traffic we saw was matchmaking and card art from Scryfall.</p></details>
+    <details><summary>Does it touch my install or account?</summary><p>No. Your install is only read, and the patched copy uses its own profile.</p></details>
+    <details><summary>Do you redistribute the game?</summary><p>No game files, code, art or audio are shipped or hosted here. The copy is made on your PC from your own install.</p></details>
+    <details><summary>Is it allowed?</summary><p>We cannot speak for MTGA's terms of service, so use it at your discretion.</p></details>
+  </div>
+</div>
+
+<footer>
+  <p>Rules engine: <a href="https://github.com/Card-Forge/forge">Forge</a> (GPL, source available). Card art from <a href="https://scryfall.com/">Scryfall</a>, never bundled.</p>
+  <p>Magic: The Gathering, MTG Arena and related names are trademarks of their respective owners. Provided as is, with no warranty. Built by players, for players.</p>
+</footer>
+
 </div>
 </body>
 </html>
