@@ -101,6 +101,7 @@ namespace MtgaForgeLauncher
         // play page
         readonly Panel pgPlay = new Panel();
         readonly Label lblProfile = new Label();
+        readonly Button btnBackup = new Button(), btnRestore = new Button();
         readonly TextBox txtName = new TextBox(), txtCode = new TextBox(), txtFolder = new TextBox();
         readonly CheckBox chkOffline = new CheckBox();
         readonly Label lblHelp = new Label(), lblStatus = new Label();
@@ -169,6 +170,16 @@ namespace MtgaForgeLauncher
             // the player's name lives in the profile (data\profile.json, written by the server); what was typed last is only the fallback
             string profName, profId, profTag;
             if (ReadProfile(set["folder"], out profName, out profId, out profTag) && profName != "") set["name"] = profName;
+            else if (set["name"] == "Forge Player") set["name"] = RandomName();     // first start: a name of their own (the game adds #12345 anyway)
+        }
+
+        static readonly string[] Adjectives = { "Quick", "Brave", "Silent", "Golden", "Crimson", "Azure", "Mystic", "Wandering", "Clever", "Fierce", "Gentle", "Hidden", "Ancient", "Lucky", "Stormy", "Verdant" };
+        static readonly string[] Nouns = { "Otter", "Falcon", "Golem", "Sphinx", "Wurm", "Druid", "Rogue", "Mage", "Knight", "Phoenix", "Raven", "Badger", "Dragon", "Fox", "Elk", "Lynx" };
+
+        static string RandomName()
+        {
+            var r = new Random();
+            return Adjectives[r.Next(Adjectives.Length)] + Nouns[r.Next(Nouns.Length)];
         }
 
         /// <summary>The player's profile of this install: name, player id and the #tag the game shows after the name.</summary>
@@ -198,6 +209,57 @@ namespace MtgaForgeLauncher
             string n, id, tag;
             if (!ReadProfile(Folder, out n, out id, out tag)) return "A player ID is made the first time you start the game.";
             return "Player ID " + (id.Length > 8 ? id.Substring(0, 8) : id) + (tag != "" ? "  -  shown as " + n + "#" + tag : "");
+        }
+
+        string DataDir { get { return Path.Combine(Folder, "data"); } }
+
+        /// <summary>Copies the identity (the device key that proves who you are online) and the profile into a folder the player chooses.</summary>
+        void BackupIdentity()
+        {
+            string key = Path.Combine(DataDir, "identity.json"), prof = Path.Combine(DataDir, "profile.json");
+            if (!File.Exists(key))
+            {
+                MessageBox.Show(this, "There is no identity yet: it is made the first time you start the game online.", "MTGA-Forge");
+                return;
+            }
+            using (var d = new FolderBrowserDialog { Description = "Where to keep the backup (a folder MTGA-Forge-identity is made inside). Keep it private: it lets whoever has it play as you." })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                string target = Path.Combine(d.SelectedPath, "MTGA-Forge-identity");
+                try
+                {
+                    Directory.CreateDirectory(target);
+                    File.Copy(key, Path.Combine(target, "identity.json"), true);
+                    if (File.Exists(prof)) File.Copy(prof, Path.Combine(target, "profile.json"), true);
+                    MessageBox.Show(this, "Saved to " + target + "\r\nTo get your name, tag and friends back on another PC (or after a reinstall) use \"Restore...\" and pick that folder.", "MTGA-Forge");
+                }
+                catch (Exception e) { MessageBox.Show(this, "Could not save the backup: " + e.Message, "MTGA-Forge"); }
+            }
+        }
+
+        /// <summary>The reverse: puts a backed-up identity and profile into this install (the game must not be running).</summary>
+        void RestoreIdentity()
+        {
+            using (var d = new FolderBrowserDialog { Description = "Choose the MTGA-Forge-identity folder of your backup" })
+            {
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                string src = d.SelectedPath, key = Path.Combine(src, "identity.json");
+                if (!File.Exists(key) && File.Exists(Path.Combine(src, "MTGA-Forge-identity", "identity.json"))) { src = Path.Combine(src, "MTGA-Forge-identity"); key = Path.Combine(src, "identity.json"); }
+                if (!File.Exists(key)) { MessageBox.Show(this, "That folder has no identity.json.", "MTGA-Forge"); return; }
+                if (File.Exists(Path.Combine(DataDir, "identity.json")) &&
+                    MessageBox.Show(this, "This replaces the identity and profile of this install (your decks stay). Continue?", "MTGA-Forge", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                try
+                {
+                    Directory.CreateDirectory(DataDir);
+                    File.Copy(key, Path.Combine(DataDir, "identity.json"), true);
+                    if (File.Exists(Path.Combine(src, "profile.json"))) File.Copy(Path.Combine(src, "profile.json"), Path.Combine(DataDir, "profile.json"), true);
+                    string n, id, tag;
+                    if (ReadProfile(Folder, out n, out id, out tag) && n != "") txtName.Text = n;
+                    lblProfile.Text = ProfileNote();
+                    MessageBox.Show(this, "Restored. Start the game: you come back with your name and tag.", "MTGA-Forge");
+                }
+                catch (Exception e) { MessageBox.Show(this, "Could not restore: " + e.Message, "MTGA-Forge"); }
+            }
         }
 
         void SaveSettings()
@@ -250,10 +312,16 @@ namespace MtgaForgeLauncher
             pgPlay.Controls.Add(At(new Label { Text = "Your name in the game" }, 20, 14, 300, 20));
             txtName.Text = set["name"];
             txtName.MaxLength = 24;
-            pgPlay.Controls.Add(At(txtName, 20, 36, 280, 24));
+            pgPlay.Controls.Add(At(txtName, 20, 36, 220, 24));
+            btnBackup.Text = "Back up identity...";
+            btnRestore.Text = "Restore...";
+            btnBackup.Click += (s, e) => BackupIdentity();
+            btnRestore.Click += (s, e) => RestoreIdentity();
+            pgPlay.Controls.Add(At(btnBackup, 250, 34, 140, 28));
+            pgPlay.Controls.Add(At(btnRestore, 396, 34, 100, 28));
             lblProfile.Text = ProfileNote();
             lblProfile.ForeColor = SystemColors.GrayText;
-            pgPlay.Controls.Add(At(lblProfile, 310, 40, 310, 20));
+            pgPlay.Controls.Add(At(lblProfile, 20, 58, 600, 16));
 
             var grp = At(new GroupBox { Text = "Playing" }, 20, 74, 600, 134);
             grp.Controls.Add(At(new Label { Text = "Bot Play (against the Forge AI) always works. Casual Play finds another player online for the same format: nothing to set up.", AutoSize = false }, 16, 22, 570, 34));
@@ -458,7 +526,7 @@ namespace MtgaForgeLauncher
         // ---------------------------------------------------------------------------------------------- run the game
         void SetRunning(bool running)
         {
-            foreach (Control c in new Control[] { btnStart, txtName, txtCode, chkOffline, txtFolder, btnBrowse }) c.Enabled = !running;
+            foreach (Control c in new Control[] { btnStart, txtName, txtCode, chkOffline, txtFolder, btnBrowse, btnBackup, btnRestore }) c.Enabled = !running;
             btnStop.Enabled = running;
             if (!running) UpdateMode();
         }

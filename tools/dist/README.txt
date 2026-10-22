@@ -20,6 +20,9 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   pick the same Casual Play format. Without a code you meet random players.
   If you are told "different card database", one of you has another MTGA version or another MTGA-Forge package.
   "Offline" in the window (or -Offline) switches online play off.
+  Your name: the window suggests a random one the first time; the game shows it as Name#12345 (the number is given by the
+  matchmaking server so that no two players have the same Name#number). Your identity is a key file in <Folder>\data
+  (identity.json): use "Back up identity..." in the window to keep a copy, "Restore..." to get your name back on another PC.
   (Single player: Play > Find Match > Bot Play. Each queue only accepts decks legal in its format.)
 
   Options (run from a command prompt):

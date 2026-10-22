@@ -4,7 +4,7 @@
 #
 # Usage: powershell -NoProfile -File tools\verify.ps1 [-Client <folder>] [-Only nc,bolt,...] [-SkipSelfPlay] [-SkipClient]
 #        [-Port 30003 -FdPort 30010 -ArtPort 30011] [-DataDir <dir>] [-ClassPath <file>] [-Out <dir>] [-BuildServer]
-# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-pvp sp-peer sp-online sp-profile sp-queues
+# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-pvp sp-peer sp-online sp-accounts sp-profile sp-queues
 # Needs: java + built forge-gui-mtga (-BuildServer compiles it), tools\cp.txt, a card DB in <Client>\MTGA_Data\Downloads, the
 # player's window (Unity renders only on an unlocked desktop), Scryfall access for the "art served" check.
 # Evidence per recipe in <Out>\<recipe>\ (player.log, server.log, capture.log, net.txt, shots\). The data dir (decks) is shared with
@@ -283,6 +283,18 @@ function Run-QueueCheck($name) {
     Check 'QUEUE CHECK OK' (($o -match '^QUEUE CHECK OK').Count -gt 0) (($o -match '^QUEUE CHECK|  FAIL' | Select-Object -First 3) -join '; ')
 }
 
+function Run-AccountCheck($name) {
+    Start-Entry $name
+    $dir = "$Out\$name"; New-Item -ItemType Directory -Force $dir | Out-Null
+    Write-Host "== $name : device key + account registration against the coordinator (needs the internet; test players are called 'zztest...')"
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $pr = Start-Process $JavaExe -ArgumentList '-cp', "`"$cp`"", 'forge.mtga.social.AccountCheck' -WorkingDirectory $guiDir -RedirectStandardOutput "$dir\accountcheck.log" -RedirectStandardError "$dir\accountcheck.err" -PassThru -WindowStyle Hidden
+    if (-not $pr.WaitForExit(120000)) { Stop-Process -Id $pr.Id -Force; Check 'finishes within 2 min' $false; return }
+    $script:cur.Secs = [int]$sw.Elapsed.TotalSeconds
+    $o = @(Get-Content "$dir\accountcheck.log")
+    Check 'ACCOUNT CHECK OK' (($o -match '^ACCOUNT CHECK OK').Count -gt 0) (($o -match '^ACCOUNT CHECK|  FAIL' | Select-Object -First 3) -join '; ')
+}
+
 # ----------------------------------------------------------------------------------------------------------------- run
 function Wanted($n) { return ($Only.Count -eq 0 -or $Only -contains $n) }
 try {
@@ -293,6 +305,7 @@ try {
         if (Wanted 'sp-pvp') { Run-SelfPlay 'sp-pvp' $null '-Dselfplay.pvp=true' 'SELFPLAY PVP OK' }
         if (Wanted 'sp-peer') { Run-SelfPlay 'sp-peer' $null '-Dselfplay.peer=true' 'SELFPLAY PEER OK' }
         if (Wanted 'sp-online') { Run-SelfPlay 'sp-online' $null '-Dselfplay.online=wss://mm.mtga-forge.workers.dev' 'SELFPLAY ONLINE OK' }   # needs the internet (live coordinator)
+        if (Wanted 'sp-accounts') { Run-AccountCheck 'sp-accounts' }
         if (Wanted 'sp-profile') { Run-ProfileCheck 'sp-profile' }
         if (Wanted 'sp-queues') { Run-QueueCheck 'sp-queues' }
     }

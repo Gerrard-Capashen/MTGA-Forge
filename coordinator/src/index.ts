@@ -9,10 +9,13 @@
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
  *
- * Nothing is inspected or stored: the host's engine stays authoritative (casual play).
+ * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. The relay inspects and stores nothing: the host's engine
+ * stays authoritative (casual play).
  */
 
-export interface Env {
+import { handleAccounts, type AccountEnv } from "./accounts";
+
+export interface Env extends AccountEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -43,6 +46,9 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/health") return Response.json({ ok: true, service: "mtga-forge-coordinator" });
+
+    const account = await handleAccounts(req, env, url);
+    if (account) return account;
 
     if (req.headers.get("Upgrade") !== "websocket") return text(426, "WebSocket expected");
 

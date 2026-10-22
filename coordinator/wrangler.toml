@@ -1,6 +1,7 @@
 name = "mm"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
+preview_urls = false
 
 [[durable_objects.bindings]]
 name = "QUEUE"
@@ -15,6 +16,11 @@ class_name = "Room"
 tag = "v1"
 new_sqlite_classes = ["Queue", "Room"]
 
-# Secret for the match tokens: `npx wrangler secret put TOKEN_SECRET` (a default is used under `wrangler dev`).
+# Accounts: names, tags, device keys (schema in migrations/, apply with `npm run db:migrate`).
+[[d1_databases]]
+binding = "DB"
+database_name = "mtga-forge"
+database_id = "3f6f6bd1-3851-46d9-9406-9f52ab6f7c67"
+migrations_dir = "migrations"
 
-preview_urls = false
+# Secret for the match tokens and session tokens: `npx wrangler secret put TOKEN_SECRET` (a default is used under `wrangler dev`).
