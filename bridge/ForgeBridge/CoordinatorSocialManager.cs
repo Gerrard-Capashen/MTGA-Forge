@@ -51,6 +51,7 @@ namespace ForgeBridge
         private long _since;
         private volatile bool _stopping;
         private bool _first = true;
+        private long _lastMessage;
 
         public bool IsSocialEnabled => true;
         public bool Connected => _connected;
@@ -227,6 +228,15 @@ namespace ForgeBridge
                 BlocksChanged?.Invoke();
             }
 
+            // friend messages (the client's challenge invites and updates travel as opaque text between two clients)
+            foreach (var j in Items(o, "messages"))
+            {
+                long seq = (long)j["seq"];
+                if (seq <= _lastMessage) continue;
+                _lastMessage = seq;
+                if (!_first) OnGameMessage?.Invoke(new GameMessage((string)j["from"], "", (string)j["payload"], null));
+            }
+
             bool connected = (bool)o["connected"];
             if (connected != _connected || _first)
             {
@@ -281,7 +291,10 @@ namespace ForgeBridge
         public void Disconnect(bool shutdownStyle) { }
         public void Reconnect() { }
         public void SendDirectMessage(string friendFullName, string message) { Log.Info("social: direct messages are not available yet"); }
-        public void SendGameMessage(string playerId, string message) { Log.Info("social: game messages are not available yet (challenges: next stage)"); }
+        public void SendGameMessage(string playerId, string message)
+        {
+            Post("game", new JObject { ["to"] = playerId, ["payload"] = message });
+        }
 
         public void SetUserPresenceStatus(PresenceStatus presenceStatus)
         {

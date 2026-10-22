@@ -6,6 +6,8 @@
  *   /session   (from the Worker, after the token check, header x-player-id)  WebSocket. Server -> client:
  *                {"t":"hello","status":"Available"}   {"t":"presence","playerId":"...","status":"Busy"}   {"t":"changed"}
  *              client -> server: {"t":"status","status":"Available|Busy|Away|Offline"}  and "ping" (answered "pong" without waking the Hub)
+ *                {"t":"game","to":"<friend id>","payload":"..."}  an opaque message for a friend (the client's challenge invites travel this way);
+ *                the friend's sessions get {"t":"game","from":"<id>","payload":"..."}. Friends only, 16 KB, 60 a minute, dropped when the friend is offline.
  *   /notify    POST {to:[playerId], event}  send the event to those players' sessions
  *   /presence  POST {ids:[playerId]} -> {playerId: status}   ("Offline" when there is no session)
  *
@@ -17,7 +19,12 @@ const STATUSES = ["Available", "Busy", "Away", "Offline"];
 
 interface Session { playerId: string; status: string }
 
+const GAME_MAX = 16 * 1024;
+const GAME_PER_MINUTE = 60;
+
 export class Hub implements DurableObject {
+  private sent = new Map<string, { n: number; since: number }>();
+
   constructor(private ctx: DurableObjectState, private env: FriendsEnv) {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
@@ -56,10 +63,14 @@ export class Hub implements DurableObject {
 
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (typeof message !== "string") return;
-    let m: { t?: string; status?: string };
+    let m: { t?: string; status?: string; to?: string; payload?: string };
     try { m = JSON.parse(message); } catch { return; }
     const s = ws.deserializeAttachment() as Session | null;
     if (!s) return;
+    if (m.t === "game" && typeof m.to === "string" && typeof m.payload === "string") {
+      await this.relayGame(s.playerId, m.to, m.payload);
+      return;
+    }
     if (m.t === "status" && typeof m.status === "string" && STATUSES.includes(m.status) && m.status !== s.status) {
       ws.serializeAttachment({ ...s, status: m.status } satisfies Session);
       await this.announce(s.playerId);
@@ -73,6 +84,19 @@ export class Hub implements DurableObject {
   }
 
   async webSocketError(ws: WebSocket): Promise<void> { await this.webSocketClose(ws, 1011); }
+
+  private async relayGame(from: string, to: string, payload: string): Promise<void> {
+    if (payload.length > GAME_MAX) return;
+    const now = Date.now();
+    const r = this.sent.get(from);
+    if (!r || now - r.since > 60_000) this.sent.set(from, { n: 1, since: now });
+    else if (++r.n > GAME_PER_MINUTE) return;
+    const [a, b] = from < to ? [from, to] : [to, from];
+    const friends = await this.env.DB.prepare("SELECT 1 FROM friendships WHERE a = ?1 AND b = ?2 AND status = 'accepted'").bind(a, b).first();
+    if (!friends) return;
+    const text = JSON.stringify({ t: "game", from, payload });
+    for (const w of this.live(to)) w.send(text);
+  }
 
   private live(playerId: string): WebSocket[] {
     return this.ctx.getWebSockets(playerId).filter(w => w.readyState === WebSocket.READY_STATE_OPEN);

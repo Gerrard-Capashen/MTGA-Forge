@@ -16,10 +16,13 @@
 
 import { authenticateToken, handleAccounts } from "./accounts";
 import { handleFriends, hubOf, type FriendsEnv } from "./friends";
+import { handleChallenges, type ChallengesEnv } from "./challenges";
+import { matchToken, type Role } from "./tokens";
 
 export { Hub } from "./hub";
+export { Challenge } from "./challenge";
 
-export interface Env extends FriendsEnv {
+export interface Env extends FriendsEnv, ChallengesEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -32,15 +35,9 @@ const WAIT_MS = 5 * 60_000;         // a waiting ticket older than this is ignor
 const ROOM_JOIN_MS = 60_000;        // both sides must be in the room by then
 const ROOM_MAX_MS = 6 * 3_600_000;  // hard cap of one match
 
-type Role = "host" | "guest";
 const other = (r: Role): Role => (r === "host" ? "guest" : "host");
 
-async function token(env: Env, match: string, role: Role): Promise<string> {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.TOKEN_SECRET ?? "dev-secret"),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${match}.${role}`));
-  return [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
+const token = matchToken;
 
 function text(status: number, body: string): Response {
   return new Response(body, { status, headers: { "content-type": "text/plain; charset=utf-8" } });
@@ -55,6 +52,8 @@ export default {
     if (account) return account;
     const friends = await handleFriends(req, env, url);
     if (friends) return friends;
+    const challenges = await handleChallenges(req, env, url);
+    if (challenges) return challenges;
 
     if (req.headers.get("Upgrade") !== "websocket") return text(426, "WebSocket expected");
 
