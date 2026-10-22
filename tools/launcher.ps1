@@ -30,6 +30,7 @@ param(
     [string]$PeerKey = '',
     [string]$FriendCode = '',
     [switch]$Offline,
+    [switch]$SocialSpike,
     [string]$Coordinator = '',
     [string]$ClientArgs = '',
     [switch]$NoPause
@@ -116,6 +117,7 @@ try {
     if ($busy) { Stop-WithMessage "Port $(($busy.LocalPort | Sort-Object -Unique) -join ', ') is used by another program ($((Get-Process -Id $busy[0].OwningProcess -ErrorAction SilentlyContinue).ProcessName)). Close it and start again." }
 
     $p2pArgs = @()
+    if ($SocialSpike) { $p2pArgs += '-Dmtga.social=spike' }      # developer: fake friend list (stage 2 spike)
     if ($Offline) { $p2pArgs += '-Dmtga.p2p=off' }
     elseif (-not $P2P) {
         if ($Coordinator) { $p2pArgs += "-Dmtga.coordinator=$Coordinator" }
@@ -156,6 +158,7 @@ try {
     Get-ChildItem Env: | Where-Object { $_.Name -like 'FORGEBRIDGE_*' } | ForEach-Object { Remove-Item "Env:$($_.Name)" }
     foreach ($k in $aids.Keys) { Set-Item "Env:$k" $aids[$k] }
     $env:FORGEBRIDGE_FDPORT = "$($ports[1])"; $env:FORGEBRIDGE_ARTPORT = "$($ports[2])"; $env:FORGEBRIDGE_NAME = $Name; $env:FORGEBRIDGE_DATA = $dataDir
+    if ($SocialSpike) { $env:FORGEBRIDGE_SOCIAL = 'spike' }
     if ($Instance -gt 0 -and -not $ClientArgs) { $ClientArgs = '-screen-fullscreen 0 -screen-width 1280 -screen-height 720' }
     $sp = @{ FilePath = "$client\MTGA.exe"; WorkingDirectory = $client; PassThru = $true }
     if ($ClientArgs) { $sp.ArgumentList = $ClientArgs }

@@ -77,7 +77,8 @@ namespace ForgeBridge
             Log.Info("stage1: registering LocalAccountClient");
             Pantry.Set<IAccountClient>(Pantry.Scope.Application, new LocalAccountClient());
             // Hasbro Go (social/chat SDK) cannot initialise offline: use the null implementations the client already ships.
-            Pantry.Set<MTGA.Social.ISocialManager>(Pantry.Scope.Application, new Wizards.Mtga.Social.NullSocialManager());
+            MTGA.Social.ISocialManager social = SpikeSocialManager.Enabled ? (MTGA.Social.ISocialManager)new SpikeSocialManager() : new Wizards.Mtga.Social.NullSocialManager();
+            Pantry.Set<MTGA.Social.ISocialManager>(Pantry.Scope.Application, social);
             Pantry.Set<_3rdParty.ExternalChat.IExternalChatManager>(Pantry.Scope.Application, new _3rdParty.ExternalChat.MockExternalChatManager());
 
             // TLS trust must be in place before PAPA.Create: the Front Door TcpConnection captures the callback when it is built.
