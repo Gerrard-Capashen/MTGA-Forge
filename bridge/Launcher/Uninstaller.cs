@@ -15,6 +15,9 @@ namespace MtgaForgeLauncher
         public List<string> Dirs { get; } = new List<string>();
         public List<string> Files { get; } = new List<string>();
         public string RegistryKey { get; set; }
+
+        /// <summary>Extra removal step that returns a message on failure (the firewall rule).</summary>
+        public Func<string> Custom { get; set; }
         public long Bytes { get; set; }
         public bool Exists { get; set; }
         public bool IsChecked { get { return isChecked; } set { Set(ref isChecked, value); } }
@@ -81,9 +84,12 @@ namespace MtgaForgeLauncher
             var own = new UninstallItem { Title = "Launcher settings", Detail = "What this window remembers: folder, name, friend code.", IsChecked = true };
             foreach (var f in new[] { "ui.ini", "config.json" }) if (File.Exists(Path.Combine(Settings.Home, f))) own.Files.Add(Path.Combine(Settings.Home, f));
 
-            foreach (var i in new[] { copy, logs, data, prefs, own })
+            var fw = new UninstallItem { Title = "Firewall rule", Detail = "The rule that blocks the game from the internet. Windows asks for administrator approval to remove it.", IsChecked = true };
+            if (Firewall.Exists(folder)) fw.Custom = () => Firewall.Set(folder, false);
+
+            foreach (var i in new[] { copy, logs, data, prefs, own, fw })
             {
-                i.Exists = i.Dirs.Count + i.Files.Count > 0 || i.RegistryKey != null;
+                i.Exists = i.Dirs.Count + i.Files.Count > 0 || i.RegistryKey != null || i.Custom != null;
                 if (!i.Exists) i.IsChecked = false;
                 items.Add(i);
             }
@@ -111,6 +117,7 @@ namespace MtgaForgeLauncher
                 status("Removing " + i.Title.ToLowerInvariant() + "...");
                 foreach (var d in i.Dirs) Try(() => DeleteTree(d), d, problems);
                 foreach (var f in i.Files) Try(() => File.Delete(f), f, problems);
+                if (i.Custom != null) { string err = null; Try(() => err = i.Custom(), i.Title, problems); if (err != null) problems.Add(err); }
                 if (i.RegistryKey != null) Try(() => Registry.CurrentUser.DeleteSubKeyTree(i.RegistryKey, false), "HKCU\\" + i.RegistryKey, problems);
             }
             // leave no empty shells behind

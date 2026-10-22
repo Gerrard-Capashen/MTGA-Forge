@@ -73,7 +73,8 @@ namespace MtgaForgeLauncher
         Stage stage = Stage.Checking;
         string headline = "Looking for your game...", body = "", sourceNote = "", folder = "", diskInfo = "", folderProblem = "";
         string name = "", friendCode = "", playStatus = "", profileNote = "";
-        bool offline, consoleOpen, diskLow;
+        bool offline, consoleOpen, diskLow, firewallOn, updateAvailable;
+        string updateText = "", updateUrl = "";
         SourceItem selectedSource;
         double progress;
 
@@ -94,6 +95,8 @@ namespace MtgaForgeLauncher
         public ICommand ChangeLocationCommand { get; }
         public ICommand DefaultFolderCommand { get; }
         public ICommand ToggleConsoleCommand { get; }
+        public ICommand OpenUpdateCommand { get; }
+        public ICommand DismissUpdateCommand { get; }
 
         /// <summary>A line for the console panel.</summary>
         public event Action<string> LogAdded;
@@ -108,12 +111,15 @@ namespace MtgaForgeLauncher
             ChangeLocationCommand = new RelayCommand(() => { editing = true; RaiseStage(); }, () => stage == Stage.Ready);
             DefaultFolderCommand = new RelayCommand(() => SetFolder(Settings.DefaultFolder), () => !busy && stage != Stage.Running);
             ToggleConsoleCommand = new RelayCommand(() => ConsoleOpen = !ConsoleOpen);
+            OpenUpdateCommand = new RelayCommand(OpenUpdate);
+            DismissUpdateCommand = new RelayCommand(() => UpdateAvailable = false);
             logTimer.Tick += (s, e) => PollServerLog();
 
             settings.Load();
             folder = string.IsNullOrEmpty(folderOverride) ? settings.Folder : folderOverride; name = settings.Name; friendCode = settings.Code; offline = settings.Offline; consoleOpen = settings.ConsoleOpen;
             profileNote = Profile.Note(folder);
             foreach (var s in PatchSteps) Steps.Add(new StepItem { Title = s[1] });
+            if (!demo) { RefreshFirewall(); ui.BeginInvoke(DispatcherPriority.ApplicationIdle, (Action)CheckForUpdate); }
             if (!demo) Task.Run(() => MtgaLocator.Find()).ContinueWith(t => ui.BeginInvoke((Action)(() => OnSourcesFound(t.Result))));
         }
 
@@ -154,6 +160,10 @@ namespace MtgaForgeLauncher
         public string Name { get { return name; } set { Set(ref name, value); } }
         public string FriendCode { get { return friendCode; } set { Set(ref friendCode, value); } }
         public bool Offline { get { return offline; } set { if (Set(ref offline, value)) Raise("OnlineEnabled"); } }
+        public bool UpdateAvailable { get { return updateAvailable; } private set { Set(ref updateAvailable, value); } }
+        public string UpdateText { get { return updateText; } private set { Set(ref updateText, value); } }
+        public bool FirewallOn { get { return firewallOn; } }
+        public string FirewallTip { get { return Firewall.Explanation; } }
         public bool OnlineEnabled { get { return !offline; } }
         public bool ConsoleOpen { get { return consoleOpen; } set { if (Set(ref consoleOpen, value)) settings.ConsoleOpen = value; } }
 
@@ -257,6 +267,7 @@ namespace MtgaForgeLauncher
             profileNote = Profile.Note(folder); Raise("ProfileNote");
             ValidateFolder();
             UpdateDisk();
+            RefreshFirewall();
             if (!busy) Recheck();
         }
 
@@ -444,12 +455,57 @@ namespace MtgaForgeLauncher
             }
         }
 
+        // ------------------------------------------------------------------------------------------ updates
+        void CheckForUpdate()
+        {
+            DateTimeOffset built; string commit;
+            if (!UpdateChecker.OwnVersion(Path.GetDirectoryName(tools), out built, out commit)) { Log("Update check skipped: this is a development copy."); return; }
+            Log("Update check: this package is commit " + commit + ", built " + built.ToString("yyyy-MM-dd HH:mm") + ". Asking " + UpdateChecker.Endpoint);
+            Task.Run(() => UpdateChecker.Fetch(commit)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
+            {
+                var u = t.Result;
+                if (u == null) { Log("Update check: the website could not be reached. Nothing is needed."); return; }
+                if (!u.Released.HasValue) { Log("Update check: no release is listed yet."); return; }
+                if (u.Released.Value <= built.AddMinutes(1)) { Log("Update check: you have the latest version."); return; }
+                Log("Update check: a newer version exists (commit " + u.Commit + ", released " + u.Released.Value.ToString("yyyy-MM-dd") + ", SHA-256 " + u.Sha256 + ").");
+                updateUrl = u.Url;
+                UpdateText = "A newer MTGA Forge is available (" + u.Released.Value.ToString("yyyy-MM-dd") + "). Players on different versions cannot match online.";
+                UpdateAvailable = true;
+            })));
+        }
+
+        void OpenUpdate()
+        {
+            Uri uri;
+            if (!Uri.TryCreate(updateUrl, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps) { Log("Update link ignored (not an https address): " + updateUrl); return; }
+            try { System.Diagnostics.Process.Start(uri.AbsoluteUri); } catch (Exception e) { Log("Could not open the browser: " + e.Message); }
+        }
+
+        // ------------------------------------------------------------------------------------------ firewall
+        /// <summary>Reads whether the block rule for this folder's client exists (the switch shows the real state, not a remembered one).</summary>
+        public void RefreshFirewall()
+        {
+            string dir = folder;
+            Task.Run(() => Firewall.Exists(dir)).ContinueWith(t => ui.BeginInvoke((Action)(() => { firewallOn = t.Result; Raise("FirewallOn"); })));
+        }
+
+        public void SetFirewall(bool on)
+        {
+            string dir = folder;
+            PlayStatus = on ? "Waiting for Windows to approve the firewall rule..." : "Waiting for Windows to approve removing the firewall rule...";
+            Task.Run(() => Firewall.Set(dir, on)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
+            {
+                PlayStatus = t.Result ?? (on ? "The game is now blocked from the internet. Forge and matchmaking are not affected." : "The firewall rule is removed.");
+                RefreshFirewall();
+            })));
+        }
+
         // ------------------------------------------------------------------------------------------ identity backup
         /// <summary>The uninstall removed things: look at the game again.</summary>
         public void AfterUninstall()
         {
             profileNote = Profile.Note(folder); Raise("ProfileNote");
-            ValidateFolder(); UpdateDisk();
+            ValidateFolder(); UpdateDisk(); RefreshFirewall();
             editing = false;
             Recheck();
         }
@@ -524,7 +580,7 @@ namespace MtgaForgeLauncher
                     Headline = "Preparing your game"; Body = "This takes several minutes, mostly copying files. You can do something else meanwhile.";
                     for (int k = 0; k < Steps.Count; k++) Steps[k].State = k < 3 ? 2 : k == 3 ? 1 : 0;
                     Progress = 3; Stage = Stage.Preparing; break;
-                case Stage.Ready: Headline = "Ready to play"; PlayStatus = ""; Stage = Stage.Ready; break;
+                case Stage.Ready: Headline = "Ready to play"; PlayStatus = ""; Stage = Stage.Ready; UpdateText = "A newer MTGA Forge is available (2026-10-25). Players on different versions cannot match online."; UpdateAvailable = true; break;
                 case Stage.Running: PlayStatus = "Game running. Pick Bot Play or Casual Play, a format and a deck. Close the game window to finish."; Stage = Stage.Running; break;
                 default: Stage = s; break;
             }

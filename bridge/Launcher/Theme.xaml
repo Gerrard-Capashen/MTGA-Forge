@@ -200,6 +200,20 @@
     </Setter>
   </Style>
 
+  <Style TargetType="ToolTip">
+    <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToolTip">
+          <Border Background="{StaticResource Panel2}" BorderBrush="{StaticResource Muted}" BorderThickness="1" CornerRadius="6" Padding="12,9">
+            <ContentPresenter/>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style x:Key="Card" TargetType="Border">
     <Setter Property="Background" Value="{StaticResource Panel}"/>
     <Setter Property="BorderBrush" Value="{StaticResource Line}"/>

@@ -45,6 +45,34 @@ namespace MtgaForgeLauncher
                 Console.ScrollToEnd();
             };
             Closing += (s, e) => model.Shutdown();
+            Loaded += (s, e) => { if (model.ConsoleOpen) ResizeForConsole(true); };
+            model.PropertyChanged += (s, e) =>
+            {
+                // after the console has been laid out, so the window grows around it
+                if (e.PropertyName == "ConsoleOpen" && IsLoaded) Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, (Action)(() => ResizeForConsole(model.ConsoleOpen)));
+            };
+        }
+
+        double grownBy;
+
+        /// <summary>Opening Details adds the console's height to the window (and closing takes it away) so nothing is covered.</summary>
+        void ResizeForConsole(bool open)
+        {
+            if (WindowState != WindowState.Normal) return;
+            var work = SystemParameters.WorkArea;
+            if (open && grownBy == 0)
+            {
+                double want = Console.Height + 2;                                   // the console and its border
+                double room = work.Height - Height;
+                grownBy = Math.Max(0, Math.Min(want, room));
+                Height += grownBy;
+                if (Top + Height > work.Bottom) Top = Math.Max(work.Top, work.Bottom - Height);
+            }
+            else if (!open && grownBy > 0)
+            {
+                Height = Math.Max(MinHeight, Height - grownBy);
+                grownBy = 0;
+            }
         }
 
         string PickFolder(string description, string start)
@@ -82,6 +110,11 @@ namespace MtgaForgeLauncher
             if (dir == null) return;
             if (Model.HasIdentity && MessageBox.Show(this, "This replaces the identity and profile of this install. Your decks stay. Continue?", "MTGA Forge", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
             Info(Model.RestoreIdentity(dir));
+        }
+
+        void Firewall_Click(object sender, RoutedEventArgs e)
+        {
+            Model.SetFirewall(FirewallSwitch.IsChecked == true);
         }
 
         void Uninstall_Click(object sender, RoutedEventArgs e)

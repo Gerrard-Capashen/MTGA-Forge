@@ -8,6 +8,7 @@
   <Grid Background="{StaticResource Bg}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
@@ -26,8 +27,17 @@
       </DockPanel>
     </Border>
 
+    <!-- a newer release exists (from the website's latest.json) -->
+    <Border Grid.Row="1" Background="{StaticResource Panel2}" BorderBrush="{StaticResource Accent}" BorderThickness="0,0,0,1" Padding="24,9" Visibility="{Binding UpdateAvailable, Converter={StaticResource B2V}}">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Dismiss" Command="{Binding DismissUpdateCommand}" Margin="16,0,0,0"/>
+        <Button DockPanel.Dock="Right" Content="Get the update" Command="{Binding OpenUpdateCommand}" Padding="14,5" FontSize="13"/>
+        <TextBlock Text="{Binding UpdateText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+      </DockPanel>
+    </Border>
+
     <!-- body: steps on the left, the current step on the right -->
-    <Grid Grid.Row="1">
+    <Grid Grid.Row="2">
       <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
 
       <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Padding="24,28,16,16">
@@ -157,7 +167,8 @@
       </Grid>
 
       <!-- play -->
-      <Grid Grid.Column="1" Margin="32,28,32,16" Visibility="{Binding PlayVisible, Converter={StaticResource B2V}}">
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Visibility="{Binding PlayVisible, Converter={StaticResource B2V}}">
+      <Grid Margin="32,28,32,16">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions>
         <StackPanel>
           <TextBlock Text="Ready to play" FontSize="26" FontWeight="SemiBold"/>
@@ -173,6 +184,14 @@
             <TextBlock Text="To play one friend, both type the same code (like blue-otter-7) and pick the same Casual Play format. Empty means random opponents." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
 
             <CheckBox Content="Offline: no online play, Bot Play only" IsChecked="{Binding Offline}" Margin="0,18,0,0"/>
+            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+              <CheckBox x:Name="FirewallSwitch" Content="Block the game's internet access" IsChecked="{Binding FirewallOn, Mode=OneWay}" Click="Firewall_Click"/>
+              <Border Width="18" Height="18" CornerRadius="9" BorderBrush="{StaticResource Muted}" BorderThickness="1.5" Margin="10,0,0,0" VerticalAlignment="Center" Background="Transparent"
+                      ToolTipService.InitialShowDelay="100" ToolTipService.ShowDuration="60000" Cursor="Help">
+                <TextBlock Text="i" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border.ToolTip><TextBlock Text="{Binding FirewallTip}" TextWrapping="Wrap" MaxWidth="360"/></Border.ToolTip>
+              </Border>
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
@@ -189,10 +208,11 @@
         </StackPanel>
         <local:ForgeIcon Grid.Column="1" Animate="True" Width="210" Height="210" VerticalAlignment="Top" Margin="0,10,0,0"/>
       </Grid>
+      </ScrollViewer>
     </Grid>
 
     <!-- details: everything the launcher runs, on request -->
-    <Border Grid.Row="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+    <Border Grid.Row="3" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
       <StackPanel>
         <DockPanel Margin="20,8">
           <Button Style="{StaticResource LinkButton}" Command="{Binding ToggleConsoleCommand}" DockPanel.Dock="Left" FontSize="13" Foreground="{StaticResource Fg}">
