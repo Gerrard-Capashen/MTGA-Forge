@@ -18,6 +18,8 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   Cloudflare Worker); no deck lists or accounts are stored there.
   To play a specific friend: both type the same Friend code in the window (like blue-otter-7) before pressing Start, then both
   pick the same Casual Play format. Without a code you meet random players.
+  Friends: the game's own Friends list (bottom left corner) works: add a friend by typing their Name#12345 (the number is part of
+  the name: ask them), they see your request and accept; you see each other online, busy or offline.
   If you are told "different card database", one of you has another MTGA version or another MTGA-Forge package.
   "Offline" in the window (or -Offline) switches online play off.
   Your name: the window suggests a random one the first time; the game shows it as Name#12345 (the number is given by the

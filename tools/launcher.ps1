@@ -158,7 +158,7 @@ try {
     Get-ChildItem Env: | Where-Object { $_.Name -like 'FORGEBRIDGE_*' } | ForEach-Object { Remove-Item "Env:$($_.Name)" }
     foreach ($k in $aids.Keys) { Set-Item "Env:$k" $aids[$k] }
     $env:FORGEBRIDGE_FDPORT = "$($ports[1])"; $env:FORGEBRIDGE_ARTPORT = "$($ports[2])"; $env:FORGEBRIDGE_NAME = $Name; $env:FORGEBRIDGE_DATA = $dataDir
-    if ($SocialSpike) { $env:FORGEBRIDGE_SOCIAL = 'spike' }
+    if ($SocialSpike) { $env:FORGEBRIDGE_SOCIAL = 'spike' } elseif (-not $Offline -and -not $P2P) { $env:FORGEBRIDGE_SOCIAL = 'online' }     # the client's friends UI on the coordinator's friends
     if ($Instance -gt 0 -and -not $ClientArgs) { $ClientArgs = '-screen-fullscreen 0 -screen-width 1280 -screen-height 720' }
     $sp = @{ FilePath = "$client\MTGA.exe"; WorkingDirectory = $client; PassThru = $true }
     if ($ClientArgs) { $sp.ArgumentList = $ClientArgs }

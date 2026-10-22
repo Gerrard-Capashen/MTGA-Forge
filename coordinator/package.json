@@ -8,9 +8,9 @@
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply mtga-forge --remote",
     "db:migrate:local": "wrangler d1 migrations apply mtga-forge --local",
-    "db:clean": "wrangler d1 execute mtga-forge --command \"DELETE FROM players WHERE name_lc LIKE 'zztest%'; DELETE FROM name_holds WHERE name_lc LIKE 'zztest%'\"",
+    "db:clean": "wrangler d1 execute mtga-forge --command \"DELETE FROM friendships WHERE a IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%') OR b IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM blocks WHERE blocker IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%') OR blocked IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM players WHERE name_lc LIKE 'zztest%'; DELETE FROM name_holds WHERE name_lc LIKE 'zztest%'\"",
     "typecheck": "tsc --noEmit",
-    "test": "node test/smoke.mjs && node test/accounts.mjs"
+    "test": "node test/smoke.mjs && node test/accounts.mjs && node test/friends.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261019.1",

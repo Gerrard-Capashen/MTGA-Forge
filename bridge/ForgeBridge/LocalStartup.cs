@@ -52,6 +52,7 @@ namespace ForgeBridge
             Log.Info("LocalStartup.Run entered. Original startup disabled; no Wizards network calls.");
             Privacy.Apply();
             bootstrap.StartCoroutine(CardArt.Pump());
+            bootstrap.StartCoroutine(CoordinatorSocialManager.Pump());
             bootstrap.StartCoroutine(CosmeticCatalogs.Watch());
             bootstrap.StartCoroutine(DebugShots.Run());
             bootstrap.StartCoroutine(DebugClicks.Run());
@@ -77,7 +78,8 @@ namespace ForgeBridge
             Log.Info("stage1: registering LocalAccountClient");
             Pantry.Set<IAccountClient>(Pantry.Scope.Application, new LocalAccountClient());
             // Hasbro Go (social/chat SDK) cannot initialise offline: use the null implementations the client already ships.
-            MTGA.Social.ISocialManager social = SpikeSocialManager.Enabled ? (MTGA.Social.ISocialManager)new SpikeSocialManager() : new Wizards.Mtga.Social.NullSocialManager();
+            MTGA.Social.ISocialManager social = CoordinatorSocialManager.Enabled ? (MTGA.Social.ISocialManager)new CoordinatorSocialManager()
+                : SpikeSocialManager.Enabled ? new SpikeSocialManager() : new Wizards.Mtga.Social.NullSocialManager();
             Pantry.Set<MTGA.Social.ISocialManager>(Pantry.Scope.Application, social);
             Pantry.Set<_3rdParty.ExternalChat.IExternalChatManager>(Pantry.Scope.Application, new _3rdParty.ExternalChat.MockExternalChatManager());
 

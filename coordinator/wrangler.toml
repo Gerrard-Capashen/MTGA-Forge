@@ -11,10 +11,18 @@ class_name = "Queue"
 name = "ROOM"
 class_name = "Room"
 
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
 # SQLite-backed Durable Objects are the ones available on the free plan.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Queue", "Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Hub"]
 
 # Accounts: names, tags, device keys (schema in migrations/, apply with `npm run db:migrate`).
 [[d1_databases]]

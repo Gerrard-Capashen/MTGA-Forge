@@ -9,13 +9,17 @@
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
  *
- * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. The relay inspects and stores nothing: the host's engine
+ * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
+ *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
  * stays authoritative (casual play).
  */
 
-import { handleAccounts, type AccountEnv } from "./accounts";
+import { authenticateToken, handleAccounts } from "./accounts";
+import { handleFriends, hubOf, type FriendsEnv } from "./friends";
 
-export interface Env extends AccountEnv {
+export { Hub } from "./hub";
+
+export interface Env extends FriendsEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -49,8 +53,18 @@ export default {
 
     const account = await handleAccounts(req, env, url);
     if (account) return account;
+    const friends = await handleFriends(req, env, url);
+    if (friends) return friends;
 
     if (req.headers.get("Upgrade") !== "websocket") return text(426, "WebSocket expected");
+
+    if (url.pathname === "/session") {
+      const id = await authenticateToken(env, url.searchParams.get("token") ?? "");
+      if (!id) return text(401, "sign in first");
+      const headers = new Headers(req.headers);
+      headers.set("x-player-id", id);                                   // set here only: a client cannot choose who it is
+      return hubOf(env).fetch(new Request("https://hub/session?status=" + encodeURIComponent(url.searchParams.get("status") ?? "Available"), { headers }));
+    }
 
     if (url.pathname === "/queue") {
       const q = url.searchParams.get("q") ?? "";

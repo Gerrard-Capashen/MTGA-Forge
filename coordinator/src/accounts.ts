@@ -77,7 +77,12 @@ async function issueToken(env: AccountEnv, playerId: string): Promise<{ token: s
 /** The player id behind a valid "Authorization: Bearer" token, else null. */
 export async function authenticate(env: AccountEnv, req: Request): Promise<string | null> {
   const h = req.headers.get("Authorization") ?? "";
-  const t = h.startsWith("Bearer ") ? h.slice(7).split(".") : [];
+  return h.startsWith("Bearer ") ? authenticateToken(env, h.slice(7)) : null;
+}
+
+/** Same for a bare token (a WebSocket cannot send headers from every client: /session takes it in the query). */
+export async function authenticateToken(env: AccountEnv, token: string): Promise<string | null> {
+  const t = token.split(".");
   if (t.length !== 4 || t[0] !== "v1" || !ID.test(t[1]) || Number(t[2]) < Date.now()) return null;
   return t[3] === await mac(env, `session|${t[1]}.${t[2]}`) ? t[1] : null;
 }
