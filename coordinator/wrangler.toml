@@ -40,3 +40,7 @@ database_id = "3f6f6bd1-3851-46d9-9406-9f52ab6f7c67"
 migrations_dir = "migrations"
 
 # Secret for the match tokens and session tokens: `npx wrangler secret put TOKEN_SECRET` (a default is used under `wrangler dev`).
+
+# No logs or traces on purpose (privacy): /session and /match/<id> carry tokens in the query string, which invocation logs would record.
+[observability.logs]
+enabled = false

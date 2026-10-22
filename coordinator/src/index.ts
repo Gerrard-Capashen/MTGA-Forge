@@ -9,6 +9,7 @@
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
  *
+ * Results (src/results.ts): POST /matches/<id>/result, GET /matches/<id> (both seats report, verified when they agree).
  * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
  *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
  * stays authoritative (casual play).
@@ -17,12 +18,13 @@
 import { authenticateToken, handleAccounts } from "./accounts";
 import { handleFriends, hubOf, type FriendsEnv } from "./friends";
 import { handleChallenges, type ChallengesEnv } from "./challenges";
+import { handleResults, leaveGraceMs, roomLeft, roomStarted, settleMatch, type ResultsEnv } from "./results";
 import { matchToken, type Role } from "./tokens";
 
 export { Hub } from "./hub";
 export { Challenge } from "./challenge";
 
-export interface Env extends FriendsEnv, ChallengesEnv {
+export interface Env extends FriendsEnv, ChallengesEnv, ResultsEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -54,6 +56,8 @@ export default {
     if (friends) return friends;
     const challenges = await handleChallenges(req, env, url);
     if (challenges) return challenges;
+    const results = await handleResults(req, env, url);
+    if (results) return results;
 
     if (req.headers.get("Upgrade") !== "websocket") return text(426, "WebSocket expected");
 
@@ -141,6 +145,8 @@ export class Room implements DurableObject {
 
   async fetch(req: Request): Promise<Response> {
     const role = new URL(req.url).searchParams.get("role") as Role;
+    const match = new URL(req.url).pathname.split("/").pop() ?? "";
+    await this.ctx.storage.put("match", match);                       // the results table is keyed by it
     if (this.ctx.getWebSockets(role).length > 0) return text(409, `${role} is already connected`);
     if (this.ctx.getWebSockets().length === 0) await this.ctx.storage.setAlarm(Date.now() + ROOM_JOIN_MS);
 
@@ -151,6 +157,7 @@ export class Room implements DurableObject {
     const peer = this.ctx.getWebSockets(other(role))[0];
     if (peer) {
       await this.ctx.storage.setAlarm(Date.now() + ROOM_MAX_MS);
+      await roomStarted(this.env, match);
       server.send(JSON.stringify({ t: "peer" }));
       peer.send(JSON.stringify({ t: "peer" }));
       for (const m of this.pending[other(role)]) server.send(m);   // what the other side sent before we were here
@@ -168,19 +175,26 @@ export class Room implements DurableObject {
     if (q.length < 64 && size < 1_000_000) q.push(message);
   }
 
-  webSocketClose(ws: WebSocket, code: number): void {
+  async webSocketClose(ws: WebSocket, code: number): Promise<void> {
     const role = this.ctx.getTags(ws)[0] as Role;
     const peer = this.ctx.getWebSockets(other(role))[0];
+    const match = await this.ctx.storage.get<string>("match");
+    if (match && peer) {
+      await roomLeft(this.env, match, role);                            // a seat dropping while the other is still here: the results table keeps the fact
+      await this.ctx.storage.setAlarm(Date.now() + leaveGraceMs(this.env) + 500);   // settle the match once the grace period is over (nobody else would ask)
+    }
     if (peer) {
       try { peer.send(JSON.stringify({ t: "left" })); peer.close(1000, "peer left"); } catch { /* gone */ }
     }
     try { ws.close(code === 1005 ? 1000 : code); } catch { /* already closed */ }
   }
 
-  webSocketError(ws: WebSocket): void { this.webSocketClose(ws, 1011); }
+  webSocketError(ws: WebSocket): Promise<void> { return this.webSocketClose(ws, 1011); }
 
-  /** The join deadline (one side never came) or the match cap, whichever alarm is set: either way the room ends. */
+  /** The join deadline (one side never came), the match cap, or the end of the grace period after a seat left: the room ends, and a match with a lone report is settled. */
   async alarm(): Promise<void> {
     for (const w of this.ctx.getWebSockets()) { try { w.close(1000, "room closed"); } catch { /* gone */ } }
+    const match = await this.ctx.storage.get<string>("match");
+    if (match) await settleMatch(this.env, match);
   }
 }
