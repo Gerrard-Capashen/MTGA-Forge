@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -10,6 +10,7 @@ using System.Windows.Threading;
 // Forge server and the game. The work is done by tools\forge-patch.ps1 and tools\launcher.ps1; this program collects the settings,
 // runs them and shows what they print.
 //   MTGA-Forge.exe --shots <folder>   render the window in each state to PNG files and exit (no scripts are run)
+//   MTGA-Forge.exe --ico <file.ico>   draw the anvil at 16..256 px into an icon file and exit (app.ico is made this way)
 //   MTGA-Forge.exe --probe <out.txt> [folder]   start for real (find MTGA, check the game, nothing is patched or started), write where it ended up, exit
 namespace MtgaForgeLauncher
 {
@@ -23,9 +24,40 @@ namespace MtgaForgeLauncher
             var app = new App();
             app.InitializeComponent();
             if (args.Length >= 2 && args[0] == "--shots") return Shots(app, args[1]);
+            if (args.Length >= 2 && args[0] == "--ico") return MakeIcon(args[1]);
             if (args.Length >= 2 && args[0] == "--probe") return Probe(app, args[1], args.Length > 2 ? args[2] : null);
             var window = new MainWindow(new MainViewModel(false));
             return app.Run(window);
+        }
+
+        static int MakeIcon(string path)
+        {
+            var sizes = new[] { 16, 24, 32, 48, 64, 128, 256 };
+            var pngs = new byte[sizes.Length][];
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                var art = new ForgeIcon { Width = sizes[i], Height = sizes[i] };
+                art.Measure(new Size(sizes[i], sizes[i])); art.Arrange(new Rect(0, 0, sizes[i], sizes[i])); art.UpdateLayout();
+                var bmp = new RenderTargetBitmap(sizes[i], sizes[i], 96, 96, PixelFormats.Pbgra32);
+                bmp.Render(art);
+                var enc = new PngBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bmp));
+                using (var ms = new MemoryStream()) { enc.Save(ms); pngs[i] = ms.ToArray(); }
+            }
+            using (var w = new BinaryWriter(File.Create(path)))
+            {
+                w.Write((short)0); w.Write((short)1); w.Write((short)sizes.Length);
+                int offset = 6 + 16 * sizes.Length;
+                for (int i = 0; i < sizes.Length; i++)
+                {
+                    w.Write((byte)(sizes[i] == 256 ? 0 : sizes[i])); w.Write((byte)(sizes[i] == 256 ? 0 : sizes[i]));
+                    w.Write((byte)0); w.Write((byte)0); w.Write((short)1); w.Write((short)32);
+                    w.Write(pngs[i].Length); w.Write(offset);
+                    offset += pngs[i].Length;
+                }
+                foreach (var png in pngs) w.Write(png);
+            }
+            return 0;
         }
 
         static int Probe(App app, string outFile, string folder)

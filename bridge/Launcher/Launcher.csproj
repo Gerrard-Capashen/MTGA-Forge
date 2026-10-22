@@ -10,9 +10,13 @@
     <AssemblyName>MTGA-Forge</AssemblyName>
     <RootNamespace>MtgaForgeLauncher</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <Product>MTGA-Forge</Product>
     <Description>Launcher for MTGA-Forge (unofficial fan project, not affiliated with the makers of MTGA)</Description>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>none</DebugType>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
 </Project>

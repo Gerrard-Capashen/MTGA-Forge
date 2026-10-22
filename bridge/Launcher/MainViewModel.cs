@@ -288,9 +288,11 @@ namespace MtgaForgeLauncher
                     string where = full;
                     while (where != null && !Directory.Exists(where)) where = Path.GetDirectoryName(where);
                     if (where == null) throw new DirectoryNotFoundException("The drive does not exist.");
+                    // a folder that exists is tested by writing a file into it; one that doesn't yet is tested by creating a folder in its
+                    // parent, because that is what will happen (a normal user may create folders in C:\ but not files)
                     string probe = Path.Combine(where, ".write-test-" + Guid.NewGuid().ToString("N"));
-                    File.WriteAllText(probe, "x");
-                    File.Delete(probe);
+                    if (SamePath(where, full)) { File.WriteAllText(probe, "x"); File.Delete(probe); }
+                    else { Directory.CreateDirectory(probe); Directory.Delete(probe); }
                 }
             }
             catch (UnauthorizedAccessException) { problem = "Windows does not let programs write there without administrator rights (Program Files does this). Choose another folder."; }
