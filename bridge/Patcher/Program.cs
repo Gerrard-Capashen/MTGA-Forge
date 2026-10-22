@@ -128,6 +128,26 @@ foreach (var (name, result) in new[] { ("HaveAsset", (bool?)true), ("AddReferenc
     Console.WriteLine("patched AssetLoader.AcquireAsset<T> -> ForgeBridge.CardArt.Acquire");
 }
 
+//   6b. ClientEventDefinitionList.GetBillboardImagePath/GetBladeImagePath/GetBackgroundImagePath(assetLookupSystem, EventContext):
+//      events without art in the client (quick drafts) get "forge-event-art/<SET>.jpg" (CardArt.EventArtPath), served by the art server.
+var eventArtPath = core.ImportReference(cardArt.Methods.Single(m => m.Name == "EventArtPath"));
+var eventBackgroundPath = core.ImportReference(cardArt.Methods.Single(m => m.Name == "EventBackgroundPath"));
+var eventDefs = core.GetType("ClientEventDefinitionList");
+foreach (var name in new[] { "GetBillboardImagePath", "GetBladeImagePath", "GetBackgroundImagePath" })
+{
+    var m = eventDefs.Methods.Single(x => x.Name == name && x.IsStatic && x.Parameters.Count == 2 && x.Parameters[1].ParameterType.FullName == "Wizards.MDN.EventContext");
+    var mp = m.Body.GetILProcessor();
+    foreach (var ret in m.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+    {
+        // reuse the ret instruction itself so branches that target it run the hook too
+        ret.OpCode = OpCodes.Ldarg_1;
+        var call = mp.Create(OpCodes.Call, name == "GetBackgroundImagePath" ? eventBackgroundPath : eventArtPath);
+        mp.InsertAfter(ret, call);
+        mp.InsertAfter(call, mp.Create(OpCodes.Ret));
+    }
+    Console.WriteLine("patched ClientEventDefinitionList." + name + "(EventContext) -> ForgeBridge.CardArt.EventArtPath");
+}
+
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
 

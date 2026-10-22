@@ -38,11 +38,13 @@ namespace ForgeBridge
         }
 
         /// <summary>Hook (AssetLoader.HaveAsset/ReleaseAsset/AddReferenceCount): the path is one of ours, not a bundle asset.</summary>
-        public static bool Owns(string path) => ArtId(path) != 0;
+        public static bool Owns(string path) => ArtId(path) != 0 || EventSet(path) != null;
 
         /// <summary>Hook (AssetLoader.AcquireAsset&lt;T&gt;): the texture for one of our paths, null for any other path.</summary>
         public static UnityEngine.Object Acquire(string path)
         {
+            string set = EventSet(path);
+            if (set != null) return EventSprite(set);
             int id = ArtId(path);
             if (id == 0) return null;
             if (textures.TryGetValue(id, out var tex) && tex != null) return tex;
@@ -57,6 +59,106 @@ namespace ForgeBridge
             Draw(tex, Time.realtimeSinceStartup);
             Task.Run(() => Fetch(id));
             return tex;
+        }
+
+        // ---- quick draft event art: "forge-event-art/<SET>.jpg" is a 16:9 crop of a showcase card of the set ----
+
+        private const int EventWidth = 640, EventHeight = 360, BackgroundWidth = 1920, BackgroundHeight = 1080;
+        private static readonly Regex EventPath = new Regex(@"^forge-event-art/([A-Za-z0-9]{2,8}(-bg)?)\.jpg$", RegexOptions.Compiled);
+        private static readonly Dictionary<string, Sprite> eventSprites = new Dictionary<string, Sprite>();
+        /// <summary>Per event art key ("ZEN-bg"): the client's own art path for the event, shown when ours cannot be had.</summary>
+        private static readonly Dictionary<string, string> eventDefaults = new Dictionary<string, string>();
+        private static readonly HashSet<string> eventFailed = new HashSet<string>();
+        private static readonly AssetLoader.AssetTracker<Sprite> defaultTracker = new AssetLoader.AssetTracker<Sprite>("ForgeEventArtDefault");
+        private static readonly ConcurrentQueue<KeyValuePair<string, byte[]>> arrivedEvent = new ConcurrentQueue<KeyValuePair<string, byte[]>>();
+
+        private static string EventSet(string path)
+        {
+            if (path == null || !path.StartsWith("forge-event-art/", StringComparison.Ordinal)) return null;
+            var m = EventPath.Match(path);
+            return m.Success ? m.Groups[1].Value : null;
+        }
+
+        /// <summary>Hook for the event-art fallback (Core patch): the path to use when the client has no art for this event.</summary>
+        public static string EventArtPath(string current, Wizards.MDN.EventContext ctx) => EventArt(current, ctx, "", false);
+
+        /// <summary>Same for the event page's full-size background (a soft composite, see the art server).</summary>
+        public static string EventBackgroundPath(string current, Wizards.MDN.EventContext ctx) => EventArt(current, ctx, "-bg", true);
+
+        /// <param name="replace">true: also replace art the client found (the background lookup answers a default image for unknown events).</param>
+        private static string EventArt(string current, Wizards.MDN.EventContext ctx, string suffix, bool replace)
+        {
+            if (!replace && !string.IsNullOrEmpty(current)) return current;
+            string name = null;
+            try { name = ctx?.PlayerEvent?.EventUXInfo?.PublicEventName; } catch (Exception) { }
+            if (name == null || !name.StartsWith("QuickDraft_", StringComparison.Ordinal)) return current;
+            string key = name.Substring("QuickDraft_".Length) + suffix;
+            if (eventFailed.Contains(key)) return current;      // no art for it this session: the client's own
+            if (!string.IsNullOrEmpty(current)) eventDefaults[key] = current;
+            return "forge-event-art/" + key + ".jpg";
+        }
+
+        private static Sprite EventSprite(string set)
+        {
+            if (eventSprites.TryGetValue(set, out var sprite) && sprite != null) return sprite;
+            bool bg = set.EndsWith("-bg", StringComparison.Ordinal);
+            int w = bg ? BackgroundWidth : EventWidth, h = bg ? BackgroundHeight : EventHeight;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                name = "ForgeEventArt_" + set,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontUnloadUnusedAsset,
+            };
+            Fill(tex, new Color32(32, 32, 38, 255));
+            sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            sprite.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            eventSprites[set] = sprite;
+            Task.Run(() => FetchEvent(set));
+            return sprite;
+        }
+
+        /// <summary>Copy the client's own sprite for the event into our placeholder texture (so the page shows its default, not a gray frame).</summary>
+        private static void ShowDefault(Texture2D target, string path)
+        {
+            try
+            {
+                var sprite = defaultTracker.Acquire(path);
+                if (sprite == null || sprite.texture == null) return;
+                var rt = RenderTexture.GetTemporary(target.width, target.height, 0);
+                var prev = RenderTexture.active;
+                Graphics.Blit(sprite.texture, rt);
+                RenderTexture.active = rt;
+                target.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                target.Apply(false);
+                RenderTexture.active = prev;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+            catch (Exception e)
+            {
+                Log.Error("EventArt default: " + e.Message);
+            }
+        }
+
+        private static async Task FetchEvent(string set)
+        {
+            byte[] bytes = null;
+            for (int attempt = 0; attempt < 3 && bytes == null; attempt++)
+            {
+                try
+                {
+                    using (var resp = await http.GetAsync("http://127.0.0.1:" + Port + "/event/" + set))
+                    {
+                        if (resp.StatusCode == HttpStatusCode.OK) bytes = await resp.Content.ReadAsByteArrayAsync();
+                        else break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (attempt == 2) Log.Error("EventArt " + set + ": " + e.Message);
+                    await Task.Delay(2000);
+                }
+            }
+            arrivedEvent.Enqueue(new KeyValuePair<string, byte[]>(set, bytes));
         }
 
         private static async Task Fetch(int id)
@@ -97,6 +199,13 @@ namespace ForgeBridge
                         Fill(tex, new Color32(40, 40, 46, 255));
                         Log.Info("CardArt " + a.Key + ": no art");
                     }
+                }
+                while (arrivedEvent.TryDequeue(out var e))
+                {
+                    if (e.Value != null && eventSprites.TryGetValue(e.Key, out var sprite) && sprite != null && sprite.texture.LoadImage(e.Value)) continue;
+                    Log.Info("EventArt " + e.Key + ": no art");
+                    eventFailed.Add(e.Key);
+                    if (eventSprites.TryGetValue(e.Key, out var ours) && ours != null && eventDefaults.TryGetValue(e.Key, out var path)) ShowDefault(ours.texture, path);
                 }
                 float now = Time.realtimeSinceStartup;
                 if (pending.Count > 0 && now >= nextFrame)

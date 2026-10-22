@@ -43,14 +43,29 @@ namespace ForgeBridge
             else Log.Error("format labels: no CompositeLocProvider");
         }
 
+        private const string DraftTitle = "Events/Event_Title_QuickDraft_";
+        private const string DraftDesc = "Events/Event_Desc_QuickDraft_";
+
+        /// <summary>Quick draft events are one per Forge set (QuickDraft_&lt;SET&gt;): their labels are derived from the set code.</summary>
+        private static bool TryDraft(string key, out string loc)
+        {
+            loc = null;
+            if (key == null) return false;
+            if (key.StartsWith(DraftTitle)) loc = SetBlurbs.Title(key.Substring(DraftTitle.Length));
+            else if (key.StartsWith(DraftDesc)) loc = SetBlurbs.Of(key.Substring(DraftDesc.Length));
+            return loc != null;
+        }
+
+        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc);
+
         public string GetLocalizedText(string key, params (string, string)[] locParams)
         {
-            return Text.TryGetValue(key, out var s) ? s : null;
+            return TryGet(key, out var s) ? s : null;
         }
 
         public bool TryGetLocalizedTextForLanguage(string key, string overrideLangCode, (string, string)[] locParams, out string loc)
         {
-            return Text.TryGetValue(key, out loc);
+            return TryGet(key, out loc);
         }
 
         public string GetLocalizedTextForLanguage(string key, string overrideLangCode, params (string, string)[] locParams)
@@ -58,7 +73,7 @@ namespace ForgeBridge
             return GetLocalizedText(key);
         }
 
-        public bool DoesContainTranslation(string key) => Text.ContainsKey(key);
+        public bool DoesContainTranslation(string key) => TryGet(key, out _);
 
         public bool IsDisposed() => false;
 
