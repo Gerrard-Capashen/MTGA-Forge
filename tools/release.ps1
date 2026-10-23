@@ -4,6 +4,7 @@
 #   -Scan               upload MTGA-Forge.exe and the zip to VirusTotal (vt CLI, needs `vt init` once), wait, stop when anything flags malicious.
 #                       NOTE: VirusTotal shares uploaded files with security vendors; the package has no personal data but it is public after this.
 #   -Upload github|r2   host the zip. github: gh release create on -Repo owner/name. r2: wrangler r2 object put into -Bucket, link = -PublicBase/<file>
+#   -Url <link>         the zip is already hosted somewhere else (any https address): skip -Upload, just write latest.json (and deploy)
 #   -Deploy             write site\public\latest.json (publish-latest.ps1) and run wrangler deploy for the site
 # Example: powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Repo owner/mtga-forge -Notes 'First release' -Deploy
 param(
@@ -15,6 +16,7 @@ param(
     [string]$Repo = '',
     [string]$Bucket = 'mtga-forge',
     [string]$PublicBase = '',
+    [string]$Url = '',
     [string]$Notes = '',
     [switch]$Deploy
 )
@@ -62,7 +64,8 @@ if ($Scan) {
     if ($bad -gt 0 -and -not $AllowDetections) { throw "VirusTotal flags $bad detection(s). Look at the links above; rerun with -AllowDetections once you judged them false positives." }
 }
 
-$url = ''
+$url = $Url
+if ($Url -and $Url -notmatch '^https://') { throw '-Url must be an https address' }
 if ($Upload -eq 'github') {
     if (-not $Repo) { throw '-Repo owner/name is needed for -Upload github' }
     Step "GitHub release on $Repo"
@@ -88,5 +91,5 @@ if ($url) {
         Push-Location "$root\site"; try { Native 'npx' @('wrangler', 'deploy') | Out-Host } finally { Pop-Location }
     } else { Write-Host 'Not deployed. Run: cd site; npx wrangler deploy' }
 } elseif ($Upload -eq 'none') {
-    Write-Host "`nNothing published (no -Upload). With -Upload github|r2 the zip is hosted, latest.json is written and (with -Deploy) the site is updated."
+    Write-Host "`nNothing published (no -Upload or -Url). With -Upload github|r2 the zip is hosted, latest.json is written and (with -Deploy) the site is updated."
 }
