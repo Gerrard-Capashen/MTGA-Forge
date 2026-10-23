@@ -1,9 +1,20 @@
 {
-  "schema": 1,
-  "released": null,
-  "commit": null,
-  "sha256": null,
-  "size": null,
-  "url": "https://play.mtga-forge.workers.dev/",
-  "notes": "No release yet."
+    "schema":  1,
+    "released":  "2026-10-22T20:58:51.4229089-03:00",
+    "commit":  "7398201",
+    "sha256":  "f8434589e46460a3502a62a21d702e297287cc039a64905618fe7f4d1e9e7e8b",
+    "size":  131405491,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.10.22-2358/MTGA-Forge.zip",
+    "notes":  "First public release.",
+    "scan":  {
+                 "at":  "2026-10-23T01:26:01.1397777Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/f8434589e46460a3502a62a21d702e297287cc039a64905618fe7f4d1e9e7e8b",
+                 "zipEngines":  35,
+                 "zipMalicious":  0,
+                 "zipSuspicious":  0,
+                 "exeReport":  "https://www.virustotal.com/gui/file/5fe810ce6fc3bd96cfec05ca0962edebc6d74cedb9212ae1af3c9512ca34310e",
+                 "exeEngines":  70,
+                 "exeMalicious":  0,
+                 "exeSuspicious":  0
+             }
 }
