@@ -65,6 +65,13 @@ r = await get("/me", alice.token.slice(0, -2) + "00");
 check(r.status === 401, "forged token rejected");
 r = await get("/players/by-name?full=" + encodeURIComponent(`${alice.name.toUpperCase()}#${alice.tag}`), alice.token);
 check(r.status === 200 && r.body.playerId === alice.id, "lookup by full name, case-insensitive");
+check(r.body.dev === false, "a new player is not a developer (the flag is only set by hand in the database)");
+r = await get("/players/by-id?id=" + alice.id, alice.token);
+check(r.status === 200 && r.body.fullName === `${alice.name}#${alice.tag}` && r.body.dev === false, "lookup by player id carries the dev flag");
+r = await get("/players/by-id?id=" + alice.id);
+check(r.status === 401, "lookup by player id needs a token");
+r = await get("/players/by-id?id=" + randomUUID(), alice.token);
+check(r.status === 404, "unknown player id: 404");
 
 // the same name: every player gets a different tag, also all at once
 const same = "zztest same " + run;

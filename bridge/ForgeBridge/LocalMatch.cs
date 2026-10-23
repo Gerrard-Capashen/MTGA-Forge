@@ -27,12 +27,12 @@ namespace ForgeBridge
             };
         }
 
-        private static MatchPlayerConfig Player(uint seat, string name) => new MatchPlayerConfig
+        private static MatchPlayerConfig Player(uint seat, string name, bool dev = false) => new MatchPlayerConfig
         {
             SeatId = seat,
             TeamId = seat,
             ScreenName = name,
-            IsWotc = false,
+            IsWotc = dev,
             RankClass = "None",
             RankTier = 0,
             Commanders = new ClientCommanderInfo[0],
@@ -58,7 +58,7 @@ namespace ForgeBridge
                 matchType = MatchType.Queue,
                 battlefield = "",
                 clientMetadata = new Dictionary<string, string>(),
-                PlayerInfos = new[] { Player(1, LocalAccountClient.DisplayName), Player(2, "Forge AI") },
+                PlayerInfos = new[] { Player(1, LocalAccountClient.DisplayName, LocalProfile.IsDev), Player(2, "Forge AI") },
                 YourSeatId = 1,
             };
         }

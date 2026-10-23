@@ -24,7 +24,7 @@ const MAX_OPEN = 5;
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
 const stub = (env: ChallengesEnv, id: string) => env.CHALLENGE.get(env.CHALLENGE.idFromName(id));
-const call = (env: ChallengesEnv, id: string, op: string, player: { id: string; fullName: string }, args: Record<string, unknown> = {}) =>
+const call = (env: ChallengesEnv, id: string, op: string, player: { id: string; fullName: string; dev?: boolean }, args: Record<string, unknown> = {}) =>
   stub(env, id).fetch("https://challenge/op", { method: "POST", body: JSON.stringify({ op, player, args }) });
 
 export async function handleChallenges(req: Request, env: ChallengesEnv, url: URL): Promise<Response | null> {
@@ -32,9 +32,9 @@ export async function handleChallenges(req: Request, env: ChallengesEnv, url: UR
   if (path !== "/challenges" && !path.startsWith("/challenges/")) return null;
   const me = await authenticate(env, req);
   if (!me) return fail(401, "sign in first");
-  const row = await env.DB.prepare("SELECT name, tag FROM players WHERE player_id = ?1").bind(me).first<{ name: string; tag: string }>();
+  const row = await env.DB.prepare("SELECT name, tag, dev FROM players WHERE player_id = ?1").bind(me).first<{ name: string; tag: string; dev: number }>();
   if (!row) return fail(404, "not registered");
-  const player = { id: me, fullName: `${row.name}#${row.tag}` };
+  const player = { id: me, fullName: `${row.name}#${row.tag}`, dev: !!row.dev };
   const body = req.method === "POST" ? await req.json().catch(() => ({})) as Record<string, unknown> : {};
 
   if (path === "/challenges" && req.method === "POST") {

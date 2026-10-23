@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using WAS;
 using Wizards.Arena.Promises;
@@ -36,7 +37,9 @@ namespace ForgeBridge
                 // (TokenManager then showed "Connection Lost"). Ten years is plenty.
                 Credentials = new Credentials("local-jwt", "local-refresh", 10 * 365 * 24 * 3600, "local"),
                 // MTGA_DEBUG enables the client's debug overlays (log window on every error); opt in with FORGEBRIDGE_DEBUGROLE=1
-                Roles = Environment.GetEnvironmentVariable("FORGEBRIDGE_DEBUGROLE") == "1" ? new[] { "MTGA_DEBUG" } : new string[0],
+                // WotC_REP is the role behind the orange (Mythic) name on the profile screen
+                Roles = new[] { Environment.GetEnvironmentVariable("FORGEBRIDGE_DEBUGROLE") == "1" ? "MTGA_DEBUG" : null, LocalProfile.IsDev ? "WotC_REP" : null }
+                    .Where(r => r != null).ToArray(),
             };
         }
 

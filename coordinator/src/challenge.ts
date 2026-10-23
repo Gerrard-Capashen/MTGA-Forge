@@ -16,7 +16,7 @@ export interface ChallengeEnv extends FriendsEnv { TOKEN_SECRET?: string }
 
 interface Cosmetics { avatar: string; sleeve: string; pet: string; title: string; emotes: string[] }
 export interface Member {
-  playerId: string; fullName: string; ready: boolean; teamId: number;
+  playerId: string; fullName: string; dev?: boolean; ready: boolean; teamId: number;
   deckId: string; deckName: string; artId: number; tileId: number; cosmetics: Cosmetics;
 }
 export interface State {
@@ -24,7 +24,7 @@ export interface State {
   status: "open" | "starting"; players: Member[]; issued: string[]; createdAt: number; launchedAt: number;
 }
 
-interface Op { op: string; player: { id: string; fullName: string }; args: Record<string, unknown> }
+interface Op { op: string; player: { id: string; fullName: string; dev?: boolean }; args: Record<string, unknown> }
 
 const NAME = /^DirectGame[A-Za-z]{0,30}$/;
 const PLAY_FIRST = ["Random", "Challenger", "Opponent"];
@@ -175,7 +175,7 @@ export class Challenge implements DurableObject {
   }
 
   private member(player: Op["player"], args: Record<string, unknown>): Member {
-    return { playerId: player.id, fullName: player.fullName, ready: false, teamId: 0, deckId: "", deckName: "", artId: 0, tileId: 0, cosmetics: cosmetics(args.cosmetics) };
+    return { playerId: player.id, fullName: player.fullName, dev: !!player.dev, ready: false, teamId: 0, deckId: "", deckName: "", artId: 0, tileId: 0, cosmetics: cosmetics(args.cosmetics) };
   }
 
   private async save(s: State): Promise<void> {

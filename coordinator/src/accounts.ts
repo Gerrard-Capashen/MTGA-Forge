@@ -7,7 +7,8 @@
  *   POST  /auth/login {playerId, nonce, sig}               sig over "login|playerId|nonce"  -> {token, exp, ...}
  *   GET   /me                                              (Bearer token)
  *   PATCH /me {name}                                       rename: new tag, the old pair stays reserved for 30 days
- *   GET   /players/by-name?full=Name%2312345               (Bearer token) -> {playerId, name, tag}
+ *   GET   /players/by-name?full=Name%2312345               (Bearer token) -> {playerId, name, tag, dev}
+ *   GET   /players/by-id?id=<player id>                    (Bearer token) -> the same
  *
  * publicKey = SPKI DER, base64; sig = IEEE P1363 (r||s), base64 (Java: SHA256withECDSAinP1363Format).
  */
@@ -87,9 +88,10 @@ export async function authenticateToken(env: AccountEnv, token: string): Promise
   return t[3] === await mac(env, `session|${t[1]}.${t[2]}`) ? t[1] : null;
 }
 
-interface PlayerRow { player_id: string; name: string; name_lc: string; tag: string; pubkey: string }
+interface PlayerRow { player_id: string; name: string; name_lc: string; tag: string; pubkey: string; dev?: number }
 
-const view = (p: PlayerRow) => ({ playerId: p.player_id, name: p.name, tag: p.tag, fullName: `${p.name}#${p.tag}` });
+/** dev = a developer (orange name in the client); only ever set by hand in the database. */
+const view = (p: PlayerRow) => ({ playerId: p.player_id, name: p.name, tag: p.tag, fullName: `${p.name}#${p.tag}`, dev: !!p.dev });
 
 function randomTag(): string {
   const n = new Uint32Array(1);
@@ -158,7 +160,7 @@ export async function handleAccounts(req: Request, env: AccountEnv, url: URL): P
     return json(200, { ...await issueToken(env, p.player_id), ...view(p) });
   }
 
-  if (path === "/me" || path === "/players/by-name") {
+  if (path === "/me" || path === "/players/by-name" || path === "/players/by-id") {
     const id = await authenticate(env, req);
     if (!id) return fail(401, "sign in first");
 
@@ -166,6 +168,12 @@ export async function handleAccounts(req: Request, env: AccountEnv, url: URL): P
       const m = (url.searchParams.get("full") ?? "").match(/^(.{3,24})#(\d{5})$/s);
       if (!m) return fail(400, "expected Name#12345");
       const p = await env.DB.prepare("SELECT * FROM players WHERE name_lc = ?1 AND tag = ?2").bind(m[1].normalize("NFC").toLowerCase(), m[2]).first<PlayerRow>();
+      return p ? json(200, view(p)) : fail(404, "no such player");
+    }
+
+    if (path === "/players/by-id" && req.method === "GET") {
+      const wanted = url.searchParams.get("id") ?? "";
+      const p = ID.test(wanted) ? await env.DB.prepare("SELECT * FROM players WHERE player_id = ?1").bind(wanted).first<PlayerRow>() : null;
       return p ? json(200, view(p)) : fail(404, "no such player");
     }
 

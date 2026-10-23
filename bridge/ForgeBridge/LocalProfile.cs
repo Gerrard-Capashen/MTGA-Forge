@@ -16,6 +16,8 @@ namespace ForgeBridge
         public static string PlayerId { get; private set; } = FallbackId;
         /// <summary>Name as the client shows it: <c>Name#12345</c>.</summary>
         public static string DisplayName { get; private set; } = "Forge Player#00001";
+        /// <summary>A developer (the coordinator says so, the server copies it into the profile): the client draws the name in orange.</summary>
+        public static bool IsDev { get; private set; }
 
         private static bool _loaded;
 
@@ -42,6 +44,7 @@ namespace ForgeBridge
                 string id = (string)o["playerId"];
                 string display = (string)o["displayName"];
                 string tag = (string)o["tag"];
+                IsDev = (bool?)o["wotc"] == true;
                 if (!string.IsNullOrEmpty(id)) PlayerId = id;
                 if (!string.IsNullOrEmpty(display)) DisplayName = display + "#" + (string.IsNullOrEmpty(tag) ? "00001" : tag);
                 Log.Info("LocalProfile: " + DisplayName + " (" + PlayerId + ") from " + file);
