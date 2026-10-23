@@ -3,7 +3,7 @@
 #   -Build              run package.ps1 -BuildServer -Zip first (about 8 minutes)
 #   -Scan               upload MTGA-Forge.exe and the zip to VirusTotal (vt CLI, needs `vt init` once), wait, stop when anything flags malicious.
 #                       NOTE: VirusTotal shares uploaded files with security vendors; the package has no personal data but it is public after this.
-#   -Upload github|r2   host the zip. github: gh release create on -Repo owner/name. r2: wrangler r2 object put into -Bucket, link = -PublicBase/<file>
+#   -Upload github|r2   host the zip. github: gh release create on -Repo owner/name (default Gerrard-Capashen/MTGA-Forge) with the token in -TokenFile; -SourceZip adds a second file (GPL source). r2: wrangler r2 object put into -Bucket, link = -PublicBase/<file>
 #   -Url <link>         the zip is already hosted somewhere else (any https address): skip -Upload, just write latest.json (and deploy)
 #   -Deploy             write site\public\latest.json (publish-latest.ps1) and run wrangler deploy for the site
 # Example: powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Repo owner/mtga-forge -Notes 'First release' -Deploy
@@ -13,7 +13,9 @@ param(
     [switch]$Scan,
     [switch]$AllowDetections,
     [ValidateSet('none', 'github', 'r2')][string]$Upload = 'none',
-    [string]$Repo = '',
+    [string]$Repo = 'Gerrard-Capashen/MTGA-Forge',
+    [string]$TokenFile = "$env:LOCALAPPDATA\MTGA-Forge-release\token.txt",
+    [string]$SourceZip = '',
     [string]$Bucket = 'mtga-forge',
     [string]$PublicBase = '',
     [string]$Url = '',
@@ -69,10 +71,24 @@ if ($Url -and $Url -notmatch '^https://') { throw '-Url must be an https address
 if ($Upload -eq 'github') {
     if (-not $Repo) { throw '-Repo owner/name is needed for -Upload github' }
     Step "GitHub release on $Repo"
-    $tag = 'v' + ([DateTimeOffset]::Parse($dist.builtAt)).UtcDateTime.ToString('yyyy.MM.dd-HHmm')
-    $asset = "MTGA-Forge-$($dist.commit).zip"
-    $tmp = Join-Path $env:TEMP $asset; Copy-Item $Zip $tmp -Force
-    Native 'gh' @('release', 'create', $tag, $tmp, '--repo', $Repo, '--title', "MTGA Forge $tag", '--notes', "sha256 $sha`n$Notes") | Out-Host
+    # Only this repo's token is used (never the gh login of this machine), and only if it belongs to the repo's owner.
+    if (-not (Test-Path $TokenFile)) { throw "No token file at $TokenFile (one line: a fine-grained token of the account that owns $Repo, Contents: read and write)" }
+    $oldToken = $env:GH_TOKEN
+    $env:GH_TOKEN = (Get-Content $TokenFile -Raw).Trim()
+    try {
+        $login = ((Native 'gh' @('api', 'user', '--jq', '.login')) -join '').Trim()
+        $owner = ($Repo -split '/')[0]
+        if ($login -ne $owner) { throw "The token belongs to '$login', but $Repo belongs to '$owner'. Nothing was uploaded." }
+        Write-Host "  releasing as $login"
+        $tag = 'v' + ([DateTimeOffset]::Parse($dist.builtAt)).UtcDateTime.ToString('yyyy.MM.dd-HHmm')
+        $asset = 'MTGA-Forge.zip'
+        $tmpDir = Join-Path $env:TEMP ('mtgaf-release-' + [guid]::NewGuid().ToString('N')); New-Item -ItemType Directory $tmpDir | Out-Null
+        Copy-Item $Zip (Join-Path $tmpDir $asset)
+        $files = @((Join-Path $tmpDir $asset))
+        if ($SourceZip) { $files += (Resolve-Path $SourceZip).Path }
+        Native 'gh' (@('release', 'create', $tag) + $files + @('--repo', $Repo, '--title', "MTGA Forge $tag", '--notes', "sha256 of MTGA-Forge.zip: $sha`n$Notes")) | Out-Host
+        Remove-Item $tmpDir -Recurse -Force
+    } finally { $env:GH_TOKEN = $oldToken }
     $url = "https://github.com/$Repo/releases/download/$tag/$asset"
 } elseif ($Upload -eq 'r2') {
     if (-not $PublicBase) { throw '-PublicBase https://<public address of the bucket> is needed for -Upload r2' }
