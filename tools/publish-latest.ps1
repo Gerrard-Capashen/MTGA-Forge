@@ -6,7 +6,8 @@ param(
     [Parameter(Mandatory)][string]$Zip,
     [Parameter(Mandatory)][string]$Url,
     [string]$Notes = '',
-    [string]$Package = ''
+    [string]$Package = '',
+    [string]$ScanFile = ''     # <zip>.scan.json from release.ps1 -Scan: VirusTotal results shown under the download button
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path "$PSScriptRoot\..").Path
@@ -24,8 +25,16 @@ $out = [ordered]@{
     url      = $Url
     notes    = $Notes
 }
+if ($ScanFile) {
+    $sc = Get-Content $ScanFile -Raw | ConvertFrom-Json
+    $out['scan'] = [ordered]@{
+        at = $sc.at
+        zipReport = $sc.zipReport; zipEngines = $sc.zipEngines; zipMalicious = $sc.zipMalicious; zipSuspicious = $sc.zipSuspicious
+        exeReport = $sc.exeReport; exeEngines = $sc.exeEngines; exeMalicious = $sc.exeMalicious; exeSuspicious = $sc.exeSuspicious
+    }
+}
 $target = "$root\site\public\latest.json"
-[IO.File]::WriteAllText($target, (($out | ConvertTo-Json) + "`n"), (New-Object Text.UTF8Encoding $false))
+[IO.File]::WriteAllText($target, (($out | ConvertTo-Json -Depth 4) + "`n"), (New-Object Text.UTF8Encoding $false))
 Write-Host "wrote $target"
 Get-Content $target
 Write-Host "Deploy with: cd site; npx wrangler deploy"

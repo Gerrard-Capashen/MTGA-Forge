@@ -51,6 +51,7 @@ if ($Scan) {
     if (-not $vtKey -and (Test-Path "$env:USERPROFILE\.vt.toml")) { $vtKey = ((Get-Content "$env:USERPROFILE\.vt.toml" -Raw) -replace '(?s).*apikey\s*=\s*"([^"]*)".*', '$1').Trim() }
     if ($vtKey -notmatch '^[0-9a-fA-F]{64}$') { throw 'No VirusTotal API key (run: vt init, or set VT_APIKEY)' }
     $bad = 0
+    $scanInfo = [ordered]@{ at = (Get-Date).ToUniversalTime().ToString('o'); zipSha = $sha }
     foreach ($f in $exe, $Zip) {
         $line = (Native 'vt' @('scan', 'file', $f, '--apikey', $vtKey) | Select-Object -Last 1).ToString().Trim()
         $id = ($line -split '\s+')[-1]
@@ -66,7 +67,14 @@ if ($Scan) {
         $h = if ($f -eq $Zip) { $sha } else { $exeSha }
         Write-Host ("  {0}: malicious {1}, suspicious {2}, harmless {3}, undetected {4}  https://www.virustotal.com/gui/file/{5}" -f (Split-Path $f -Leaf), $stats.malicious, $stats.suspicious, $stats.harmless, $stats.undetected, $h)
         $bad += [int]$stats.malicious
+        $k = if ($f -eq $Zip) { 'zip' } else { 'exe' }
+        $scanInfo["${k}Report"] = "https://www.virustotal.com/gui/file/$h"
+        $scanInfo["${k}Engines"] = [int]$stats.malicious + [int]$stats.suspicious + [int]$stats.harmless + [int]$stats.undetected
+        $scanInfo["${k}Malicious"] = [int]$stats.malicious
+        $scanInfo["${k}Suspicious"] = [int]$stats.suspicious
     }
+    # kept next to the zip so a later run (without uploading again) can put the same results on the site
+    [IO.File]::WriteAllText("$Zip.scan.json", ($scanInfo | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
     if ($bad -gt 0 -and -not $AllowDetections) { throw "VirusTotal flags $bad detection(s). Look at the links above; rerun with -AllowDetections once you judged them false positives." }
 }
 
@@ -105,7 +113,12 @@ if ($Upload -eq 'github') {
 
 if ($url) {
     Step "latest.json -> $url"
-    & powershell -NoProfile -File "$root\tools\publish-latest.ps1" -Zip $Zip -Url $url -Notes $Notes
+    $scanArg = @()
+    if (Test-Path "$Zip.scan.json") {
+        if ((Get-Content "$Zip.scan.json" -Raw | ConvertFrom-Json).zipSha -eq $sha) { $scanArg = @('-ScanFile', "$Zip.scan.json") }
+        else { Write-Host '  the scan results on disk belong to another zip: not shown on the site' }
+    } else { Write-Host '  no scan results for this zip (run with -Scan): the site will show none' }
+    & powershell -NoProfile -File "$root\tools\publish-latest.ps1" -Zip $Zip -Url $url -Notes $Notes @scanArg
     if ($Deploy) {
         Step 'deploy the site'
         Push-Location "$root\site"; try { Native 'npx' @('wrangler', 'deploy') | Out-Host } finally { Pop-Location }

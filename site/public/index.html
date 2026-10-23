@@ -59,8 +59,17 @@ header nav a:hover { color: var(--fg); }
 .hero h1 em { font-style: normal; color: var(--accent); }
 .hero p.lead { font-size: 1.2rem; color: var(--muted); margin-top: 20px; }
 .get { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 28px; }
-.btn { display: inline-block; padding: 13px 26px; border-radius: 6px; background: var(--accent); color: var(--bg); font-weight: 600; opacity: .5; cursor: not-allowed; }
+.btn { display: inline-block; padding: 13px 26px; border: 0; border-radius: 6px; background: var(--accent); color: var(--bg); font: 600 1rem var(--body); cursor: pointer; }
+.btn:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
 .get small { color: var(--muted); }
+.facts { margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: .92rem; max-width: 62ch; }
+.facts dl { margin: 0; gap: 8px 18px; }
+.facts code { font-size: .78rem; }
+.facts .copy { margin-left: 6px; padding: 1px 9px; border: 1px solid var(--line); border-radius: 4px; background: none; color: var(--muted); font: inherit; font-size: .8rem; cursor: pointer; }
+.facts .copy:hover { color: var(--fg); border-color: var(--muted); }
+.facts .hint { color: var(--muted); margin: 10px 0 0; font-size: .85rem; }
 
 figure { margin: 0 0 24px; background: var(--panel); border-radius: 10px; padding: 18px; }
 figure svg { display: block; width: 100%; height: auto; }
@@ -106,7 +115,15 @@ footer p { max-width: 78ch; }
   <div>
   <h1>The client you know. <em>A rules engine you can keep.</em></h1>
   <p class="lead">Play Standard, Pioneer, Modern and quick drafts in your own copy of MTG Arena, with the open source Forge engine running the game. Free cards, free cosmetics, friends and community matchmaking.</p>
-  <div class="get"><span class="btn" aria-disabled="true">Download for Windows</span><small>Coming soon. Unofficial fan project.</small></div>
+  <div class="get"><button class="btn" id="dl" type="button" disabled>Download for Windows</button><small id="dlnote">Coming soon. Unofficial fan project.</small></div>
+  <noscript><p class="lead" style="font-size:.95rem">The download button needs JavaScript.</p></noscript>
+  <div class="facts" id="facts" hidden>
+    <dl>
+      <dt>SHA-256</dt><dd><code id="f-sha"></code><button class="copy" id="f-copy" type="button">Copy</button></dd>
+      <dt>VirusTotal</dt><dd id="f-vt"></dd>
+    </dl>
+    <p class="hint">Compare before you run it: in PowerShell, <code>Get-FileHash .\MTGA-Forge.zip</code></p>
+  </div>
   </div>
   <div class="icon" aria-hidden="true">
     <svg viewBox="0 0 512 512">
@@ -200,9 +217,7 @@ footer p { max-width: 78ch; }
       <dt>Extras</dt><dd>None. Java and the rest are bundled</dd>
     </dl>
     <p>Unzip and run the launcher. The first start takes a minute or two while it makes a patched copy of your install. It repeats after a Steam update. Your original install is never changed.</p>
-    <p>The launcher is not code-signed yet, so Windows SmartScreen may warn. Check the file first:</p>
-    <p><code>SHA-256: published with the first release</code></p>
-    <p>Each release gets a VirusTotal report, and the launcher and patcher source will be public.</p>
+    <p>The launcher is not code-signed yet, so Windows SmartScreen may warn. Each release's SHA-256 and VirusTotal results are listed under the download button at the top: check the file against them first.</p>
   </div>
 </div>
 
@@ -237,5 +252,50 @@ footer p { max-width: 78ch; }
 </footer>
 
 </div>
+<script>
+// The download button reads /latest.json (written by tools/release.ps1), so a release never needs an edit of this page.
+(function () {
+  var btn = document.getElementById('dl'), note = document.getElementById('dlnote'), facts = document.getElementById('facts');
+  var release = null;
+  function el(tag, text, href) {
+    var e = document.createElement(tag); e.textContent = text;
+    if (href) { e.href = href; e.rel = 'noopener'; }
+    return e;
+  }
+  function safe(u, prefix) { return typeof u === 'string' && u.indexOf(prefix) === 0; }
+  function verdict(name, engines, bad, sus, report) {
+    var line = document.createElement('div');
+    line.appendChild(document.createTextNode(name + ': ' + (bad + sus === 0 ? 'clean on all ' + engines + ' engines' : (bad + sus) + ' of ' + engines + ' engines flag it') + ' · '));
+    if (safe(report, 'https://www.virustotal.com/')) line.appendChild(el('a', 'report', report));
+    return line;
+  }
+  function show(j) {
+    var when = new Date(j.released);
+    var mb = j.size ? Math.round(j.size / 1048576) + ' MB' : '';
+    note.textContent = ['Windows 10 or 11', mb, isNaN(when) ? '' : 'released ' + when.toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })].filter(Boolean).join(' · ');
+    document.getElementById('f-sha').textContent = j.sha256;
+    var vt = document.getElementById('f-vt'), s = j.scan;
+    if (s && safe(s.zipReport, 'https://www.virustotal.com/')) {
+      vt.appendChild(verdict('MTGA-Forge.zip', s.zipEngines, s.zipMalicious, s.zipSuspicious, s.zipReport));
+      if (s.exeReport) vt.appendChild(verdict('MTGA-Forge.exe', s.exeEngines, s.exeMalicious, s.exeSuspicious, s.exeReport));
+    } else vt.textContent = 'No scan result published for this release.';
+    facts.hidden = false;
+  }
+  fetch('/latest.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(function (j) {
+    if (!j || !/^[0-9a-f]{64}$/.test(j.sha256 || '') || !safe(j.url, 'https://')) return;   // no release yet: the button stays off
+    release = j; btn.disabled = false; show(j);
+  }).catch(function () {});
+  btn.addEventListener('click', function () {
+    if (!release) return;
+    window.location.assign(release.url);   // the host sends the file as an attachment, so this page stays where it is
+    note.textContent = 'Download started. Check the SHA-256 below before you run anything.';
+  });
+  document.getElementById('f-copy').addEventListener('click', function () {
+    var b = this, text = release && release.sha256;
+    function done() { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); }
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+  });
+})();
+</script>
 </body>
 </html>
