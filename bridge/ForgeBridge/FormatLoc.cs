@@ -54,13 +54,21 @@ namespace ForgeBridge
         private const string DraftTitle = "Events/Event_Title_QuickDraft_";
         private const string DraftDesc = "Events/Event_Desc_QuickDraft_";
 
-        /// <summary>Quick draft events are one per Forge set (QuickDraft_&lt;SET&gt;): their labels are derived from the set code.</summary>
+        private const string PremierTitle = "Events/Event_Title_PremierDraft_";
+        private const string PremierDesc = "Events/Event_Desc_PremierDraft_";
+
+        /// <summary>
+        /// Quick draft events are one per Forge set (QuickDraft_&lt;SET&gt;), premier drafts PremierDraft_&lt;SET&gt; or
+        /// PremierDraft_VCUBE: their labels are derived from the set code.
+        /// </summary>
         private static bool TryDraft(string key, out string loc)
         {
             loc = null;
             if (key == null) return false;
             if (key.StartsWith(DraftTitle)) loc = SetBlurbs.Title(key.Substring(DraftTitle.Length));
             else if (key.StartsWith(DraftDesc)) loc = SetBlurbs.Of(key.Substring(DraftDesc.Length));
+            else if (key.StartsWith(PremierTitle)) loc = SetBlurbs.PremierTitle(key.Substring(PremierTitle.Length));
+            else if (key.StartsWith(PremierDesc)) loc = SetBlurbs.PremierOf(key.Substring(PremierDesc.Length));
             return loc != null;
         }
 
@@ -89,7 +97,23 @@ namespace ForgeBridge
             return loc != null;
         }
 
-        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc);
+        private const string WinsTitle = "Events/Forge_Wins_";
+        private const string WinsDesc = "Events/Forge_Wins_Desc_";
+
+        /// <summary>Win track bubbles of the draft events (no rewards offline): "3 Wins" / "Win 3 matches in this event."</summary>
+        private static bool TryWins(string key, out string loc)
+        {
+            loc = null;
+            if (key == null) return false;
+            int n;
+            if (key.StartsWith(WinsDesc) && int.TryParse(key.Substring(WinsDesc.Length), out n))
+                loc = n == 7 ? "Win 7 matches: the event is complete." : "Win " + n + (n == 1 ? " match" : " matches") + " in this event.";
+            else if (key.StartsWith(WinsTitle) && int.TryParse(key.Substring(WinsTitle.Length), out n))
+                loc = n + (n == 1 ? " Win" : " Wins");
+            return loc != null;
+        }
+
+        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc) || TryWins(key, out loc);
 
         public string GetLocalizedText(string key, params (string, string)[] locParams)
         {

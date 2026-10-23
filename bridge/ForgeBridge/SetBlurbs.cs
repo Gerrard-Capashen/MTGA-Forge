@@ -187,5 +187,27 @@ namespace ForgeBridge
             string lead = Text.TryGetValue(setCode.ToUpperInvariant(), out blurb) ? blurb + " " : "";
             return lead + "Draft three packs against seven bots, then play with the deck you build.";
         }
+
+        /// <summary>Key of the premier draft cube event (PremierDraft_VCUBE).</summary>
+        public const string CubeKey = "VCUBE";
+
+        /// <summary>Title of a PremierDraft_&lt;SET&gt; event.</summary>
+        public static string PremierTitle(string key)
+        {
+            string name;
+            if (key.ToUpperInvariant() == CubeKey) return "Premier Draft: Vintage Cube";
+            return "Premier Draft: " + (Names.TryGetValue(key.ToUpperInvariant(), out name) ? name : key);
+        }
+
+        /// <summary>Description of a PremierDraft_&lt;SET&gt; event.</summary>
+        public static string PremierOf(string key)
+        {
+            string blurb, lead;
+            if (key.ToUpperInvariant() == CubeKey)
+                lead = "MTGO's Vintage Cube: 540 singleton powerhouses, the Power Nine included. ";
+            else
+                lead = Text.TryGetValue(key.ToUpperInvariant(), out blurb) ? blurb + " " : "";
+            return lead + "Draft at a table of eight, then play best-of-one matches against other players until 7 wins or 3 losses.";
+        }
     }
 }

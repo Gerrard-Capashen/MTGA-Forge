@@ -95,6 +95,9 @@ namespace ForgeBridge
             SetField(bootstrap, "_papa", papa);
 
             var fdcm = Pantry.Get<FrontDoorConnectionManager>();
+            // the client drops its Front Door after 20 min without input ("User Idle") and its reconnect only re-authenticates
+            // (events and courses are not fetched again, so event pages break): pointless against a local server, so never
+            fdcm.IdleTimeoutSec = double.MaxValue;
             if (!DuelMode)
             {
                 var env = fdcm.CurrentEnvironment;
@@ -119,6 +122,8 @@ namespace ForgeBridge
             Call(bootstrap, "PopulateAssetBundleSources");
 
             Log.Info("stage1 complete. Account=" + Pantry.Get<IAccountClient>().AccountInformation.PersonaID);
+            // every card is unlocked (no collection, no vault): never show the draft's "Vault Progress" popup
+            MDNPlayerPrefs.SetDraftHasSeenVaultPopup(Pantry.Get<IAccountClient>().AccountInformation.PersonaID, true);
 
             // ---- stage 2: bundles, localization, card database ----
             Log.Info("stage2: wwise listener + audio manager");

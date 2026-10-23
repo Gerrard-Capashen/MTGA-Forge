@@ -64,7 +64,7 @@ namespace ForgeBridge
         // ---- quick draft event art: "forge-event-art/<SET>.jpg" is a 16:9 crop of a showcase card of the set ----
 
         private const int EventWidth = 640, EventHeight = 360, BackgroundWidth = 1920, BackgroundHeight = 1080;
-        private static readonly Regex EventPath = new Regex(@"^forge-event-art/([A-Za-z0-9]{2,8}(-bg)?)\.jpg$", RegexOptions.Compiled);
+        private static readonly Regex EventPath = new Regex(@"^forge-event-art/([A-Za-z0-9]{2,8}(-p)?(-bg)?)\.jpg$", RegexOptions.Compiled);
         private static readonly Dictionary<string, Sprite> eventSprites = new Dictionary<string, Sprite>();
         /// <summary>Per event art key ("ZEN-bg"): the client's own art path for the event, shown when ours cannot be had.</summary>
         private static readonly Dictionary<string, string> eventDefaults = new Dictionary<string, string>();
@@ -91,8 +91,11 @@ namespace ForgeBridge
             if (!replace && !string.IsNullOrEmpty(current)) return current;
             string name = null;
             try { name = ctx?.PlayerEvent?.EventUXInfo?.PublicEventName; } catch (Exception) { }
-            if (name == null || !name.StartsWith("QuickDraft_", StringComparison.Ordinal)) return current;
-            string key = name.Substring("QuickDraft_".Length) + suffix;
+            string prefix = name == null ? null : name.StartsWith("QuickDraft_", StringComparison.Ordinal) ? "QuickDraft_"
+                : name.StartsWith("PremierDraft_", StringComparison.Ordinal) ? "PremierDraft_" : null;
+            if (prefix == null) return current;
+            // a premier draft has its own tile ("<SET>-p"), so it differs from the same set's quick draft
+            string key = name.Substring(prefix.Length) + (prefix == "PremierDraft_" ? "-p" : "") + suffix;
             if (eventFailed.Contains(key)) return current;      // no art for it this session: the client's own
             if (!string.IsNullOrEmpty(current)) eventDefaults[key] = current;
             return "forge-event-art/" + key + ".jpg";
