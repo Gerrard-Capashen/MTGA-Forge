@@ -14,6 +14,7 @@ using Mono.Cecil.Cil;
 //   5. ManifestMetadataProvider(): no manifest pointer request to Wizards' CDN
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
+//   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
 if (args.Length > 1 && (args[0] == "identity" || args[0] == "unityconnect" || args[0] == "check-bridge" || args[0] == "audit-bridge")) return Tools.Run(args);
@@ -162,6 +163,26 @@ foreach (var ret in settingsOpen.Body.Instructions.Where(i => i.OpCode == OpCode
     sp.InsertAfter(call, sp.Create(OpCodes.Ret));
 }
 Console.WriteLine("patched SettingsMenu.Open -> " + tweaks.FullName);
+
+//   6d. ProfileDetailsPanel.Display: before every return, ForgeBridge.ProfileTweaks.Apply(this) hides the set collection entry;
+//      SetCollectionClicked becomes a no-op so the glitchy collection screen cannot be opened from the profile
+var profileTweaks = core.ImportReference(bridge.GetType("ForgeBridge.ProfileTweaks").Methods.Single(m => m.Name == "Apply"));
+var profilePanel = core.GetType("ProfileUI.ProfileDetailsPanel");
+var pdDisplay = profilePanel.Methods.Single(m => m.Name == "Display");
+var pdp = pdDisplay.Body.GetILProcessor();
+foreach (var ret in pdDisplay.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    ret.OpCode = OpCodes.Ldarg_0;
+    var call = pdp.Create(OpCodes.Call, profileTweaks);
+    pdp.InsertAfter(ret, call);
+    pdp.InsertAfter(call, pdp.Create(OpCodes.Ret));
+}
+var setCollectionClicked = profilePanel.Methods.Single(m => m.Name == "SetCollectionClicked");
+setCollectionClicked.Body.Instructions.Clear();
+setCollectionClicked.Body.Variables.Clear();
+setCollectionClicked.Body.ExceptionHandlers.Clear();
+setCollectionClicked.Body.GetILProcessor().Append(Instruction.Create(OpCodes.Ret));
+Console.WriteLine("patched ProfileUI.ProfileDetailsPanel -> " + profileTweaks.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
