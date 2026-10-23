@@ -5,6 +5,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <RollForward>Major</RollForward>
+    <DebugType>none</DebugType>   <!-- no pdb path (this machine's folders) inside the shipped binary -->
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />

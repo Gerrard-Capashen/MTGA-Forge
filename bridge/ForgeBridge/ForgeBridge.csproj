@@ -5,6 +5,7 @@
     <AssemblyName>ForgeBridge</AssemblyName>
     <Nullable>disable</Nullable>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>none</DebugType>   <!-- no pdb path (this machine's folders) inside the shipped binary -->
     <NoWarn>MSB3277;CS1701;CS1702;CS8981</NoWarn>
     <ManagedDir>D:\Development\MTGA-Forge\client\MTGA_Data\Managed</ManagedDir>
   </PropertyGroup>

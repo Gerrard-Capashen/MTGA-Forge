@@ -93,6 +93,14 @@ foreach ($f in $files | Where-Object { $textExt -contains $_.Extension.ToLower()
     if ($s -match 'C:\\Users\\[A-Za-z]|D:\\Development|@gmail\.com|steamapps\\common\\MTGA\\MTGA_Data') { Fail "machine/user specific text in $($f.FullName.Substring($Package.Length + 1)): $($Matches[0])" }
 }
 
+# 6b. Same for our own binaries: no debug-symbol path or user folder compiled in (ASCII and UTF-16)
+foreach ($f in $files | Where-Object { $_.Extension -in '.exe', '.dll' -and $_.Length -lt 4MB -and $_.Name -notlike 'Mono.Cecil*' -and $_.FullName -notlike "$Package\runtime\*" }) {   # runtime\: Microsoft's and OpenJDK's own binaries
+    $b = [IO.File]::ReadAllBytes($f.FullName)
+    foreach ($s in [Text.Encoding]::ASCII.GetString($b), [Text.Encoding]::Unicode.GetString($b), [Text.Encoding]::Unicode.GetString($b, 1, $b.Length - 2)) {
+        if ($s -match '[A-Za-z]:\\[^\x00]{0,200}\.pdb|C:\\Users\\[A-Za-z]|D:\\Development|@gmail\.com') { Fail "machine/user specific text compiled into $($f.FullName.Substring($Package.Length + 1)): $($Matches[0])"; break }
+    }
+}
+
 # 7. A zip of the package holds the same files
 if ($Zip) {
     $z = [IO.Compression.ZipFile]::OpenRead((Resolve-Path $Zip).Path)
