@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path "$PSScriptRoot\..").Path
 if (-not $Zip) { $Zip = "$root\dist\MTGA-Forge.zip" }
 function Step($t) { Write-Host "== $t" }
-function Native($exe, [string[]]$a) { $o = & $exe @a 2>&1; if ($LASTEXITCODE -ne 0) { throw "$exe $($a -join ' ') failed ($LASTEXITCODE): $o" }; $o }
+function Native($exe, [string[]]$a) { $o = & $exe @a 2>&1; if ($LASTEXITCODE -ne 0) { throw "$exe $(($a | Select-Object -First 2) -join ' ') failed ($LASTEXITCODE): $o" }; $o }
 
 if ($Build) {
     Step 'package'
@@ -46,15 +46,19 @@ if ((git -C $root status --porcelain 2>$null | Measure-Object).Count -gt 0) { Wr
 if ($Scan) {
     Step 'VirusTotal'
     if (-not (Get-Command vt -ErrorAction SilentlyContinue)) { throw 'vt CLI not found (https://github.com/VirusTotal/vt-cli/releases), then run: vt init' }
+    # vt did not pick up its own ~/.vt.toml in every shell, so the key is read here and passed explicitly
+    $vtKey = $env:VT_APIKEY
+    if (-not $vtKey -and (Test-Path "$env:USERPROFILE\.vt.toml")) { $vtKey = ((Get-Content "$env:USERPROFILE\.vt.toml" -Raw) -replace '(?s).*apikey\s*=\s*"([^"]*)".*', '$1').Trim() }
+    if ($vtKey -notmatch '^[0-9a-fA-F]{64}$') { throw 'No VirusTotal API key (run: vt init, or set VT_APIKEY)' }
     $bad = 0
     foreach ($f in $exe, $Zip) {
-        $line = (Native 'vt' @('scan', 'file', $f) | Select-Object -Last 1).ToString().Trim()
+        $line = (Native 'vt' @('scan', 'file', $f, '--apikey', $vtKey) | Select-Object -Last 1).ToString().Trim()
         $id = ($line -split '\s+')[-1]
         Write-Host "  uploaded $(Split-Path $f -Leaf), analysis $id"
         $stats = $null
         for ($i = 0; $i -lt 60 -and -not $stats; $i++) {
             Start-Sleep -Seconds 15
-            $j = (Native 'vt' @('analysis', $id, '--format', 'json')) -join "`n" | ConvertFrom-Json
+            $j = (Native 'vt' @('analysis', $id, '--format', 'json', '--apikey', $vtKey)) -join "`n" | ConvertFrom-Json
             $a = @($j)[0]; if ($a.attributes) { $a = $a.attributes }
             if ($a.status -eq 'completed') { $stats = $a.stats }
         }
