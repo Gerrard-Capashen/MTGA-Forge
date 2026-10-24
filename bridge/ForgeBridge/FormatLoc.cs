@@ -40,6 +40,11 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Alchemy", "Every card Forge implements, rebalanced versions included." },
             { "MainNav/DeckFormatInfo/Draft", "A drafted deck kept in your decks: 40 cards, any card allowed." },
             { "MainNav/DeckFormatInfo/Timeless", "Every card Forge implements. Bot matches accept decks of any format." },
+            // home carousel banners (FrontDoor CarouselGetCarouselItems)
+            { "Forge/Carousel/ForgeWelcome_Title", "Welcome to MTGA Forge!" },
+            { "Forge/Carousel/ForgeWelcome_Desc", "Enjoy all your favorite formats" },
+            { "Forge/Carousel/ForgeDiscord_Title", "Join the MTGA Forge Discord" },
+            { "Forge/Carousel/ForgeDiscord_Desc", "Find opponents, get help and report bugs" },
         };
 
         /// <summary>Call after the localization DB is loaded (it is only loaded while the composite has fewer than 2 providers).</summary>
