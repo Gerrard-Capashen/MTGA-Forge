@@ -1,6 +1,13 @@
 name = "play"
 compatibility_date = "2025-01-01"
 
+# mtgaforge.com is the public address. play.mtga-forge.workers.dev stays on: launchers already shipped read /latest.json there.
+workers_dev = true
+routes = [
+  { pattern = "mtgaforge.com", custom_domain = true },
+  { pattern = "www.mtgaforge.com", custom_domain = true },
+]
+
 # Pure static site: everything in public/ is served as-is.
 [assets]
 directory = "./public"

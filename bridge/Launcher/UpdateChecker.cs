@@ -19,7 +19,7 @@ namespace MtgaForgeLauncher
     /// </summary>
     static class UpdateChecker
     {
-        public const string Endpoint = "https://play.mtga-forge.workers.dev/latest.json";
+        public const string Endpoint = "https://mtgaforge.com/latest.json";
 
         public static bool OwnVersion(string packageRoot, out DateTimeOffset built, out string commit)
         {

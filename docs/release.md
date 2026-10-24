@@ -4,7 +4,7 @@ How a new MTGA Forge version reaches players, and the steps to publish one. Last
 
 ## How updates work
 
-- The website (`site/`, Worker `play` at https://play.mtga-forge.workers.dev) serves `site/public/latest.json`: release time, commit, zip SHA-256, size, download URL, notes, VirusTotal results. The page's download button, SHA and scan lines all come from it, so a release never edits `index.html` (only feature text does).
+- The website (`site/`, Worker `play` at https://mtgaforge.com, also https://play.mtga-forge.workers.dev for launchers built before the domain) serves `site/public/latest.json`: release time, commit, zip SHA-256, size, download URL, notes, VirusTotal results. The page's download button, SHA and scan lines all come from it, so a release never edits `index.html` (only feature text does).
 - The launcher (`bridge/Launcher/UpdateChecker.cs`) compares its own `dist.json` `builtAt` (written by `tools/package.ps1`) with `latest.json` `released` once per start. If the release is newer, it shows the "A newer MTGA Forge is available" banner with a link. Nothing downloads automatically. A dev copy (no `dist.json`) never checks.
 - The zip is hosted as a GitHub release asset on `Gerrard-Capashen/MTGA-Forge`.
 - The coordinator (`coordinator/`, Worker `mm`) is deployed on its own. It must be deployed before a release that needs new endpoints or DOs (old clients keep working against it).

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb04a"/><stop offset="1" stop-color="#e8590c"/></linearGradient>
+    <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4540f"/><stop offset="1" stop-color="#8f2f06"/></linearGradient>
+    <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2b0"/><stop offset="1" stop-color="#ff9f45"/></linearGradient>
+  </defs>
+  <g stroke="#2b1208" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M172 204 L36 214 Q20 218 30 228 Q100 296 188 322 L196 334 Q214 344 204 364 Q192 394 172 408 L412 418 Q372 398 362 374 Q356 346 372 322 Q420 268 468 222 L172 222 Z" fill="url(#ga)"/>
+    <path d="M176 178 H470 Q482 178 482 190 V216 Q482 224 472 224 H180 Z" fill="url(#gt)"/>
+    <rect x="112" y="410" width="302" height="44" rx="8" fill="url(#gd)"/>
+    <g transform="translate(0 -14) rotate(-4 372 172)">
+      <path d="M96 90 H330 V132 H96 Q82 132 82 111 Q82 90 96 90 Z" fill="url(#ga)"/>
+      <path d="M336 56 H396 Q410 56 406 74 Q396 104 408 132 Q412 168 398 172 H336 Z" fill="url(#gt)"/>
+    </g>
+  </g>
+</svg>
