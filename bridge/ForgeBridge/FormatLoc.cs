@@ -40,6 +40,10 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Alchemy", "Every card Forge implements, rebalanced versions included." },
             { "MainNav/DeckFormatInfo/Draft", "A drafted deck kept in your decks: 40 cards, any card allowed." },
             { "MainNav/DeckFormatInfo/Timeless", "Every card Forge implements. Bot matches accept decks of any format." },
+            // the draft events' prize for winning out (FrontDoor StartHook token definition Forge_EventChampion)
+            { "Forge/Token/EventChampionSingular", "Event Champion" },
+            { "Forge/Token/EventChampionPlural", "Event Champion" },
+            { "Forge/Token/EventChampion_Desc", "Congratulations on winning the event!" },
             // home carousel banners (FrontDoor CarouselGetCarouselItems)
             { "Forge/Carousel/ForgeWelcome_Title", "Welcome to MTGA Forge!" },
             { "Forge/Carousel/ForgeWelcome_Desc", "Enjoy all your favorite formats" },
@@ -106,6 +110,7 @@ namespace ForgeBridge
 
         private const string WinsTitle = "Events/Forge_Wins_";
         private const string WinsDesc = "Events/Forge_Wins_Desc_";
+        private const string WinsFinal = "Events/Forge_Wins_Final_";   // the last bubble, the one with the prize
 
         /// <summary>Win track bubbles of the draft events (no rewards offline): "3 Wins" / "Win 3 matches in this event."</summary>
         private static bool TryWins(string key, out string loc)
@@ -113,8 +118,10 @@ namespace ForgeBridge
             loc = null;
             if (key == null) return false;
             int n;
-            if (key.StartsWith(WinsDesc) && int.TryParse(key.Substring(WinsDesc.Length), out n))
-                loc = n == 7 ? "Win 7 matches: the event is complete." : "Win " + n + (n == 1 ? " match" : " matches") + " in this event.";
+            if (key.StartsWith(WinsFinal) && int.TryParse(key.Substring(WinsFinal.Length), out n))
+                loc = "Win " + n + " matches to complete the event and earn the Event Champion token.";
+            else if (key.StartsWith(WinsDesc) && int.TryParse(key.Substring(WinsDesc.Length), out n))
+                loc = n == 0 ? "Your record starts here." : "Win " + n + (n == 1 ? " match" : " matches") + " in this event.";
             else if (key.StartsWith(WinsTitle) && int.TryParse(key.Substring(WinsTitle.Length), out n))
                 loc = n + (n == 1 ? " Win" : " Wins");
             return loc != null;
