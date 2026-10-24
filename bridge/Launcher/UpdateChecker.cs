@@ -35,14 +35,30 @@ namespace MtgaForgeLauncher
             catch { return false; }
         }
 
-        /// <summary>The latest release, or null when the website can't be reached or has no release yet.</summary>
-        public static UpdateInfo Fetch(string ownCommit)
+        /// <summary>
+        /// The latest release, or null when the website can't be reached (<c>error</c> says why). Two tries: the first HTTPS request of
+        /// a cold .NET Framework process (proxy auto-detection, TLS) sometimes outlasts a short timeout while the game check starts.
+        /// </summary>
+        public static UpdateInfo Fetch(string ownCommit, out string error)
         {
+            error = "";
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                var info = FetchOnce(ownCommit, out error);
+                if (info != null) return info;
+                if (attempt == 1) System.Threading.Thread.Sleep(2000);
+            }
+            return null;
+        }
+
+        static UpdateInfo FetchOnce(string ownCommit, out string error)
+        {
+            error = "";
             try
             {
                 ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
                 var req = (HttpWebRequest)WebRequest.Create(Endpoint);
-                req.Timeout = 6000; req.ReadWriteTimeout = 6000;
+                req.Timeout = 15000; req.ReadWriteTimeout = 15000;
                 req.UserAgent = "MTGA-Forge-Launcher/" + ownCommit;
                 req.CachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.NoCacheNoStore);
                 using (var resp = (HttpWebResponse)req.GetResponse())
@@ -55,7 +71,7 @@ namespace MtgaForgeLauncher
                     return info;
                 }
             }
-            catch { return null; }
+            catch (Exception e) { error = e.Message; return null; }
         }
 
         static string Str(string json, string key)

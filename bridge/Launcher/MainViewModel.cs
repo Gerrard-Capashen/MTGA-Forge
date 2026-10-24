@@ -463,10 +463,11 @@ namespace MtgaForgeLauncher
             DateTimeOffset built; string commit;
             if (!UpdateChecker.OwnVersion(Path.GetDirectoryName(tools), out built, out commit)) { Log("Update check skipped: this is a development copy."); return; }
             Log("Update check: this package is commit " + commit + ", built " + built.ToString("yyyy-MM-dd HH:mm") + ". Asking " + UpdateChecker.Endpoint);
-            Task.Run(() => UpdateChecker.Fetch(commit)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
+            string error = "";
+            Task.Run(() => UpdateChecker.Fetch(commit, out error)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
             {
                 var u = t.Result;
-                if (u == null) { Log("Update check: the website could not be reached. Nothing is needed."); return; }
+                if (u == null) { Log("Update check: the website could not be reached (" + error + "). Nothing is needed."); return; }
                 if (!u.Released.HasValue) { Log("Update check: no release is listed yet."); return; }
                 if (u.Released.Value <= built.AddMinutes(1)) { Log("Update check: you have the latest version."); return; }
                 Log("Update check: a newer version exists (commit " + u.Commit + ", released " + u.Released.Value.ToString("yyyy-MM-dd") + ", SHA-256 " + u.Sha256 + ").");
