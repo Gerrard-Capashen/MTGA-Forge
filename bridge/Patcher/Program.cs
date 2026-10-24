@@ -15,6 +15,7 @@ using Mono.Cecil.Cil;
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks)
+//   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
 if (args.Length > 1 && (args[0] == "identity" || args[0] == "unityconnect" || args[0] == "check-bridge" || args[0] == "audit-bridge")) return Tools.Run(args);
@@ -183,6 +184,20 @@ setCollectionClicked.Body.Variables.Clear();
 setCollectionClicked.Body.ExceptionHandlers.Clear();
 setCollectionClicked.Body.GetILProcessor().Append(Instruction.Create(OpCodes.Ret));
 Console.WriteLine("patched ProfileUI.ProfileDetailsPanel -> " + profileTweaks.FullName);
+
+//   6e. NavBarController.UpdateButtons (async stub): before its return, ForgeBridge.NavTweaks.Apply(this) hides the Packs,
+//      Store and Mastery tabs and the currency counters. The task stays on the stack across the call.
+var navTweaks = core.ImportReference(bridge.GetType("ForgeBridge.NavTweaks").Methods.Single(m => m.Name == "Apply"));
+var updateButtons = core.GetType("NavBarController").Methods.Single(m => m.Name == "UpdateButtons");
+var nbp = updateButtons.Body.GetILProcessor();
+foreach (var ret in updateButtons.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    ret.OpCode = OpCodes.Ldarg_0;
+    var call = nbp.Create(OpCodes.Call, navTweaks);
+    nbp.InsertAfter(ret, call);
+    nbp.InsertAfter(call, nbp.Create(OpCodes.Ret));
+}
+Console.WriteLine("patched NavBarController.UpdateButtons -> " + navTweaks.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
