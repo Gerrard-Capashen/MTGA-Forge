@@ -1,7 +1,7 @@
 # Builds the patch distribution (no Wizards files, no card art) from the dev tree.
 # Usage: powershell -NoProfile -File tools\package.ps1 [-Out dist\MTGA-Forge] [-ManagedDir <client Managed folder>] [-BuildServer] [-Zip]
 #   dist\MTGA-Forge\
-#     MTGA-Forge.exe(+.config)                        the launcher window (bridge\Launcher): first-start guidance, friend code / offline
+#     MTGA-Forge.exe(+.config)                        the launcher window (bridge\Launcher): first-start guidance, name / offline
 #     MTGA-Forge.cmd, README.txt, dist.json           command-line start (tools\launcher.ps1) / what it is
 #     tools\                                          launcher.ps1 forge-patch.ps1 layout.ps1 verify.ps1 check-package.ps1
 #     patcher\                                        Patcher.exe (.NET Framework 4.8, ships with Windows) + Mono.Cecil, ForgeBridge.dll (our client code)

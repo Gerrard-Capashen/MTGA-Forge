@@ -81,7 +81,7 @@ namespace MtgaForgeLauncher
             if (Directory.Exists(localLow)) prefs.Dirs.Add(localLow);
             using (var k = Registry.CurrentUser.OpenSubKey(@"Software\" + UnityCompany)) if (k != null) prefs.RegistryKey = @"Software\" + UnityCompany;
 
-            var own = new UninstallItem { Title = "Launcher settings", Detail = "What this window remembers: folder, name, friend code.", IsChecked = true };
+            var own = new UninstallItem { Title = "Launcher settings", Detail = "What this window remembers: folder, name, options.", IsChecked = true };
             foreach (var f in new[] { "ui.ini", "config.json" }) if (File.Exists(Path.Combine(Settings.Home, f))) own.Files.Add(Path.Combine(Settings.Home, f));
 
             var fw = new UninstallItem { Title = "Firewall rule", Detail = "The rule that blocks the game from the internet. Windows asks for administrator approval to remove it.", IsChecked = true };

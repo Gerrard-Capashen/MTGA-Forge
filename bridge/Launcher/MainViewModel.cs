@@ -72,7 +72,7 @@ namespace MtgaForgeLauncher
 
         Stage stage = Stage.Checking;
         string headline = "Looking for your game...", body = "", sourceNote = "", folder = "", diskInfo = "", folderProblem = "";
-        string name = "", friendCode = "", playStatus = "", profileNote = "";
+        string name = "", playStatus = "", profileNote = "";
         bool offline, consoleOpen, diskLow, firewallOn, updateAvailable;
         string updateText = "", updateUrl = "";
         SourceItem selectedSource;
@@ -116,7 +116,7 @@ namespace MtgaForgeLauncher
             logTimer.Tick += (s, e) => PollServerLog();
 
             settings.Load();
-            folder = string.IsNullOrEmpty(folderOverride) ? settings.Folder : folderOverride; name = settings.Name; friendCode = settings.Code; offline = settings.Offline; consoleOpen = settings.ConsoleOpen;
+            folder = string.IsNullOrEmpty(folderOverride) ? settings.Folder : folderOverride; name = settings.Name; offline = settings.Offline; consoleOpen = settings.ConsoleOpen;
             profileNote = Profile.Note(folder);
             foreach (var s in PatchSteps) Steps.Add(new StepItem { Title = s[1] });
             if (!demo) { RefreshFirewall(); ui.BeginInvoke(DispatcherPriority.ApplicationIdle, (Action)CheckForUpdate); }
@@ -158,7 +158,6 @@ namespace MtgaForgeLauncher
 
         public bool HasSource { get { return selectedSource != null; } }
         public string Name { get { return name; } set { Set(ref name, value); } }
-        public string FriendCode { get { return friendCode; } set { Set(ref friendCode, value); } }
         public bool Offline { get { return offline; } set { if (Set(ref offline, value)) Raise("OnlineEnabled"); } }
         public bool UpdateAvailable { get { return updateAvailable; } private set { Set(ref updateAvailable, value); } }
         public string UpdateText { get { return updateText; } private set { Set(ref updateText, value); } }
@@ -199,7 +198,7 @@ namespace MtgaForgeLauncher
             {
                 return offline
                     ? "Press Start, then in the game: Play > Find Match > Bot Play. Pick Standard, Pioneer or Modern and a deck of that format."
-                    : "Press Start, then in the game: Play > Find Match. Bot Play is against the Forge AI. Casual Play is against another player online, in the same format.";
+                    : "Press Start, then in the game: Play > Find Match. Bot Play is against the Forge AI, Casual Play against another player online. Events has Quick Drafts against bots and Premier Drafts with other players (newest set and the Vintage Cube); challenge a friend from the Friends list.";
             }
         }
 
@@ -411,8 +410,7 @@ namespace MtgaForgeLauncher
         {
             var a = new StringBuilder("-NoPause -Folder " + Q(folder) + " -Source " + Q(SourcePath));
             if (name.Trim() != "") a.Append(" -Name " + Q(name.Trim()));
-            string code = Regex.Replace((friendCode ?? "").Trim(), "[^A-Za-z0-9_-]", "");     // goes on a command line and into a URL
-            if (offline) a.Append(" -Offline"); else if (code != "") a.Append(" -FriendCode " + Q(code));
+            if (offline) a.Append(" -Offline");     // friends play each other through the game's own Friends list (direct challenges)
             return a.ToString();
         }
 
@@ -420,7 +418,7 @@ namespace MtgaForgeLauncher
         {
             if (busy) return;
             if (name.Trim() == "") { PlayStatus = "Type a name first."; return; }
-            settings.Name = name; settings.Code = friendCode; settings.Offline = offline; settings.Folder = folder; settings.Source = SourcePath;
+            settings.Name = name; settings.Offline = offline; settings.Folder = folder; settings.Source = SourcePath;
             settings.Save();
             serverLog = null;
             busy = true;
@@ -444,7 +442,7 @@ namespace MtgaForgeLauncher
             if (m.Success) { serverLog = new ServerLog(m.Groups[1].Value); logTimer.Start(); PlayStatus = "Starting the server..."; }
             else if (l.Contains("Patching the game")) PlayStatus = "Updating the patched game first (a few minutes)...";
             else if (l.Contains("Server ready")) PlayStatus = "Server ready, starting the game...";
-            else if (l.Contains("MTGA started")) PlayStatus = "Game running. Pick Bot Play or Casual Play, a format and a deck. Close the game window to finish.";
+            else if (l.Contains("MTGA started")) PlayStatus = "Game running. Pick a queue or an event in the game. Close the game window to finish.";
         }
 
         void PollServerLog()
@@ -556,7 +554,7 @@ namespace MtgaForgeLauncher
         public void Shutdown()
         {
             if (!Persist) { if (runner != null) runner.KillTree(); return; }
-            settings.Name = name; settings.Code = friendCode; settings.Offline = offline; settings.Folder = folder; settings.Source = SourcePath;
+            settings.Name = name; settings.Offline = offline; settings.Folder = folder; settings.Source = SourcePath;
             settings.Save();
             if (runner != null) runner.KillTree();
         }
@@ -585,7 +583,7 @@ namespace MtgaForgeLauncher
                     for (int k = 0; k < Steps.Count; k++) Steps[k].State = k < 3 ? 2 : k == 3 ? 1 : 0;
                     Progress = 3; Stage = Stage.Preparing; break;
                 case Stage.Ready: Headline = "Ready to play"; PlayStatus = ""; Stage = Stage.Ready; UpdateText = "A newer MTGA Forge is available (2026-10-25). Players on different versions cannot match online."; UpdateAvailable = true; break;
-                case Stage.Running: PlayStatus = "Game running. Pick Bot Play or Casual Play, a format and a deck. Close the game window to finish."; Stage = Stage.Running; break;
+                case Stage.Running: PlayStatus = "Game running. Pick a queue or an event in the game. Close the game window to finish."; Stage = Stage.Running; break;
                 default: Stage = s; break;
             }
         }

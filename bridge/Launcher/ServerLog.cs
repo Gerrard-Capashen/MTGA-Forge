@@ -42,6 +42,9 @@ namespace MtgaForgeLauncher
             if ((m = Regex.Match(l, @"FD online: paired with (.+) as (host|guest)")).Success) return "Matched with " + m.Groups[1].Value + ". The game is starting.";
             if ((m = Regex.Match(l, @"FD online: no match \((.+)\)")).Success) return "No match: " + m.Groups[1].Value;
             if ((m = Regex.Match(l, @"FD online: join failed: (.+)$")).Success) return "Could not join: " + m.Groups[1].Value;
+            if (Regex.IsMatch(l, @"table queue: waiting in ")) return "Looking for a draft table...";
+            if ((m = Regex.Match(l, @"FD premier \S+: table \S+ formed, (\d+) people")).Success) return m.Groups[1].Value == "1" ? "Nobody else came: drafting with bots." : "Draft table found: " + m.Groups[1].Value + " players. Press Ready in the game.";
+            if ((m = Regex.Match(l, @"FD premier \S+: table cancelled \((.+)\)")).Success) return "Draft table cancelled: " + m.Groups[1].Value + ".";
             if (l.Contains("matchmaking server unreachable")) return "Can't reach the matchmaking server: check your internet connection.";
             if (l.Contains("[mtga] game over")) return "Game over. Close the game window to finish.";
             if (l.Contains("game thread died")) return "The game stopped unexpectedly (see the details below).";

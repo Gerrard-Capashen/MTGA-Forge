@@ -179,11 +179,7 @@
             <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" MaxLength="24"/>
             <TextBlock Text="{Binding ProfileNote}" FontSize="12" Foreground="{StaticResource Muted}" Margin="0,6,0,0"/>
 
-            <TextBlock Style="{StaticResource Label}" Text="Friend code (optional)"/>
-            <TextBox Text="{Binding FriendCode, UpdateSourceTrigger=PropertyChanged}" MaxLength="24" IsEnabled="{Binding OnlineEnabled}"/>
-            <TextBlock Text="To play one friend, both type the same code (like blue-otter-7) and pick the same Casual Play format. Empty means random opponents." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,6,0,0"/>
-
-            <CheckBox Content="Offline: no online play, Bot Play only" IsChecked="{Binding Offline}" Margin="0,18,0,0"/>
+            <CheckBox Content="Offline: no online play (Bot Play and Quick Drafts only)" IsChecked="{Binding Offline}" Margin="0,18,0,0"/>
             <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
               <CheckBox x:Name="FirewallSwitch" Content="Block the game's internet access" IsChecked="{Binding FirewallOn, Mode=OneWay}" Click="Firewall_Click"/>
               <Border Width="18" Height="18" CornerRadius="9" BorderBrush="{StaticResource Muted}" BorderThickness="1.5" Margin="10,0,0,0" VerticalAlignment="Center" Background="Transparent"

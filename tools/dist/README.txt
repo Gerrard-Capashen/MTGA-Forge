@@ -1,4 +1,4 @@
-MTGA-Forge: play Magic Arena's client against the Forge rules engine (Bot Play offline, Casual Play online).
+MTGA-Forge: play Magic Arena's client against the Forge rules engine (Bot Play and Quick Drafts offline, Casual Play, Premier Drafts and challenges online).
 
 WHAT YOU NEED
 - Windows 10/11 and MTGA installed (Steam). Nothing else: Java and the patch tools are in this folder.
@@ -20,8 +20,11 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   paired with another player waiting in the same format; the one who waited longest runs the game on their PC. Nothing to
   set up: no addresses, no router ports. Only the pairing and the game messages go through a small matchmaking server;
   no deck lists or accounts are stored there.
-  To play a specific friend: both type the same Friend code in the window (like blue-otter-7) before pressing Start, then both
-  pick the same Casual Play format. Without a code you meet random players.
+  Premier Drafts (Events): draft at one table with other players (up to 8; bots take the empty seats), from the newest set or the
+  Vintage Cube. Press Join, wait for the table (about a minute, longer while more players arrive), press Ready, draft, build, then
+  play your deck against other players of the same event. The first player at the table runs it on their PC: if they quit, the
+  others' draft ends (the game asks them first). If you leave and come back, your seat was picked for meanwhile.
+  Quick Drafts (Events): the same with seven Forge bots, offline.
   Friends: the game's own Friends list (bottom left corner) works: add a friend by typing their Name#12345 (the number is part of
   the name: ask them), they see your request and accept; you see each other online, busy or offline.
   Challenges: invite a friend to a challenge from the Friends panel; the deck type spinner shows Standard, Pioneer, Modern and 40 cards.
@@ -33,7 +36,7 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   (identity.json): use "Back up identity..." in the window to keep a copy, "Restore..." to get your name back on another PC.
   (Single player: Play > Find Match > Bot Play. Each queue only accepts decks legal in its format.)
 
-  Settings in the window: your name, a friend code, Offline, "Back up identity" / "Restore", and a switch to block the patched
+  Settings in the window: your name, Offline, "Back up identity" / "Restore", and a switch to block the patched
   game from the internet with a Windows Firewall rule (asks for administrator once; only affects the patched MTGA.exe, not the
   Forge server or matchmaking; it is for those who want to be 100% sure the game itself never contacts anything).
 
@@ -60,7 +63,7 @@ UNINSTALL
   preferences, the launcher's settings). Nothing outside those is touched, and your Steam MTGA is never modified.
 
 COMMAND LINE (optional, for scripting)
-  MTGA-Forge.cmd -Folder D:\MTGA-Forge -Source "D:\Games\MTGA" -PatchOnly -Repatch -FriendCode blue-otter-7 -Offline -Firewall
+  MTGA-Forge.cmd -Folder D:\MTGA-Forge -Source "D:\Games\MTGA" -PatchOnly -Repatch -Offline -Firewall
   Without -Folder the command-line start uses %LOCALAPPDATA%\MTGA-Forge; the window uses the folder you chose.
 
 THIS PACKAGE CONTAINS
