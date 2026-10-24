@@ -51,8 +51,9 @@ namespace ForgeBridge
         {
             Log.Info("LocalStartup.Run entered. Original startup disabled; no Wizards network calls.");
             Privacy.Apply();
-            // a quit without an exception in Player.log: say who asked for it
-            Application.wantsToQuit += () => { Log.Info("quit requested:\n" + Environment.StackTrace); return true; };
+            // a quit without an exception in Player.log: say who asked for it; held while others draft at this player's table
+            Application.wantsToQuit += HostQuitGuard.WantsToQuit;
+            bootstrap.StartCoroutine(HostQuitGuard.Watch());
             bootstrap.StartCoroutine(CardArt.Pump());
             bootstrap.StartCoroutine(CoordinatorSocialManager.Pump());
             bootstrap.StartCoroutine(CosmeticCatalogs.Watch());
