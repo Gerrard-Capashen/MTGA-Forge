@@ -4,13 +4,13 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --port 8787 --var RESULT_MIN_MS:300 --var RESULT_GRACE_MS:600",
+    "dev": "wrangler dev --port 8787 --var RESULT_MIN_MS:300 --var RESULT_GRACE_MS:600 --var TABLE_FIRST_MS:1500 --var TABLE_JOIN_MS:1000",
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply mtga-forge --remote",
     "db:migrate:local": "wrangler d1 migrations apply mtga-forge --local",
     "db:clean": "wrangler d1 execute mtga-forge --command \"DELETE FROM challenge_players WHERE player_id IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM friendships WHERE a IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%') OR b IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM blocks WHERE blocker IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%') OR blocked IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM matches WHERE host_id IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%') OR guest_id IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM match_reports WHERE player_id IN (SELECT player_id FROM players WHERE name_lc LIKE 'zztest%'); DELETE FROM players WHERE name_lc LIKE 'zztest%'; DELETE FROM name_holds WHERE name_lc LIKE 'zztest%'\"",
     "typecheck": "tsc --noEmit",
-    "test": "node test/smoke.mjs && node test/accounts.mjs && node test/friends.mjs && node test/challenges.mjs && node test/results.mjs"
+    "test": "node test/smoke.mjs && node test/accounts.mjs && node test/friends.mjs && node test/challenges.mjs && node test/results.mjs && node test/tables.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261019.1",

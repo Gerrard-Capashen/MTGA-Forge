@@ -9,6 +9,7 @@
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
  *
+ * Draft tables (src/tables.ts): WS /tablequeue (forms a table of up to 8), WS /table/<id> (relay between the host and the guests).
  * Results (src/results.ts): POST /matches/<id>/result, GET /matches/<id> (both seats report, verified when they agree).
  * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
  *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
@@ -19,12 +20,14 @@ import { authenticateToken, handleAccounts } from "./accounts";
 import { handleFriends, hubOf, type FriendsEnv } from "./friends";
 import { handleChallenges, type ChallengesEnv } from "./challenges";
 import { handleResults, leaveGraceMs, roomLeft, roomStarted, settleMatch, type ResultsEnv } from "./results";
+import { handleTables, type TablesEnv } from "./tables";
 import { matchToken, type Role } from "./tokens";
 
 export { Hub } from "./hub";
 export { Challenge } from "./challenge";
+export { TableQueue, TableRoom } from "./tables";
 
-export interface Env extends FriendsEnv, ChallengesEnv, ResultsEnv {
+export interface Env extends FriendsEnv, ChallengesEnv, ResultsEnv, TablesEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -58,6 +61,8 @@ export default {
     if (challenges) return challenges;
     const results = await handleResults(req, env, url);
     if (results) return results;
+    const tables = await handleTables(req, env, url);
+    if (tables) return tables;
 
     if (req.headers.get("Upgrade") !== "websocket") return text(426, "WebSocket expected");
 

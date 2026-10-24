@@ -19,6 +19,14 @@ class_name = "Hub"
 name = "CHALLENGE"
 class_name = "Challenge"
 
+[[durable_objects.bindings]]
+name = "TABLE_QUEUE"
+class_name = "TableQueue"
+
+[[durable_objects.bindings]]
+name = "TABLE_ROOM"
+class_name = "TableRoom"
+
 # SQLite-backed Durable Objects are the ones available on the free plan.
 [[migrations]]
 tag = "v1"
@@ -31,6 +39,10 @@ new_sqlite_classes = ["Hub"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["Challenge"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["TableQueue", "TableRoom"]
 
 # Accounts: names, tags, device keys (schema in migrations/, apply with `npm run db:migrate`).
 [[d1_databases]]
