@@ -89,8 +89,8 @@ namespace ForgeBridge
         private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper" };
 
         /// <summary>
-        /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
-        /// Bot Play is against the Forge AI, Casual Play against another player.
+        /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; / RankedPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
+        /// Bot Play is against the Forge AI, Casual Play and Ranked against another player.
         /// </summary>
         private static bool TryQueue(string key, out string loc)
         {
@@ -107,6 +107,8 @@ namespace ForgeBridge
                 loc = title ? "Bot Play: " + format : "Play a " + format + " deck against the Forge AI. Only decks legal in " + format + " can be chosen.";
             else if (mode == "CasualPlay")
                 loc = title ? "Casual Play: " + format : "Play a casual " + format + " match against another player. Only decks legal in " + format + " can be chosen.";
+            else if (mode == "RankedPlay")
+                loc = title ? "Ranked: " + format : "Climb the Constructed ladder in " + format + " against another player. Every ranked format shares one rank. Only decks legal in " + format + " can be chosen.";
             return loc != null;
         }
 

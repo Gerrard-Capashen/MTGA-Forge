@@ -4,17 +4,21 @@
  *   POST /matches/{id}/result {role, token, outcome: "win"|"loss"|"draw", pool}
  *        `token` is the match token the seat got when it was paired (proves it sat in that match as that role), the Bearer token says who it is.
  *        Answers {status, winner?}. A report cannot be changed; repeating the same one is fine.
- *   GET  /matches/{id}    the verdict, for the two players of the match (this also settles a match whose other seat never reported).
+ *   GET  /matches/{id}    the verdict, for the two players of the match (this also settles a match whose other seat never reported);
+ *        for a ranked match also `rank`: the caller's applied rank change (rank.ts rankUpdateFor), absent until there is one.
  *
  * status: pending | verified | disputed | forfeit | conceded | void (migrations/0004_match_results.sql). Both seats reported and agree =
  * verified. One seat only: a reported loss is taken at its word (conceded), a reported win only when the relay room saw the opponent
  * drop for good after MIN_MATCH_MS (forfeit); anything else stays pending and ends void after PENDING_TTL_MS. A later report from the
  * missing seat upgrades conceded/forfeit to verified, or to disputed when it contradicts.
+ * Ranked matches (paired by a ranked queue, rank.ts match_seats): only the seated account may report a seat, and every settle applies
+ * the verdict to the ratings (rank.ts applyRank, idempotent).
  */
 import { authenticate, type AccountEnv } from "./accounts";
+import { applyRank, rankUpdateFor, seatsOf, type RankEnv } from "./rank";
 import { matchToken, type Role } from "./tokens";
 
-export interface ResultsEnv extends AccountEnv {
+export interface ResultsEnv extends AccountEnv, RankEnv {
   TOKEN_SECRET?: string;
   /** "1" lets one player id fill both seats (local tests with two clients on one profile); such a match is never verified for rewards otherwise. */
   ALLOW_SELF_PAIRING?: string;
@@ -71,8 +75,12 @@ export async function handleResults(req: Request, env: ResultsEnv, url: URL): Pr
 
   if (!isResult && req.method === "GET") {
     const reports = await reportsOf(env, id);
-    if (!reports.some(r => r.player_id === me)) return fail(404, "not your match");
-    return Response.json(await settle(env, id, reports));
+    const seats = await seatsOf(env, id);
+    if (!reports.some(r => r.player_id === me) && !seats.some(s => s.player_id === me)) return fail(404, "not your match");
+    const verdict: Verdict & { rank?: unknown } = reports.length > 0 ? await settle(env, id, reports) : { status: "pending" };
+    const rank = seats.length > 0 ? await rankUpdateFor(env, id, me) : null;
+    if (rank) verdict.rank = rank;
+    return Response.json(verdict);
   }
   if (!isResult || req.method !== "POST") return fail(404, "not found");
 
@@ -82,6 +90,8 @@ export async function handleResults(req: Request, env: ResultsEnv, url: URL): Pr
   if (typeof outcome !== "string" || !(OUTCOMES as readonly string[]).includes(outcome)) return fail(400, "bad outcome");
   if (typeof pool !== "string" || !POOL.test(pool)) return fail(400, "bad pool");
   if (typeof body.token !== "string" || body.token !== await matchToken(env, id, role)) return fail(403, "bad token");
+  const seat = (await seatsOf(env, id)).find(s => s.role === role);
+  if (seat && seat.player_id !== me) return fail(403, "not your seat");          // ranked: the queue knows who sat there
 
   const before = await reportsOf(env, id);
   const mine = before.find(r => r.role === role);
@@ -119,8 +129,15 @@ function decide(env: ResultsEnv, reports: Report[], room: RoomRow | null, now: n
   return null;
 }
 
-/** Settles the match when it can be (idempotent). verified and disputed are final; conceded, forfeit and void are revised when the other seat reports. */
+/** Settles the match when it can be (idempotent) and applies a ranked verdict to the ratings (also idempotent: a failed apply is retried here). */
 async function settle(env: ResultsEnv, id: string, reports: Report[]): Promise<Verdict> {
+  const v = await store(env, id, reports);
+  if (v.status !== "pending") await applyRank(env, id);
+  return v;
+}
+
+/** verified and disputed are final; conceded, forfeit and void are revised when the other seat reports. */
+async function store(env: ResultsEnv, id: string, reports: Report[]): Promise<Verdict> {
   const row = await env.DB.prepare("SELECT status, winner FROM matches WHERE match_id = ?1").bind(id).first<{ status: string; winner: string | null }>();
   const done = (r: { status: string; winner: string | null }): Verdict => (r.winner ? { status: r.status, winner: r.winner } : { status: r.status });
   if (row && (row.status === "verified" || row.status === "disputed")) return done(row);

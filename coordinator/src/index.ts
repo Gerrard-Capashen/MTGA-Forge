@@ -5,20 +5,24 @@
  *   WS   /queue?q=CasualPlay_Modern&fp=<card db>&v=<peer protocol>&id=<player id>&name=<name>[&code=<friend code>]
  *        waits until a second player asks for the same (queue, card db, protocol, code); both get
  *        {"t":"paired","role":"host"|"guest","match":"<id>","token":"<hex>","opp":"<name>"} and the socket is closed.
+ *        Ranked queues (RankedPlay_<Format>, src/rank.ts) need "Authorization: Bearer <session token>" on the upgrade request (a header,
+ *        never the query: tokens in URLs are why logs are off); the account replaces `id`, and the pairing records who sits where.
  *   WS   /match/<id>?role=host|guest&token=<hex>
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
  *
  * Draft tables (src/tables.ts): WS /tablequeue (forms a table of up to 8), WS /table/<id> (relay between the host and the guests).
  * Results (src/results.ts): POST /matches/<id>/result, GET /matches/<id> (both seats report, verified when they agree).
+ * Rank (src/rank.ts): GET /me/rank; ranked matches move pips when their verdict settles.
  * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
  *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
  * stays authoritative (casual play).
  */
 
-import { authenticateToken, handleAccounts } from "./accounts";
+import { authenticate, authenticateToken, handleAccounts } from "./accounts";
 import { handleFriends, hubOf, type FriendsEnv } from "./friends";
 import { handleChallenges, type ChallengesEnv } from "./challenges";
+import { handleRank, poolOf, recordSeats } from "./rank";
 import { handleResults, leaveGraceMs, roomLeft, roomStarted, settleMatch, type ResultsEnv } from "./results";
 import { handleTables, type TablesEnv } from "./tables";
 import { matchToken, type Role } from "./tokens";
@@ -61,6 +65,8 @@ export default {
     if (challenges) return challenges;
     const results = await handleResults(req, env, url);
     if (results) return results;
+    const rank = await handleRank(req, env, url);
+    if (rank) return rank;
     const tables = await handleTables(req, env, url);
     if (tables) return tables;
 
@@ -80,7 +86,14 @@ export default {
       const v = url.searchParams.get("v") ?? "";
       const code = url.searchParams.get("code") ?? "";
       if (!NAME.test(q) || !NAME.test(v) || fp.length < 1 || fp.length > 128 || code.length > 32) return text(400, "bad queue request");
-      return env.QUEUE.get(env.QUEUE.idFromName(`${q}|${fp}|${v}|${code}`)).fetch(req);
+      const headers = new Headers(req.headers);
+      headers.delete("x-player-id");                                    // only set below, from a verified session token
+      if (poolOf(q)) {
+        const id = await authenticate(env, req);
+        if (!id) return text(401, "sign in first (ranked)");
+        headers.set("x-player-id", id);
+      }
+      return env.QUEUE.get(env.QUEUE.idFromName(`${q}|${fp}|${v}|${code}`)).fetch(new Request(req, { headers }));
     }
 
     const m = url.pathname.match(/^\/match\/([0-9a-f-]{36})$/);
@@ -94,7 +107,8 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-interface Ticket { id: string; name: string; at: number }
+/** `account` = the signed-in player of a ranked ticket (its id is then the account too). */
+interface Ticket { id: string; name: string; at: number; account?: string }
 
 /** One instance per (queue, card database, protocol, friend code): the players in it can play each other. */
 export class Queue implements DurableObject {
@@ -105,11 +119,14 @@ export class Queue implements DurableObject {
 
   async fetch(req: Request): Promise<Response> {
     const url = new URL(req.url);
+    const account = req.headers.get("x-player-id") ?? undefined;
     const ticket: Ticket = {
-      id: (url.searchParams.get("id") ?? "").slice(0, 64) || crypto.randomUUID(),
+      id: account ?? ((url.searchParams.get("id") ?? "").slice(0, 64) || crypto.randomUUID()),
       name: (url.searchParams.get("name") ?? "Player").slice(0, 40),
       at: Date.now(),
+      account,
     };
+    await this.ctx.storage.put("queue", url.searchParams.get("q") ?? "");
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
     this.ctx.acceptWebSocket(server);
@@ -124,12 +141,19 @@ export class Queue implements DurableObject {
       .filter(w => w !== ws && w.readyState === WebSocket.READY_STATE_OPEN)
       .map(w => ({ w, t: w.deserializeAttachment() as Ticket | null }))
       .filter((x): x is { w: WebSocket; t: Ticket } => x.t !== null && now - x.t.at < WAIT_MS)
-      .filter(x => this.env.ALLOW_SELF_PAIRING === "1" || x.t.id !== mine.id)
+      .filter(x => (this.env.ALLOW_SELF_PAIRING === "1" && !mine.account) || x.t.id !== mine.id)   // ranked: never the same account
       .sort((a, b) => a.t.at - b.t.at);
     const first = waiting[0];
     if (!first) return;
 
     const match = crypto.randomUUID();       // the player who waited longest hosts
+    if (mine.account && first.t.account) {
+      try {
+        await recordSeats(this.env, match, (await this.ctx.storage.get<string>("queue")) ?? "", first.t.account, mine.account);
+      } catch {
+        return;                              // no seat record = the match could not count: leave both waiting rather than pair them unranked
+      }
+    }
     const send = async (w: WebSocket, role: Role, opp: string) => {
       w.send(JSON.stringify({ t: "paired", role, match, token: await token(this.env, match, role), opp }));
       w.close(1000, "paired");

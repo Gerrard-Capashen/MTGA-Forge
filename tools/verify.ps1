@@ -4,7 +4,7 @@
 #
 # Usage: powershell -NoProfile -File tools\verify.ps1 [-Client <folder>] [-Only nc,bolt,...] [-SkipSelfPlay] [-SkipClient]
 #        [-Port 30003 -FdPort 30010 -ArtPort 30011] [-DataDir <dir>] [-ClassPath <file>] [-Out <dir>] [-BuildServer]
-# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-Legacy sp-Vintage sp-Pauper sp-pvp sp-pvp-concede sp-peer sp-online sp-accounts sp-social sp-profile sp-queues
+# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-Legacy sp-Vintage sp-Pauper sp-pvp sp-pvp-concede sp-peer sp-online sp-ranked sp-accounts sp-social sp-profile sp-queues
 # Needs: java + built forge-gui-mtga (-BuildServer compiles it), tools\cp.txt, a card DB in <Client>\MTGA_Data\Downloads, the
 # player's window (Unity renders only on an unlocked desktop), Scryfall access for the "art served" check.
 # Evidence per recipe in <Out>\<recipe>\ (player.log, server.log, capture.log, net.txt, shots\). The data dir (decks) is shared with
@@ -320,6 +320,8 @@ try {
         if (Wanted 'sp-pvp-concede') { Run-SelfPlay 'sp-pvp-concede' $null '-Dselfplay.pvp=true -Dselfplay.pvp.concede=true' 'SELFPLAY PVP OK' }
         if (Wanted 'sp-peer') { Run-SelfPlay 'sp-peer' $null '-Dselfplay.peer=true' 'SELFPLAY PEER OK' }
         if (Wanted 'sp-online') { Run-SelfPlay 'sp-online' $null '-Dselfplay.online=wss://mm.mtga-forge.workers.dev' 'SELFPLAY ONLINE OK' }   # needs the internet (live coordinator)
+        # ranked: two zztest accounts in RankedPlay_Standard; needs a LOCAL coordinator with migration 0006 (`npm run db:migrate:local`, `npm run dev` in coordinator\)
+        if (Wanted 'sp-ranked') { Run-SelfPlay 'sp-ranked' $null '-Dselfplay.online=ws://127.0.0.1:8787 -Dselfplay.ranked=true' 'SELFPLAY ONLINE OK' }
         if (Wanted 'sp-accounts') { Run-AccountCheck 'sp-accounts' }
         if (Wanted 'sp-social') { Run-SocialCheck 'sp-social' }
         if (Wanted 'sp-profile') { Run-ProfileCheck 'sp-profile' }
