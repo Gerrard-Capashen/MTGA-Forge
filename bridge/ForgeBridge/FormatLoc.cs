@@ -49,6 +49,29 @@ namespace ForgeBridge
             { "Forge/Carousel/ForgeWelcome_Desc", "Enjoy all your favorite formats" },
             { "Forge/Carousel/ForgeDiscord_Title", "Join the MTGA Forge Discord" },
             { "Forge/Carousel/ForgeDiscord_Desc", "Find opponents, get help and report bugs" },
+            // daily quests (coordinator quests.ts POOL, server DailyQuests): "<kind>_Text" with {quantity} = the goal, the reward {number} XP
+            { "Forge/Quest/PlayVintage_Text", "Play {quantity} Vintage match" },
+            { "Forge/Quest/PlayLegacy_Text", "Play {quantity} Legacy match" },
+            { "Forge/Quest/PlayPauper_Text", "Play {quantity} Pauper matches" },
+            { "Forge/Quest/PlayModern_Text", "Play {quantity} Modern matches" },
+            { "Forge/Quest/PlayPioneer_Text", "Play {quantity} Pioneer matches" },
+            { "Forge/Quest/WinStandard_Text", "Win {quantity} Standard match" },
+            { "Forge/Quest/PlayRanked_Text", "Play {quantity} Ranked matches" },
+            { "Forge/Quest/PlayDraft_Text", "Play {quantity} draft matches" },
+            { "Forge/Quest/AttackCreatures_Text", "Attack with {quantity} creatures" },
+            { "Forge/Quest/CastWhiteSpells_Text", "Cast {quantity} white spells" },
+            { "Forge/Quest/CastBlueSpells_Text", "Cast {quantity} blue spells" },
+            { "Forge/Quest/CastBlackSpells_Text", "Cast {quantity} black spells" },
+            { "Forge/Quest/CastRedSpells_Text", "Cast {quantity} red spells" },
+            { "Forge/Quest/CastGreenSpells_Text", "Cast {quantity} green spells" },
+            { "Forge/Quest/CastInstantsSorceries_Text", "Cast {quantity} instants or sorceries" },
+            { "Forge/Quest/CastCreatures_Text", "Cast {quantity} creature spells" },
+            { "Forge/Quest/PlayLands_Text", "Play {quantity} lands" },
+            { "Forge/Quest/DealDamage_Text", "Deal {quantity} damage to your opponents" },
+            { "Forge/Quest/KillCreatures_Text", "{quantity} of your opponents' creatures die" },
+            { "Forge/Quest/CastArtifactsEnchantments_Text", "Cast {quantity} artifact or enchantment spells" },
+            { "Forge/Quest/Reward_XP", "{number} Mastery XP" },
+            { "Forge/Quest/Reward_XP_Desc", "Mastery XP" },
         };
 
         /// <summary>Call after the localization DB is loaded (it is only loaded while the composite has fewer than 2 providers).</summary>
@@ -205,17 +228,27 @@ namespace ForgeBridge
 
         public string GetLocalizedText(string key, params (string, string)[] locParams)
         {
-            return TryGet(key, out var s) ? s : null;
+            return TryGet(key, out var s) ? Fill(s, locParams) : null;
         }
 
         public bool TryGetLocalizedTextForLanguage(string key, string overrideLangCode, (string, string)[] locParams, out string loc)
         {
-            return TryGet(key, out loc);
+            if (!TryGet(key, out loc)) return false;
+            loc = Fill(loc, locParams);
+            return true;
+        }
+
+        /// <summary>"{quantity}" -> the parameter's value (the client's own providers substitute their parameters the same way).</summary>
+        private static string Fill(string text, (string, string)[] locParams)
+        {
+            if (locParams == null || text == null || text.IndexOf('{') < 0) return text;
+            foreach (var (name, value) in locParams) text = text.Replace("{" + name + "}", value);
+            return text;
         }
 
         public string GetLocalizedTextForLanguage(string key, string overrideLangCode, params (string, string)[] locParams)
         {
-            return GetLocalizedText(key);
+            return GetLocalizedText(key, locParams);
         }
 
         public bool DoesContainTranslation(string key) => TryGet(key, out _);

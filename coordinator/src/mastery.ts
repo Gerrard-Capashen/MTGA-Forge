@@ -2,12 +2,13 @@
  * Mastery: one endless XP track; every level gives one cosmetic (migrations/0007_mastery.sql, docs/results-rank-mastery.md section 3).
  *
  *   GET  /mastery/track   the track: {version, items: [[kind, cosmetic id], ...]}, level n gives items[2n-2] and items[2n-1] (public, the same for everybody)
- *   GET  /me/mastery      (Bearer) -> {xp, level, levelXp, dailyCap, todayXp, trackVersion, owned: {avatars, sleeves, pets, emotes, titles}}
- *   POST /me/xp/bot {match}   (Bearer) -> {gained, ...as /me/mastery}: a local bot match finished, BOT_XP once per match id (cannot be verified: cosmetic only, inside the daily cap)
+ *   GET  /me/mastery      (Bearer) -> {xp, level, levelXp, todayXp, trackVersion, owned: {avatars, sleeves, pets, emotes, titles}}
+ *   POST /me/xp/bot {match}   (Bearer) -> {gained, ...as /me/mastery}: a local bot match finished, BOT_XP once per match id. It cannot be verified,
+ *        so a player gets it at most once every BOT_GAP_MS (a real match lasts longer; 429 otherwise). No daily cap (user, session 20).
  *
  * XP of online matches is applied from the match verdict (results.ts settle, also the Room alarm path), once per (match, player), paying for
  * PLAYING: verified = MATCH_XP to both players + WIN_XP to the winner; forfeit = the winner's MATCH_XP + WIN_XP (the leaver gets nothing);
- * conceded = MATCH_XP to the player who reported the loss; disputed / pending / void = nothing. Everything inside a daily cap (UTC day).
+ * conceded = MATCH_XP to the player who reported the loss; disputed / pending / void = nothing. No daily cap; quests (quests.ts) pay through here too.
  * A level-up writes the level's two cosmetics into cosmetic_grants in the same batch. The always-owned set (the Adventurer, the default card
  * back, the basic phrases) is not stored: the Java server adds it. The champion title is the track's last level.
  */
@@ -15,8 +16,8 @@ import { authenticate, type AccountEnv } from "./accounts";
 import track from "./mastery-track.json";
 
 export interface MasteryEnv extends AccountEnv {
-  /** Test override of the daily XP cap. */
-  MASTERY_DAILY_CAP?: string;
+  /** Test override of the minimum time between two bot-match awards of a player (ms). */
+  MASTERY_BOT_GAP_MS?: string;
 }
 
 export const LEVEL_XP = 1_000;
@@ -25,7 +26,8 @@ export const WIN_XP = 150;
 export const BOT_XP = 100;
 /** Cosmetics per level: the client's two reward rows (level n gives items 2n-2 and 2n-1). */
 export const PER_LEVEL = 2;
-const DAILY_CAP = 3_000;
+/** At most one bot-match award per player in this time: bot XP is the client's word, a real match takes longer. */
+const BOT_GAP_MS = 120_000;
 
 const ITEMS = (track as { version: number; items: [string, string][] }).items;
 const LISTS: Record<string, string> = { avatar: "avatars", sleeve: "sleeves", pet: "pets", emote: "emotes", title: "titles" };
@@ -42,14 +44,14 @@ async function rowOf(env: MasteryEnv, player: string): Promise<Row> {
   return (await env.DB.prepare("SELECT xp, level, day, day_xp, version FROM progress WHERE player_id = ?1").bind(player).first<Row>())!;
 }
 
-/** Pays `asked` XP to a player once per award key (inside the daily cap) and grants the cosmetics of the levels it finishes. */
+/** Pays `asked` XP to a player once per award key and grants the cosmetics of the levels it finishes. */
 export async function award(env: MasteryEnv, key: string, player: string, source: string, asked: number): Promise<void> {
   for (let attempt = 0; attempt < 5; attempt++) {
     if (await env.DB.prepare("SELECT 1 FROM xp_events WHERE award = ?1 AND player_id = ?2").bind(key, player).first()) return;
     const row = await rowOf(env, player);
     const now = Date.now(), today = dayOf(now);
     const before = row.day === today ? row.day_xp : 0;
-    const pay = Math.max(0, Math.min(asked, num(env.MASTERY_DAILY_CAP, DAILY_CAP) - before));
+    const pay = Math.max(0, asked);
     const xp = row.xp + pay, level = Math.floor(xp / LEVEL_XP);
     const stmts = [
       env.DB.prepare(`UPDATE progress SET xp = ?1, level = ?2, day = ?3, day_xp = ?4, version = version + 1, last_award = ?5, updated = ?6
@@ -103,7 +105,7 @@ async function me(env: MasteryEnv, player: string) {
     .all<{ cosmetic_id: string; kind: string }>()).results;
   for (const g of grants) owned[LISTS[g.kind] ?? "other"]?.push(g.cosmetic_id);
   return {
-    xp: row.xp, level: row.level, levelXp: LEVEL_XP, dailyCap: num(env.MASTERY_DAILY_CAP, DAILY_CAP),
+    xp: row.xp, level: row.level, levelXp: LEVEL_XP,
     todayXp: row.day === dayOf(Date.now()) ? row.day_xp : 0, trackVersion: (track as { version: number }).version, owned,
   };
 }
@@ -120,6 +122,11 @@ export async function handleMastery(req: Request, env: MasteryEnv, url: URL): Pr
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   if (typeof body.match !== "string" || !MATCH.test(body.match)) return fail(400, "bad match id");
   const key = "bot:" + body.match;
+  const again = await env.DB.prepare("SELECT 1 FROM xp_events WHERE award = ?1 AND player_id = ?2").bind(key, player).first();
+  if (!again) {
+    const last = await env.DB.prepare("SELECT MAX(created) AS t FROM xp_events WHERE player_id = ?1 AND source = 'bot'").bind(player).first<{ t: number | null }>();
+    if (last?.t && Date.now() - last.t < num(env.MASTERY_BOT_GAP_MS, BOT_GAP_MS)) return Response.json({ gained: 0, error: "too soon", ...(await me(env, player)) }, { status: 429 });
+  }
   await award(env, key, player, "bot", BOT_XP);
   const paid = await env.DB.prepare("SELECT xp FROM xp_events WHERE award = ?1 AND player_id = ?2").bind(key, player).first<{ xp: number }>();
   return Response.json({ gained: paid?.xp ?? 0, ...(await me(env, player)) });

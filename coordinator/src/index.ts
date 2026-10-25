@@ -15,6 +15,7 @@
  * Results (src/results.ts): POST /matches/<id>/result, GET /matches/<id> (both seats report, verified when they agree).
  * Rank (src/rank.ts): GET /me/rank; ranked matches move pips when their verdict settles.
  * Mastery (src/mastery.ts): GET /mastery/track, GET /me/mastery, POST /me/xp/bot; online matches pay XP when their verdict settles.
+ * Daily quests (src/quests.ts): GET /me/quests, POST /me/quests/swap, POST /me/quests/progress.
  * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
  *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
  * stays authoritative (casual play).
@@ -24,6 +25,7 @@ import { authenticate, authenticateToken, handleAccounts } from "./accounts";
 import { handleFriends, hubOf, type FriendsEnv } from "./friends";
 import { handleChallenges, type ChallengesEnv } from "./challenges";
 import { handleMastery } from "./mastery";
+import { handleQuests } from "./quests";
 import { handleRank, poolOf, recordSeats } from "./rank";
 import { handleResults, leaveGraceMs, roomLeft, roomStarted, settleMatch, type ResultsEnv } from "./results";
 import { handleTables, type TablesEnv } from "./tables";
@@ -71,6 +73,8 @@ export default {
     if (rank) return rank;
     const mastery = await handleMastery(req, env, url);
     if (mastery) return mastery;
+    const quests = await handleQuests(req, env, url);
+    if (quests) return quests;
     const tables = await handleTables(req, env, url);
     if (tables) return tables;
 

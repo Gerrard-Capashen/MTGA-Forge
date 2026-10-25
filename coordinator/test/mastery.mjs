@@ -1,6 +1,6 @@
 // Mastery: node test/mastery.mjs [http://127.0.0.1:8787]
 // Local only (it sets progress rows straight in the local D1): `npm run db:migrate:local`, `npm run dev`
-// (RESULT_MIN_MS=300 / RESULT_GRACE_MS=600 for the forfeit path, MASTERY_DAILY_CAP=3000). Test players are "zztest...": `npm run db:clean -- --local`.
+// (RESULT_MIN_MS=300 / RESULT_GRACE_MS=600 for the forfeit path, MASTERY_BOT_GAP_MS=1500). Test players are "zztest...": `npm run db:clean -- --local`.
 import { generateKeyPairSync, sign, randomUUID, randomBytes } from "node:crypto";
 import { execSync } from "node:child_process";
 
@@ -137,6 +137,7 @@ check(m.level === 1 && m.xp === 1050, "950 + 100 XP -> level 1");
 const LIST = { avatar: "avatars", sleeve: "sleeves", pet: "pets", emote: "emotes", title: "titles" };
 check([0, 1].every(i => m.owned[LIST[track.items[i][0]]].includes(track.items[i][1])) && Object.values(m.owned).flat().length === 2,
   `level 1 grants the track's first two cosmetics (${track.items[0][1]}, ${track.items[1][1]})`);
+await sleep(1600);                                                                    // the bot-match gap
 sql(`UPDATE progress SET xp = 2950 WHERE player_id = '${E.id}'`);                       // still level 1: the next award crosses levels 2 and 3
 await bot(E, "lvl-2");
 const g = sql(`SELECT cosmetic_id, source FROM cosmetic_grants WHERE player_id = '${E.id}' ORDER BY source`);
@@ -144,16 +145,18 @@ check(g.length === 6 && [2, 3].every(i => g.some(x => x.cosmetic_id === track.it
   && [4, 5].every(i => g.some(x => x.cosmetic_id === track.items[i][1] && x.source === "mastery:3")),
   "crossing levels 2 and 3 at once grants both levels' two cosmetics (levels never skipped)");
 
-// ---- daily cap (3000 in the dev server)
+// ---- no daily cap (user, session 20); bot XP at most once per MASTERY_BOT_GAP_MS (1500 ms in the dev server)
 const F = await player("frank");
-setProgress(F, 0, 2950);
-r = await bot(F, "cap-1");
-check(r.body.gained === 50 && r.body.todayXp === 3000, "the daily cap pays the rest only (50 of 100)");
-r = await bot(F, "cap-2");
-check(r.body.gained === 0 && r.body.xp === 50, "past the daily cap a match pays 0 (and is still recorded once)");
-sql(`UPDATE progress SET day = ${today - 1} WHERE player_id = '${F.id}'`);
-r = await bot(F, "cap-3");
-check(r.body.gained === 100 && r.body.todayXp === 100, "a new UTC day starts a new cap");
+setProgress(F, 0, 9000);
+r = await bot(F, "gap-1");
+check(r.status === 200 && r.body.gained === 100, "no daily cap: 9,000 XP earned today and a match still pays");
+r = await bot(F, "gap-2");
+check(r.status === 429 && r.body.gained === 0, "a second bot match right after the first pays nothing (429)");
+r = await bot(F, "gap-1");
+check(r.status === 200 && r.body.gained === 100, "repeating an already paid bot match is fine (not the gap)");
+await sleep(1600);
+r = await bot(F, "gap-3");
+check(r.status === 200 && r.body.gained === 100 && r.body.xp === 200, "after the gap a bot match pays again");
 
 console.log(failed ? `${failed} FAILED` : "all ok");
 process.exit(failed ? 1 : 0);
