@@ -84,7 +84,9 @@ function Get-ToolFps {
     $files = Get-ChildItem "$root\bridge\ForgeBridge", "$root\bridge\Patcher" -Include *.cs, *.csproj -Recurse | Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' } | Sort-Object FullName
     $text = ($files | ForEach-Object { $_.FullName.Substring($root.Length) + (Get-FileHash $_.FullName -Algorithm SHA256).Hash }) -join ''
     $h = [Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($text))
-    @{ bridge = ([BitConverter]::ToString($h) -replace '-', '').ToLower().Substring(0, 32); db = '' }
+    # the card database builder: a change (new formats, cubes, cards) rebuilds the folder's card DB at the next run
+    $db = (Get-FileHash "$root\forge\forge-gui-mtga\src\main\java\forge\mtga\CardDbBuilder.java" -Algorithm SHA256).Hash.ToLower().Substring(0, 32)
+    @{ bridge = ([BitConverter]::ToString($h) -replace '-', '').ToLower().Substring(0, 32); db = $db }
 }
 # Steam is mid-update (StateFlags 4 = fully installed): the files are not a consistent build yet
 $acf0 = Get-Acf

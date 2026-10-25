@@ -14,7 +14,7 @@ using Mono.Cecil.Cil;
 //   5. ManifestMetadataProvider(): no manifest pointer request to Wizards' CDN
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
-//   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks)
+//   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
@@ -183,6 +183,13 @@ setCollectionClicked.Body.Instructions.Clear();
 setCollectionClicked.Body.Variables.Clear();
 setCollectionClicked.Body.ExceptionHandlers.Clear();
 setCollectionClicked.Body.GetILProcessor().Append(Instruction.Create(OpCodes.Ret));
+// UpdateSetCollectionBadge feeds the hidden entry and throws when the newest set the client knows has no expansion symbol
+// (seen on a newer MTGA build: GetSetIcon NRE inside Display, the profile page never finished opening): it becomes a no-op too
+var updateBadge = profilePanel.Methods.Single(m => m.Name == "UpdateSetCollectionBadge");
+updateBadge.Body.Instructions.Clear();
+updateBadge.Body.Variables.Clear();
+updateBadge.Body.ExceptionHandlers.Clear();
+updateBadge.Body.GetILProcessor().Append(Instruction.Create(OpCodes.Ret));
 Console.WriteLine("patched ProfileUI.ProfileDetailsPanel -> " + profileTweaks.FullName);
 
 //   6e. NavBarController.UpdateButtons (async stub): before its return, ForgeBridge.NavTweaks.Apply(this) hides the Packs,

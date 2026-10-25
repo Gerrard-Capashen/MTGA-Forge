@@ -20,6 +20,11 @@ namespace ForgeBridge
                 var badge = f?.GetValue(panel) as Component;
                 if (badge == null) return;
                 // the badge sits inside the button that opens the collection: hide the whole entry
+                // the whole tile (frame, "Set Collection" label, badge, button): CollectionPanel next to the Set Mastery tile; else the button around the badge
+                for (var t = badge.transform; t != null; t = t.parent)
+                {
+                    if (t.name == "CollectionPanel") { t.gameObject.SetActive(false); return; }
+                }
                 var button = badge.GetComponentInParent<Button>(true);
                 (button != null ? button.gameObject : badge.gameObject).SetActive(false);
             }
