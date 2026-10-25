@@ -74,6 +74,8 @@ header nav .discord { display: inline-flex; align-items: center; gap: 6px; }
 
 figure { margin: 0 0 24px; background: var(--panel); border-radius: 10px; padding: 18px; }
 figure svg { display: block; width: 100%; height: auto; }
+figure .tall { display: none; }
+@media (max-width: 640px) { figure .wide { display: none; } figure .tall { display: block; } }
 figcaption { color: var(--muted); font-size: .9rem; margin-top: 8px; }
 
 .row { display: grid; grid-template-columns: 190px 1fr; gap: 12px 32px; padding: 36px 0; border-top: 1px solid var(--line); }
@@ -169,20 +171,21 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
 </div>
 
 <figure>
-  <svg viewBox="0 0 880 250" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
+  <svg class="wide" viewBox="0 0 880 250" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
     <style>
       .b { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
       .h { fill: var(--fg); font: 600 15px var(--body); }
       .s { fill: var(--muted); font: 400 13px var(--body); }
       .l { stroke: var(--accent); stroke-width: 2; fill: none; }
       .d { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; fill: none; }
+      .p { stroke: var(--accent); stroke-dasharray: 5 4; }
       .g { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 5; }
     </style>
     <rect x="10" y="30" width="400" height="200" rx="12" class="g"/>
     <text x="26" y="24" class="s">YOUR PC</text>
     <rect x="30" y="52" width="170" height="64" rx="8" class="b"/>
     <text x="44" y="80" class="h">Steam install</text><text x="44" y="100" class="s">read only</text>
-    <rect x="30" y="148" width="170" height="64" rx="8" class="b"/>
+    <rect x="30" y="148" width="170" height="64" rx="8" class="b p"/>
     <text x="44" y="176" class="h">Patched client</text><text x="44" y="196" class="s">own profile</text>
     <path d="M115 116v32" class="d"/>
     <rect x="228" y="148" width="162" height="64" rx="8" class="b" style="stroke:var(--accent)"/>
@@ -195,6 +198,34 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
     <text x="714" y="176" class="h">Other players</text><text x="714" y="196" class="s">the community</text>
     <path d="M640 180h60" class="l"/>
     <text x="470" y="100" class="s">Card art loads from Scryfall.</text>
+  </svg>
+  <svg class="tall" viewBox="0 0 340 520" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
+    <style>
+      .b { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+      .h { fill: var(--fg); font: 600 15px var(--body); }
+      .s { fill: var(--muted); font: 400 13px var(--body); }
+      .l { stroke: var(--accent); stroke-width: 2; fill: none; }
+      .d { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; fill: none; }
+      .p { stroke: var(--accent); stroke-dasharray: 5 4; }
+      .g { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 5; }
+    </style>
+    <rect x="10" y="28" width="320" height="268" rx="12" class="g"/>
+    <text x="26" y="20" class="s">YOUR PC</text>
+    <rect x="30" y="48" width="280" height="56" rx="8" class="b"/>
+    <text x="46" y="73" class="h">Steam install</text><text x="46" y="92" class="s">read only</text>
+    <path d="M170 104v28" class="d"/>
+    <rect x="30" y="132" width="280" height="56" rx="8" class="b p"/>
+    <text x="46" y="157" class="h">Patched client</text><text x="46" y="176" class="s">own profile</text>
+    <path d="M170 188v28" class="l"/>
+    <rect x="30" y="216" width="280" height="56" rx="8" class="b" style="stroke:var(--accent)"/>
+    <text x="46" y="241" class="h">Forge engine</text><text x="46" y="260" class="s">plays the game</text>
+    <path d="M170 272v62" class="l"/>
+    <rect x="30" y="334" width="280" height="56" rx="8" class="b" style="stroke:var(--accent)"/>
+    <text x="46" y="359" class="h">Matchmaking</text><text x="46" y="378" class="s">friends and queue</text>
+    <path d="M170 390v34" class="l"/>
+    <rect x="30" y="424" width="280" height="56" rx="8" class="b"/>
+    <text x="46" y="449" class="h">Other players</text><text x="46" y="468" class="s">the community</text>
+    <text x="30" y="508" class="s">Card art loads from Scryfall.</text>
   </svg>
   <figcaption>Games are refereed by Forge. Matchmaking only introduces you to friends and opponents.</figcaption>
 </figure>
