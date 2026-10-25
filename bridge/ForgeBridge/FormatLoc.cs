@@ -86,8 +86,10 @@ namespace ForgeBridge
         private const string EventTitle = "Events/Event_Title_";
         private const string EventDesc = "Events/Event_Desc_";
 
+        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper" };
+
         /// <summary>
-        /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; (Standard, Pioneer, Modern):
+        /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
         /// Bot Play is against the Forge AI, Casual Play against another player.
         /// </summary>
         private static bool TryQueue(string key, out string loc)
@@ -100,7 +102,7 @@ namespace ForgeBridge
             int us = name.IndexOf('_');
             if (us < 0) return false;
             string mode = name.Substring(0, us), format = name.Substring(us + 1);
-            if (format != "Standard" && format != "Pioneer" && format != "Modern") return false;
+            if (System.Array.IndexOf(QueueFormats, format) < 0) return false;
             if (mode == "BotPlay")
                 loc = title ? "Bot Play: " + format : "Play a " + format + " deck against the Forge AI. Only decks legal in " + format + " can be chosen.";
             else if (mode == "CasualPlay")
