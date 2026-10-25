@@ -131,7 +131,77 @@ namespace ForgeBridge
             return loc != null;
         }
 
-        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc) || TryWins(key, out loc);
+        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc) || TryWins(key, out loc)
+            || TryMastery(key, out loc);
+
+        private const string TrackTitle = "MainNav/BattlePass/BattlePass_";
+        private const string MasteryKind = "Forge/Mastery/Kind_";
+        private const string MasteryItem = "Forge/Mastery/Item/";
+
+        /// <summary>
+        /// The mastery track (server MasteryTrack): it borrows the art of one of the client's set tracks (BattlePass_&lt;SET&gt;), whose
+        /// name becomes "Forge" ("Forge Mastery"); its rewards are "Forge/Mastery/Kind_&lt;kind&gt;" and "Forge/Mastery/Item/&lt;cosmetic id&gt;".
+        /// </summary>
+        private static bool TryMastery(string key, out string loc)
+        {
+            loc = null;
+            if (key == null) return false;
+            if (key.StartsWith(TrackTitle)) loc = "Forge";
+            else if (key.StartsWith(MasteryKind))
+            {
+                switch (key.Substring(MasteryKind.Length))
+                {
+                    case "avatar": loc = "Avatar"; break;
+                    case "sleeve": loc = "Card Sleeve"; break;
+                    case "pet": loc = "Companion"; break;
+                    case "sticker": loc = "Sticker"; break;
+                    case "phrase": loc = "Emote"; break;
+                    case "title": loc = "Title"; break;
+                }
+            }
+            else if (key.StartsWith(MasteryItem)) loc = CosmeticName(key.Substring(MasteryItem.Length));
+            return loc != null;
+        }
+
+        /// <summary>A readable name from a cosmetic id: Avatar_Basic_JaceBeleren -> "Jace Beleren", AFR_Dragon.Level2 -> "AFR Dragon (Level 2)".</summary>
+        internal static string CosmeticName(string id)
+        {
+            // the client's own names first: sleeves and avatars have them
+            string own = id.StartsWith("CardBack_") ? "MainNav/DeckBuilder/Sleeves/" + id : id.StartsWith("Avatar_") ? "MainNav/Profile/Avatars/" + id + "_Name" : null;
+            if (own != null)
+            {
+                string text = Pantry.Get<IClientLocProvider>()?.GetLocalizedText(own);
+                if (!string.IsNullOrEmpty(text) && !text.StartsWith("LOCME")) return text;
+            }
+            if (id.StartsWith("Title_"))
+            {
+                // Title_<group>_<name> was built from the client's key Titles/<group>/<name> (server CosmeticCatalog)
+                int us = id.IndexOf('_', 6);
+                string titleKey = us > 0 ? "Titles/" + id.Substring(6, us - 6) + "/" + id.Substring(us + 1) : null;
+                string text = titleKey == null ? null : (Pantry.Get<IClientLocProvider>()?.GetLocalizedText(titleKey));
+                if (!string.IsNullOrEmpty(text)) return text;
+            }
+            string variant = null;
+            int dot = id.IndexOf('.');
+            if (dot > 0) { variant = id.Substring(dot + 1); id = id.Substring(0, dot); }
+            foreach (var prefix in new[] { "Avatar_Basic_", "Avatar_", "CardBack_", "Phrase_", "Sticker_", "Title_" })
+                if (id.StartsWith(prefix)) { id = id.Substring(prefix.Length); break; }
+            string name = Words(id.Replace('_', ' '));
+            return variant == null ? name : name + " (" + Words(variant) + ")";
+        }
+
+        /// <summary>"JaceBeleren" -> "Jace Beleren", "Level2" -> "Level 2".</summary>
+        private static string Words(string s)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (i > 0 && s[i - 1] != ' ' && ((char.IsUpper(c) && char.IsLower(s[i - 1])) || (char.IsDigit(c) && char.IsLetter(s[i - 1])))) sb.Append(' ');
+                sb.Append(c);
+            }
+            return sb.ToString();
+        }
 
         public string GetLocalizedText(string key, params (string, string)[] locParams)
         {

@@ -5,7 +5,8 @@
  *        `token` is the match token the seat got when it was paired (proves it sat in that match as that role), the Bearer token says who it is.
  *        Answers {status, winner?}. A report cannot be changed; repeating the same one is fine.
  *   GET  /matches/{id}    the verdict, for the two players of the match (this also settles a match whose other seat never reported);
- *        for a ranked match also `rank`: the caller's applied rank change (rank.ts rankUpdateFor), absent until there is one.
+ *        for a ranked match also `rank`: the caller's applied rank change (rank.ts rankUpdateFor), absent until there is one;
+ *        `mastery` {xp, asked}: the caller's mastery XP for the match (mastery.ts), absent until paid.
  *
  * status: pending | verified | disputed | forfeit | conceded | void (migrations/0004_match_results.sql). Both seats reported and agree =
  * verified. One seat only: a reported loss is taken at its word (conceded), a reported win only when the relay room saw the opponent
@@ -15,10 +16,11 @@
  * the verdict to the ratings (rank.ts applyRank, idempotent).
  */
 import { authenticate, type AccountEnv } from "./accounts";
+import { applyMastery, masteryFor, type MasteryEnv } from "./mastery";
 import { applyRank, rankUpdateFor, seatsOf, type RankEnv } from "./rank";
 import { matchToken, type Role } from "./tokens";
 
-export interface ResultsEnv extends AccountEnv, RankEnv {
+export interface ResultsEnv extends AccountEnv, RankEnv, MasteryEnv {
   TOKEN_SECRET?: string;
   /** "1" lets one player id fill both seats (local tests with two clients on one profile); such a match is never verified for rewards otherwise. */
   ALLOW_SELF_PAIRING?: string;
@@ -77,9 +79,11 @@ export async function handleResults(req: Request, env: ResultsEnv, url: URL): Pr
     const reports = await reportsOf(env, id);
     const seats = await seatsOf(env, id);
     if (!reports.some(r => r.player_id === me) && !seats.some(s => s.player_id === me)) return fail(404, "not your match");
-    const verdict: Verdict & { rank?: unknown } = reports.length > 0 ? await settle(env, id, reports) : { status: "pending" };
+    const verdict: Verdict & { rank?: unknown; mastery?: unknown } = reports.length > 0 ? await settle(env, id, reports) : { status: "pending" };
     const rank = seats.length > 0 ? await rankUpdateFor(env, id, me) : null;
     if (rank) verdict.rank = rank;
+    const xp = await masteryFor(env, id, me);
+    if (xp) verdict.mastery = xp;
     return Response.json(verdict);
   }
   if (!isResult || req.method !== "POST") return fail(404, "not found");
@@ -129,10 +133,13 @@ function decide(env: ResultsEnv, reports: Report[], room: RoomRow | null, now: n
   return null;
 }
 
-/** Settles the match when it can be (idempotent) and applies a ranked verdict to the ratings (also idempotent: a failed apply is retried here). */
+/** Settles the match when it can be (idempotent) and applies the verdict to the ratings and the mastery XP (also idempotent: a failed apply is retried here). */
 async function settle(env: ResultsEnv, id: string, reports: Report[]): Promise<Verdict> {
   const v = await store(env, id, reports);
-  if (v.status !== "pending") await applyRank(env, id);
+  if (v.status !== "pending") {
+    await applyRank(env, id);
+    await applyMastery(env, id);
+  }
   return v;
 }
 

@@ -26,6 +26,8 @@ namespace ForgeBridge
                 while (Time.realtimeSinceStartup < at) yield return null;
                 string needle = kv[1].ToLowerInvariant();
                 if (needle == "dump") { Dump(at); continue; }
+                bool hover = needle.StartsWith("hover~");    // "hover~panel_free@3": pointer enter only (reward tooltips), no click
+                if (hover) needle = needle.Substring(6);
                 bool? setTo = null;   // "name=on" / "name=off": set a Toggle instead of flipping it
                 if (needle.EndsWith("=on")) { setTo = true; needle = needle.Substring(0, needle.Length - 3); }
                 else if (needle.EndsWith("=off")) { setTo = false; needle = needle.Substring(0, needle.Length - 4); }
@@ -74,6 +76,12 @@ namespace ForgeBridge
                 Log.Info("click '" + needle + "': " + hits.Count + " candidates: " + string.Join(" | ", hits.Take(12).Select(h => Path(h))));
                 foreach (var h in hits)
                 {
+                    if (hover)
+                    {
+                        ExecuteEvents.Execute(h.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerEnterHandler);
+                        Log.Info("pointer enter on " + h.name);
+                        continue;
+                    }
                     var ci = h.GetComponent<CardInput>();
                     if (ci != null)
                     {

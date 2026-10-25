@@ -38,11 +38,12 @@ namespace ForgeBridge
         }
 
         /// <summary>Hook (AssetLoader.HaveAsset/ReleaseAsset/AddReferenceCount): the path is one of ours, not a bundle asset.</summary>
-        public static bool Owns(string path) => ArtId(path) != 0 || EventSet(path) != null;
+        public static bool Owns(string path) => ArtId(path) != 0 || EventSet(path) != null || CosmeticIcons.Owns(path);
 
         /// <summary>Hook (AssetLoader.AcquireAsset&lt;T&gt;): the texture for one of our paths, null for any other path.</summary>
         public static UnityEngine.Object Acquire(string path)
         {
+            if (CosmeticIcons.Owns(path)) return CosmeticIcons.Acquire(path);
             string set = EventSet(path);
             if (set != null) return EventSprite(set);
             int id = ArtId(path);

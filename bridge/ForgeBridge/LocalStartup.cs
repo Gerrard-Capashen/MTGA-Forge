@@ -57,6 +57,8 @@ namespace ForgeBridge
             bootstrap.StartCoroutine(CardArt.Pump());
             bootstrap.StartCoroutine(CoordinatorSocialManager.Pump());
             bootstrap.StartCoroutine(CosmeticCatalogs.Watch());
+            bootstrap.StartCoroutine(MasteryTweaks.Watch());
+            bootstrap.StartCoroutine(RewardPopupIcons.Watch());
             bootstrap.StartCoroutine(DebugShots.Run());
             bootstrap.StartCoroutine(DebugClicks.Run());
             IEnumerator stage = Stages(bootstrap);
