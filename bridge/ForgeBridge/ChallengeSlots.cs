@@ -39,7 +39,7 @@ namespace ForgeBridge
                 {
                     var key = (ChallengeSpinnerDeckTypeKey)i;
                     infos[Slots[i].slot] = new ChallengeTypeInfo(ChallengeSpinnerMatchTypeKey.ChallengeMatch, Slots[i].deckFormat, key);
-                    deckTypes.Add(key, new ChallengeSpinnerDeckType { Label = Slots[i].label, AllowBo3 = false });
+                    deckTypes.Add(key, new ChallengeSpinnerDeckType { Label = Slots[i].label, AllowBo3 = true });
                     labels.Add(Slots[i].label);
                 }
                 // only "Challenge Match" stays in the match type spinner (the tournament variants are not offered)

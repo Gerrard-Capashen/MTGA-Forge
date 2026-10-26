@@ -15,6 +15,7 @@ using Mono.Cecil.Cil;
 //   6. AssetLoader: art of generated cards (art id 9,000,000+) from ForgeBridge.CardArt
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
+//   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
@@ -205,6 +206,19 @@ foreach (var ret in updateButtons.Body.Instructions.Where(i => i.OpCode == OpCod
     nbp.InsertAfter(call, nbp.Create(OpCodes.Ret));
 }
 Console.WriteLine("patched NavBarController.UpdateButtons -> " + navTweaks.FullName);
+
+//   6f. ZoneTransferGroup.Update: at the start, ForgeBridge.DrawTweaks.Apply(this) shortens the stagger cap of big draw groups
+//      (a mulligan's 7 new cards are dealt in 0.5 s instead of 1.5 s). Throws if the fields it sets moved.
+var drawTweaks = core.ImportReference(bridge.GetType("ForgeBridge.DrawTweaks").Methods.Single(m => m.Name == "Apply"));
+var ztGroup = core.GetType("Wotc.Mtga.DuelScene.UXEvents.ZoneTransferGroup");
+if (!ztGroup.Fields.Any(f => f.Name == "MAX_STAGGER_TIME") || !ztGroup.Fields.Any(f => f.Name == "_zoneTransfers"))
+    throw new InvalidOperationException("ZoneTransferGroup no longer has MAX_STAGGER_TIME / _zoneTransfers: update DrawTweaks");
+var ztUpdate = ztGroup.Methods.Single(m => m.Name == "Update" && m.Parameters.Count == 1);
+var ztp = ztUpdate.Body.GetILProcessor();
+var ztFirst = ztUpdate.Body.Instructions[0];
+ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Ldarg_0));
+ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Call, drawTweaks));
+Console.WriteLine("patched ZoneTransferGroup.Update -> " + drawTweaks.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
