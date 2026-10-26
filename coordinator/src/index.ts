@@ -96,10 +96,11 @@ export default {
       if (!NAME.test(q) || !NAME.test(v) || fp.length < 1 || fp.length > 128 || code.length > 32) return text(400, "bad queue request");
       const headers = new Headers(req.headers);
       headers.delete("x-player-id");                                    // only set below, from a verified session token
-      if (poolOf(q)) {
+      const pool = poolOf(q);
+      if (pool) {
         const id = await authenticate(env, req);
-        if (!id) return text(401, "sign in first (ranked)");
-        headers.set("x-player-id", id);
+        if (!id && pool === "constructed") return text(401, "sign in first (ranked)");
+        if (id) headers.set("x-player-id", id);                         // a premier draft match plays without an account too, it just does not count
       }
       return env.QUEUE.get(env.QUEUE.idFromName(`${q}|${fp}|${v}|${code}`)).fetch(new Request(req, { headers }));
     }

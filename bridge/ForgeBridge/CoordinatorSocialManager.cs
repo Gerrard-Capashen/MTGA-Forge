@@ -234,7 +234,14 @@ namespace ForgeBridge
                 long seq = (long)j["seq"];
                 if (seq <= _lastMessage) continue;
                 _lastMessage = seq;
-                if (!_first) OnGameMessage?.Invoke(new GameMessage((string)j["from"], "", (string)j["payload"], null));
+                if (_first) continue;
+                string from = (string)j["from"], payload = (string)j["payload"] ?? "";
+                if (payload.StartsWith(DmPrefix, StringComparison.Ordinal))
+                {
+                    var friend = Friends.Find(f => f.PlayerId == from);
+                    OnDirectMessage?.Invoke(new MTGA.Social.DirectMessage { SenderPlayerId = from, SenderDisplayName = friend?.FullName ?? "", Message = payload.Substring(DmPrefix.Length) });
+                }
+                else OnGameMessage?.Invoke(new GameMessage(from, "", payload, null));
             }
 
             bool connected = (bool)o["connected"];
@@ -290,7 +297,16 @@ namespace ForgeBridge
         public void Connect(PresenceStatus connectStatus) { }
         public void Disconnect(bool shutdownStyle) { }
         public void Reconnect() { }
-        public void SendDirectMessage(string friendFullName, string message) { Log.Info("social: direct messages are not available yet"); }
+        /// <summary>Chat messages travel as friend messages (the coordinator relays them to a friend who is online, 16 KB, 60 a minute), marked by this prefix.</summary>
+        private const string DmPrefix = "\u0001dm\u0001";
+
+        public void SendDirectMessage(string friendFullName, string message)
+        {
+            var friend = Friends.Find(f => f.FullName == friendFullName);
+            if (friend == null) { Log.Info("social: direct message to " + friendFullName + " dropped: not a friend"); return; }
+            if (friend.Status == PresenceStatus.Offline) Log.Info("social: " + friendFullName + " is offline, the message will not arrive");
+            Post("game", new JObject { ["to"] = friend.PlayerId, ["payload"] = DmPrefix + message });
+        }
         public void SendGameMessage(string playerId, string message)
         {
             Post("game", new JObject { ["to"] = playerId, ["payload"] = message });

@@ -163,6 +163,7 @@ namespace ForgeBridge
             var loginAssets = Call(bootstrap, "PrepareLoginAssets", assetPrepScene) as IEnumerator;
             if (loginAssets != null) while (loginAssets.MoveNext()) yield return loginAssets.Current;
             FormatLoc.Install();
+            ChallengeSlots.Install();
 
             if (!DuelMode)
             {

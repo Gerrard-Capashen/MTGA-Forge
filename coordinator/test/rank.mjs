@@ -198,5 +198,31 @@ va = await verdict(G, a); vb = await verdict(H, b);
 check(va.rank?.reason === "pair-cap" && (await rank(G)).wins === 3, "the fourth result against the same opponent today is capped");
 check(vb.rank?.reason === "pair-cap", "the cap holds for the other player of the pair too");
 
+// ---- premier draft matches count for the Limited ladder
+{
+  const PQ = "PremierDraft_VCUBE";
+  const I = await player("ivy"), J = await player("jack");
+  const limited = async p => (await api("GET", "/me/rank", undefined, p.token)).body.pools?.limited;
+  check(pips(await limited(I)) === "Bronze 4 0", "a new player starts at Bronze 4 in the Limited ladder too");
+  const [pa, pb] = await paired(I, J, PQ);
+  check(pa.role === "host" && pb.role === "guest", "two signed-in players pair in a premier draft queue");
+  const seats = sql(`SELECT pool FROM match_seats WHERE match_id = '${pa.match}'`);
+  check(seats.length === 2 && seats.every(s => s.pool === "limited"), "the pairing records both seats (pool limited)");
+  const [ra2, rb2] = await bothIn(pa, pb);
+  await sleep(450);
+  await report(I, pa, "win", PQ); await report(J, pb, "loss", PQ);
+  ra2.ws.close(); rb2.ws.close();
+  const vi = await verdict(I, pa);
+  check(vi.status === "verified" && vi.rank?.reason === "applied" && vi.rank?.pool === "limited", "a verified premier draft win is applied to the Limited ladder");
+  check(pips(await limited(I)) === "Bronze 4 2" && (await limited(I)).wins === 1, "Limited: Bronze win gives +2 pips");
+  check(pips(await rank(I)) === "Bronze 4 0" && (await rank(I)).wins === 0, "the Constructed ladder is untouched by it");
+  // without an account the queue still works, nothing counts
+  const open = [];
+  const K = await player("kim"), L = await player("liam");
+  const [ua, ub] = await Promise.all([queue(K, PQ, false, "anon-" + run + "k", open), (async () => { await sleep(200); return queue(L, PQ, false, "anon-" + run + "l", open); })()]);
+  check(ua.t === "paired" && ub.t === "paired" && sql(`SELECT COUNT(*) AS n FROM match_seats WHERE match_id = '${ua.match}'`)[0].n === 0, "a premier draft queue accepts players without an account; such a match is not ranked");
+  for (const w of open) w.close();
+}
+
 console.log(failed ? `${failed} FAILED` : "all ok");
 process.exit(failed ? 1 : 0);

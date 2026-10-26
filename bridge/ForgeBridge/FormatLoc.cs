@@ -15,10 +15,13 @@ namespace ForgeBridge
     {
         private static readonly Dictionary<string, string> Text = new Dictionary<string, string>
         {
-            // the direct challenge screen has fixed deck types: Standard / Brawl / Limited / Alchemy; the Brawl and Alchemy slots are Pioneer and Modern here
+            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper
             { "MainNav/PrivateGame/DeckType_60_Card", "Standard" },
             { "MainNav/PrivateGame/DeckType_Brawl", "Pioneer" },
             { "MainNav/PrivateGame/DeckType_60_Card_Alchemy", "Modern" },
+            { "Forge/Challenge/DeckType_Legacy", "Legacy" },
+            { "Forge/Challenge/DeckType_Vintage", "Vintage" },
+            { "Forge/Challenge/DeckType_Pauper", "Pauper" },
             { "MainNav/DeckFormat/Pioneer", "Pioneer" },
             { "MainNav/DeckFormat/Modern", "Modern" },
             { "MainNav/DeckFormat/Legacy", "Legacy" },
