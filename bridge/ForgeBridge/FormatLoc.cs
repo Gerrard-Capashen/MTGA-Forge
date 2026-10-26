@@ -128,8 +128,14 @@ namespace ForgeBridge
             int us = name.IndexOf('_');
             if (us < 0) return false;
             string mode = name.Substring(0, us), format = name.Substring(us + 1);
+            // Bot Play also has a best-of-three event, BotPlay_<Format>_BO3
+            bool bo3 = format.EndsWith("_BO3");
+            if (bo3) format = format.Substring(0, format.Length - 4);
             if (System.Array.IndexOf(QueueFormats, format) < 0) return false;
-            if (mode == "BotPlay")
+            if (bo3 && mode != "BotPlay") return false;
+            if (mode == "BotPlay" && bo3)
+                loc = title ? "Bot Play: " + format + " (Best of 3)" : "Play a best-of-three " + format + " match against the Forge AI, with sideboarding between games. Only decks legal in " + format + " can be chosen.";
+            else if (mode == "BotPlay")
                 loc = title ? "Bot Play: " + format : "Play a " + format + " deck against the Forge AI. Only decks legal in " + format + " can be chosen.";
             else if (mode == "CasualPlay")
                 loc = title ? "Casual Play: " + format : "Play a casual " + format + " match against another player. Only decks legal in " + format + " can be chosen.";
