@@ -28,6 +28,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormat/Vintage", "Vintage" },
             { "MainNav/DeckFormat/Commander", "Commander" },
             { "MainNav/DeckFormat/Draft", "Draft" },
+            { "MainNav/DeckFormat/Ambiguous", "All cards" },
             { "MainNav/Settings/ReportABug/Support_URL", "https://mtgaforge.com" },
             { "MainNav/Profile/Tabs/OverviewTab", "Overview" },
             { "MainNav/Profile/Tabs/CustomizationTab", "Customization" },
@@ -41,6 +42,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Commander", "100-card singleton deck led by a legendary commander. Deck building only: matches ignore the command zone." },
             { "MainNav/DeckFormatInfo/Historic", "Historic as Forge defines it." },
             { "MainNav/DeckFormatInfo/Alchemy", "Every card Forge implements, rebalanced versions included." },
+            { "MainNav/DeckFormatInfo/Ambiguous", "No format chosen yet: every card is shown." },
             { "MainNav/DeckFormatInfo/Draft", "A drafted deck kept in your decks: 40 cards, any card allowed." },
             { "MainNav/DeckFormatInfo/Timeless", "Every card Forge implements. Bot matches accept decks of any format." },
             // the draft events' prize for winning out (FrontDoor StartHook token definition Forge_EventChampion)
