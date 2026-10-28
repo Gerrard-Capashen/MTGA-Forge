@@ -77,13 +77,7 @@ namespace ForgeBridge
             // Discord chat account: nothing behind it here (ShowPanel would re-enable it, a destroyed one is skipped)
             var discord = Field(panel, "_discordUnlinkButton") as Component;
             if (discord != null) UnityEngine.Object.Destroy(discord.gameObject);
-            // detailed logs: the patched client logs on its own
-            if (Field(panel, "_trackerToggle") is Toggle tracker)
-            {
-                var row = tracker.transform.parent;
-                bool alone = row != null && row != panel.transform && row.GetComponentsInChildren<Toggle>(true).Length == 1;
-                (alone ? row.gameObject : tracker.gameObject).SetActive(false);
-            }
+            // the "Detailed Logs" toggle stays: it is on by default (LocalStartup.EnableDetailedLogs) and players can switch it off
         }
 
         private static void TrimReportIssue(Component panel)

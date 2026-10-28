@@ -207,6 +207,20 @@ foreach (var ret in updateButtons.Body.Instructions.Where(i => i.OpCode == OpCod
 }
 Console.WriteLine("patched NavBarController.UpdateButtons -> " + navTweaks.FullName);
 
+//   6e2. DeckManagerController.CreateDeckBuckets: before its return, ForgeBridge.DeckTweaks.Apply(this) adds the Deck Manager's
+//      format buckets for Forge's formats (Pioneer, Modern, Legacy, Vintage, Pauper, Commander), whose decks sat under "Other decks".
+var deckTweaks = core.ImportReference(bridge.GetType("ForgeBridge.DeckTweaks").Methods.Single(m => m.Name == "Apply"));
+var createBuckets = core.GetType("DeckManagerController").Methods.Single(m => m.Name == "CreateDeckBuckets");
+var dbp = createBuckets.Body.GetILProcessor();
+foreach (var ret in createBuckets.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    ret.OpCode = OpCodes.Ldarg_0;
+    var call = dbp.Create(OpCodes.Call, deckTweaks);
+    dbp.InsertAfter(ret, call);
+    dbp.InsertAfter(call, dbp.Create(OpCodes.Ret));
+}
+Console.WriteLine("patched DeckManagerController.CreateDeckBuckets -> " + deckTweaks.FullName);
+
 //   6f. ZoneTransferGroup.Update: at the start, ForgeBridge.DrawTweaks.Apply(this) shortens the stagger cap of big draw groups
 //      (a mulligan's 7 new cards are dealt in 0.5 s instead of 1.5 s). Throws if the fields it sets moved.
 var drawTweaks = core.ImportReference(bridge.GetType("ForgeBridge.DrawTweaks").Methods.Single(m => m.Name == "Apply"));

@@ -37,6 +37,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\layout.ps1"
+. "$PSScriptRoot\redact-log.ps1"
 $ports = 30003, 30010, 30011        # Match Door, Front Door, Art server (the client's defaults; the server's defaults)
 $ports = @($ports | ForEach-Object { $_ + 100 * $Instance })
 $peerPort = 30012 + 100 * $Instance
@@ -174,6 +175,10 @@ try {
     }
     Write-Host 'MTGA closed.'
 } finally {
+    # detailed logs are on by default: blank the personal data in the game's log files so they are safe to attach to a bug report
+    if ($clientProc) {
+        try { [void]$clientProc.WaitForExit(5000); Protect-PlayerLogs -ClientDir $client -Folders @($homeDir) } catch { }
+    }
     if ($server -and -not $server.HasExited) {
         Write-Host 'Stopping the Forge server.'
         & taskkill /PID $server.Id /T /F 2>&1 | Out-Null

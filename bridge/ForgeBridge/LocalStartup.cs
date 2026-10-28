@@ -47,10 +47,33 @@ namespace ForgeBridge
             return m.Invoke(o, args);
         }
 
+        /// <summary>
+        /// Bug reports need the game messages in Player.log, so detailed logs start on. Done once (the client's own "has ever forced"
+        /// flag), so a player who switches the toggle off in Settings > Account stays off. The launcher blanks personal data
+        /// (Windows user, profile name and id, IPs) in the log files when the game closes.
+        /// </summary>
+        private static void EnableDetailedLogs()
+        {
+            try
+            {
+                if (!MDNPlayerPrefs.GetHasEverForcedVerboseLogs())
+                {
+                    MDNPlayerPrefs.SetUseVerboseLogs(true);
+                    MDNPlayerPrefs.SetHasEverForcedVerboseLogs(true);
+                }
+                // LoggingUtils.Initialize already ran with the old value; the connections read this same object
+                if (Core.Shared.Code.Utilities.LoggingUtils.LoggingConfig != null)
+                    Core.Shared.Code.Utilities.LoggingUtils.LoggingConfig.VerboseLogs = MDNPlayerPrefs.GetUseVerboseLogs();
+                Log.Info("detailed logs: " + (MDNPlayerPrefs.GetUseVerboseLogs() ? "on" : "off (player's choice)"));
+            }
+            catch (Exception e) { Log.Info("detailed logs: could not set (" + e.Message + ")"); }
+        }
+
         public static IEnumerator Run(Bootstrap bootstrap)
         {
             Log.Info("LocalStartup.Run entered. Original startup disabled; no Wizards network calls.");
             Privacy.Apply();
+            EnableDetailedLogs();
             // a quit without an exception in Player.log: say who asked for it; held while others draft at this player's table
             Application.wantsToQuit += HostQuitGuard.WantsToQuit;
             bootstrap.StartCoroutine(HostQuitGuard.Watch());
