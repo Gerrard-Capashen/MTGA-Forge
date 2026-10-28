@@ -224,5 +224,49 @@ check(vb.rank?.reason === "pair-cap", "the cap holds for the other player of the
   for (const w of open) w.close();
 }
 
+// ---- bot matches of a ranked queue (Bronze..Gold, POST /me/rank/bot)
+{
+  const botApi = (p, body) => api("POST", "/me/rank/bot", body, p.token);
+  const E = await player("eve"), F = await player("fay"), G = await player("gus"), H = await player("hal");
+  const m1 = "forge-" + run + "-1";
+  check((await api("POST", "/me/rank/bot", { match: m1, queue: Q, phase: "start" })).status === 401, "bot rank: no session token is refused");
+  check((await botApi(E, { match: m1, queue: "CasualPlay_Standard", phase: "start" })).status === 400, "bot rank: only ranked queues");
+  check((await botApi(E, { match: m1, queue: Q, phase: "result", result: "win" })).body.reason === "no-start", "bot rank: a result without a start counts nothing");
+  check((await botApi(E, { match: m1, queue: Q, phase: "start" })).body.ok === true, "bot rank: start recorded");
+  let z = (await botApi(E, { match: m1, queue: Q, phase: "result", result: "win" })).body;
+  check(z.reason === "short", "bot rank: a result before the minimum length counts nothing");
+  const m2 = "forge-" + run + "-2";
+  await botApi(E, { match: m2, queue: Q, phase: "start" });
+  await sleep(450);
+  z = (await botApi(E, { match: m2, queue: Q, phase: "result", result: "win" })).body;
+  check(z.applied === true && pips(z.rank?.new) === "Bronze 4 2" && z.rank?.newRating === 1500, "bot rank: a Bronze win gives +2 pips and leaves the Elo rating alone");
+  z = (await botApi(E, { match: m2, queue: Q, phase: "result", result: "loss" })).body;
+  check(pips(await rank(E)) === "Bronze 4 2" && (await rank(E)).wins === 1, "bot rank: the same match is applied once");
+  setRank(F, "Silver", 3, 1);
+  const m3 = "forge-" + run + "-3";
+  await botApi(F, { match: m3, queue: Q, phase: "start" }); await sleep(450);
+  z = (await botApi(F, { match: m3, queue: Q, phase: "result", result: "loss" })).body;
+  check(pips(z.rank?.new) === "Silver 3 0", "bot rank: a Silver loss costs a pip");
+  setRank(G, "Gold", 1, 5);
+  const m4 = "forge-" + run + "-4";
+  await botApi(G, { match: m4, queue: Q, phase: "start" }); await sleep(450);
+  z = (await botApi(G, { match: m4, queue: Q, phase: "result", result: "win" })).body;
+  check(pips(z.rank?.new) === "Gold 1 5", "bot rank: a bot win never lifts a player out of Gold");
+  // quitting: a start that never reports is a loss when the next bot match starts (no minimum length), or when the rank is asked 2 h later
+  const Q1 = await player("quin"), Q2 = await player("rae");
+  setRank(Q1, "Silver", 3, 2); setRank(Q2, "Silver", 3, 2);
+  await botApi(Q1, { match: "forge-" + run + "-q1", queue: Q, phase: "start" });
+  check(pips(await rank(Q1)) === "Silver 3 2", "bot rank: a match in progress costs nothing yet");
+  await botApi(Q1, { match: "forge-" + run + "-q2", queue: Q, phase: "start" });
+  check(pips(await rank(Q1)) === "Silver 3 1", "bot rank: the abandoned match is a loss when the next one starts");
+  await botApi(Q2, { match: "forge-" + run + "-q3", queue: Q, phase: "start" });
+  sql(`UPDATE bot_ranked SET started = ${Date.now() - 3 * 3_600_000} WHERE player_id = '${Q2.id}'`);
+  check(pips(await rank(Q2)) === "Silver 3 1", "bot rank: an old unfinished start is a loss when the rank is asked");
+  check(pips(await rank(Q2)) === "Silver 3 1", "bot rank: ... once");
+  setRank(H, "Platinum", 4, 0);
+  z = (await botApi(H, { match: "forge-" + run + "-5", queue: Q, phase: "start" })).body;
+  check(z.reason === "rank-too-high", "bot rank: Platinum and above get nothing from bots");
+}
+
 console.log(failed ? `${failed} FAILED` : "all ok");
 process.exit(failed ? 1 : 0);

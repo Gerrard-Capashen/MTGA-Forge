@@ -13,6 +13,14 @@
  *   disputed / pending / void: nothing. A later revision of the verdict never undoes an applied event; it only adds the missing player's.
  * Only matches the queue paired as ranked count (match_seats), never a report's own pool. A match shorter than the minimum length or
  * past the daily cap for that pair of accounts is recorded with no change ('short' / 'pair-cap').
+ *
+ *   POST /me/rank/bot {match, queue, phase: "start"}                 (Bearer) -> {ok}
+ *   POST /me/rank/bot {match, queue, phase: "result", result}        (Bearer) -> {applied, reason, rank: {...as a match's rank update}}
+ * A ranked queue with nobody waiting hands Bronze..Gold players a local bot match (the player base is small); it counts for pips like a
+ * human match but cannot be verified, so: the start is recorded and the result only counts after the minimum length, at most BOT_CAP per
+ * day, never lifts a player past Gold 1 (a bot ladder ends in Gold) and never moves the Elo rating (the Mythic board stays human).
+ * A start that never gets a result (the player quit) is an abandoned match = a loss, with no minimum length: settled when the player
+ * starts another bot match, or by GET /me/rank once the start is ABANDON_MS old.
  */
 import { authenticate, type AccountEnv } from "./accounts";
 
@@ -20,6 +28,7 @@ export interface RankEnv extends AccountEnv {
   /** Test override of the minimum ranked match length (ms) and of the per-pair daily cap. */
   RESULT_MIN_MS?: string;
   RANK_PAIR_CAP?: string;
+  RANK_BOT_CAP?: string;
 }
 
 export const SEASON = 1;
@@ -35,6 +44,12 @@ const K = 32;
 const MIN_RANKED_MS = 90_000;
 /** Applied results per ordered pair of accounts per UTC day. */
 const PAIR_CAP = 3;
+/** Applied bot-match results per account per UTC day, and the top class they can lift a player to (Gold). */
+const BOT_CAP = 12;
+const BOT_TOP_CLASS = 2;
+const BOT = "bot";
+/** A bot match start with no result this old is abandoned (a loss) when the player asks for the rank. */
+const ABANDON_MS = 2 * 3_600_000;
 
 export const stepsFor = (cls: number): number => (cls === 0 ? 4 : cls >= MYTHIC ? 0 : 6);
 
@@ -142,7 +157,7 @@ export async function applyRank(env: RankEnv, match: string): Promise<void> {
   }
 }
 
-async function applyOne(env: RankEnv, match: string, me: Seat, opponent: string, result: Result, status: string, short: boolean, oppRating: number): Promise<void> {
+async function applyOne(env: RankEnv, match: string, me: Seat, opponent: string, result: Result, status: string, short: boolean, oppRating: number, bot = false): Promise<void> {
   const dayStart = Math.floor(Date.now() / 86_400_000) * 86_400_000;
   for (let attempt = 0; attempt < 5; attempt++) {
     const exists = await env.DB.prepare("SELECT 1 FROM rating_events WHERE match_id = ?1 AND player_id = ?2").bind(match, me.player_id).first();
@@ -152,11 +167,12 @@ async function applyOne(env: RankEnv, match: string, me: Seat, opponent: string,
     if (reason === "applied") {
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM rating_events WHERE player_id = ?1 AND opponent_id = ?2 AND created >= ?3 AND reason = 'applied'")
         .bind(me.player_id, opponent, dayStart).first<{ n: number }>();
-      if ((n?.n ?? 0) >= num(env.RANK_PAIR_CAP, PAIR_CAP)) reason = "pair-cap";
+      if ((n?.n ?? 0) >= num(bot ? env.RANK_BOT_CAP : env.RANK_PAIR_CAP, bot ? BOT_CAP : PAIR_CAP)) reason = "pair-cap";
     }
     const applied = reason === "applied";
-    const next = applied ? nextPips({ cls: row.class, level: row.level, step: row.step }, result) : { cls: row.class, level: row.level, step: row.step, protectedLoss: false };
-    const rating = applied ? elo(row.rating, oppRating, result) : row.rating;
+    let next = applied ? nextPips({ cls: row.class, level: row.level, step: row.step }, result) : { cls: row.class, level: row.level, step: row.step, protectedLoss: false };
+    if (bot && next.cls > BOT_TOP_CLASS) next = { cls: BOT_TOP_CLASS, level: 1, step: stepsFor(BOT_TOP_CLASS) - 1, protectedLoss: false };
+    const rating = applied && !bot ? elo(row.rating, oppRating, result) : row.rating;
     const now = Date.now();
     const mythicAt = row.mythic_at ?? (next.cls >= MYTHIC ? now : null);
     const w = applied && result === "win" ? 1 : 0, l = applied && result === "loss" ? 1 : 0, d = applied && result === "draw" ? 1 : 0;
@@ -215,11 +231,54 @@ async function poolJson(env: RankEnv, player: string, pool: string) {
   return { ...pipsJson(r.class, r.level, r.step), wins: r.wins, losses: r.losses, draws: r.draws, rating: r.rating, place: p.place, percentile: p.percentile };
 }
 
+const MATCH_ID = /^[A-Za-z0-9._-]{1,80}$/;
+
+/** Bot matches this player started and never reported (older than `olderThan`, other than `except`) are losses. */
+async function settleAbandoned(env: RankEnv, player: string, olderThan: number, except = ""): Promise<void> {
+  const open = (await env.DB.prepare(`SELECT b.match_id, b.queue, b.pool FROM bot_ranked b WHERE b.player_id = ?1 AND b.started < ?2 AND b.match_id != ?3
+      AND NOT EXISTS (SELECT 1 FROM rating_events e WHERE e.match_id = b.match_id AND e.player_id = b.player_id) ORDER BY b.started`)
+    .bind(player, olderThan, except).all<{ match_id: string; queue: string; pool: string }>()).results;
+  for (const m of open) {
+    const row = await rowOf(env, player, m.pool);
+    if (row.class > BOT_TOP_CLASS) continue;
+    await applyOne(env, m.match_id, { role: "host", player_id: player, queue: m.queue, pool: m.pool }, BOT, "loss", "abandoned", false, row.rating, true);
+  }
+}
+
+/** POST /me/rank/bot: see the header. */
+async function handleBotRank(req: Request, env: RankEnv): Promise<Response> {
+  if (req.method !== "POST") return Response.json({ error: "not found" }, { status: 404 });
+  const player = await authenticate(env, req);
+  if (!player) return Response.json({ error: "sign in first" }, { status: 401 });
+  const b = await req.json().catch(() => ({})) as Record<string, unknown>;
+  const match = typeof b.match === "string" && MATCH_ID.test(b.match) ? b.match : null;
+  const queue = typeof b.queue === "string" ? b.queue : "";
+  const pool = poolOf(queue);
+  if (!match || !pool) return Response.json({ error: "bad match or queue" }, { status: 400 });
+  const id = BOT + ":" + match;
+  const row = await rowOf(env, player, pool);
+  if (row.class > BOT_TOP_CLASS) return Response.json({ applied: false, reason: "rank-too-high" });
+  if (b.phase === "start") {
+    await settleAbandoned(env, player, Date.now() + 1, id);
+    await env.DB.prepare("INSERT OR IGNORE INTO bot_ranked (match_id, player_id, queue, pool, started) VALUES (?1, ?2, ?3, ?4, ?5)").bind(id, player, queue, pool, Date.now()).run();
+    return Response.json({ ok: true });
+  }
+  if (b.phase !== "result" || (b.result !== "win" && b.result !== "loss" && b.result !== "draw")) return Response.json({ error: "bad phase or result" }, { status: 400 });
+  const started = await env.DB.prepare("SELECT started, queue, pool FROM bot_ranked WHERE match_id = ?1 AND player_id = ?2").bind(id, player).first<{ started: number; queue: string; pool: string }>();
+  if (!started) return Response.json({ applied: false, reason: "no-start" });
+  const short = Date.now() - started.started < num(env.RESULT_MIN_MS, MIN_RANKED_MS);
+  await applyOne(env, id, { role: "host", player_id: player, queue: started.queue, pool: started.pool }, BOT, b.result, "bot", short, row.rating, true);
+  const update = await rankUpdateFor(env, id, player);
+  return Response.json({ applied: update?.reason === "applied", reason: update?.reason ?? "none", rank: update });
+}
+
 export async function handleRank(req: Request, env: RankEnv, url: URL): Promise<Response | null> {
+  if (url.pathname === "/me/rank/bot") return handleBotRank(req, env);
   if (url.pathname !== "/me/rank") return null;
   if (req.method !== "GET") return Response.json({ error: "not found" }, { status: 404 });
   const me = await authenticate(env, req);
   if (!me) return Response.json({ error: "sign in first" }, { status: 401 });
+  await settleAbandoned(env, me, Date.now() - ABANDON_MS);
   return Response.json({
     season: SEASON, seasonStart: SEASON_START, seasonEnd: SEASON_END, ladder: ladder(),
     pools: { constructed: await poolJson(env, me, "constructed"), limited: await poolJson(env, me, "limited") },
