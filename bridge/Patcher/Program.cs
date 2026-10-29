@@ -16,6 +16,7 @@ using Mono.Cecil.Cil;
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
+//   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
@@ -233,6 +234,16 @@ var ztFirst = ztUpdate.Body.Instructions[0];
 ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Ldarg_0));
 ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Call, drawTweaks));
 Console.WriteLine("patched ZoneTransferGroup.Update -> " + drawTweaks.FullName);
+
+//   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: at the start, ForgeBridge.TooltipTweaks.Apply(this) takes the all-caps style off the text
+//      (the prompt tooltip of a greyed-out Submit button shouted its warning).
+var tooltipTweaks = core.ImportReference(bridge.GetType("ForgeBridge.TooltipTweaks").Methods.Single(m => m.Name == "Apply"));
+var ttSetText = core.GetType("TooltipSystem").NestedTypes.Single(t => t.Name == "Tooltip").Methods.Single(m => m.Name == "SetAndSizeTextRect");
+var ttp = ttSetText.Body.GetILProcessor();
+var ttFirst = ttSetText.Body.Instructions[0];
+ttp.InsertBefore(ttFirst, ttp.Create(OpCodes.Ldarg_0));
+ttp.InsertBefore(ttFirst, ttp.Create(OpCodes.Call, tooltipTweaks));
+Console.WriteLine("patched TooltipSystem.Tooltip.SetAndSizeTextRect -> " + tooltipTweaks.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
