@@ -11,12 +11,14 @@ if ($Dist) {
     $GuiDir = "$Root\server\forge-gui"
     $PatcherExe = "$Root\patcher\Patcher.exe"
     $BridgeDll = "$Root\patcher\ForgeBridge.dll"
+    $BootLogo = "$Root\patcher\forge-logo.png"
 } else {
     $JavaExe = 'java'
     $ServerCp = (Get-Content "$Root\tools\cp.txt" -Raw).Trim() + ";$Root\forge\forge-gui-mtga\target\classes"
     $GuiDir = "$Root\forge\forge-gui"
     $PatcherExe = "$Root\bridge\patcher-out\Patcher.exe"
     $BridgeDll = ''      # built from bridge\ForgeBridge against the target's Managed folder
+    $BootLogo = "$Root\tools\bootlogo\forge-logo.png"
 }
 
 # MTGA install: Steam (registry + libraryfolders.vdf, MTGA = app 2141910), then the Wizards launcher's default folders

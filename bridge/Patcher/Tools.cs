@@ -9,6 +9,7 @@ using Mono.Cecil;
 // Extra verbs of the Patcher (replace the Python scripts of the first patcher so a user machine needs no Python):
 //   Patcher identity     <globalgamemanagers> [product]   company/product "Wizards Of The Coast"/"MTGA" -> "Forge Bridge Project"/product (4 characters, default "MTGF")
 //   Patcher unityconnect <globalgamemanagers>   Unity analytics / cloud services off (UnityConnectSettings)
+//   Patcher bootlogo    <MTGA_Data> <logo.png>   the Arena logo on the boot/login screen (both the default and the set-promo one) -> our 419x173 logo (BootLogo.cs)
 //   Patcher check-bridge <ManagedDir>           every Core/Unity member ForgeBridge.dll references still resolves in ManagedDir
 //   Patcher audit-bridge <ForgeBridge.dll>      the dll defines only our own namespace and embeds no resources (nothing copied from the game)
 static class Tools
@@ -21,6 +22,7 @@ static class Tools
             {
                 case "identity": Identity(args[1], args.Length > 2 ? args[2] : "MTGF"); return 0;
                 case "unityconnect": UnityConnect(args[1]); return 0;
+                case "bootlogo": BootLogo.Apply(args[1], args[2]); return 0;
                 case "check-bridge": return CheckBridge(args[1]);
                 case "audit-bridge": return AuditBridge(args[1]);
             }
@@ -79,7 +81,7 @@ static class Tools
     }
 
     // (class id, data start, size) of every object; SerializedFile format 22 without type trees
-    static List<(int cid, long start, uint size)> Objects(byte[] b)
+    internal static List<(int cid, long start, uint size, long id)> Objects(byte[] b)
     {
         uint Be32(int o) => (uint)(b[o] << 24 | b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]);
         var version = Be32(8);
@@ -99,14 +101,15 @@ static class Tools
         }
         int n = BitConverter.ToInt32(b, p); p += 4;
         p = (p + 3) & ~3;
-        var res = new List<(int, long, uint)>();
+        var res = new List<(int, long, uint, long)>();
         for (int i = 0; i < n; i++)
         {
+            long id = BitConverter.ToInt64(b, p);
             long start = BitConverter.ToInt64(b, p + 8);
             uint size = BitConverter.ToUInt32(b, p + 16);
             int type = BitConverter.ToInt32(b, p + 20);
             p += 24;
-            res.Add((classes[type], dataOffset + start, size));
+            res.Add((classes[type], dataOffset + start, size, id));
         }
         return res;
     }

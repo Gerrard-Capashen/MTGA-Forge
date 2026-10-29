@@ -34,9 +34,9 @@ foreach ($f in $files) {
 }
 foreach ($d in Get-ChildItem $Package -Recurse -Directory -Force) { if ($gameDirs -contains $d.Name) { Fail "game folder name: $($d.FullName.Substring($Package.Length + 1))" } }
 
-# 3. No images, audio or video at all: card art, symbols, UI art and sounds are all someone's artwork; the patcher builds everything else locally
+# 3. No images, audio or video at all (the one exception, patcher\forge-logo.png, is the boot screen logo we put into the client): card art, symbols, UI art and sounds are all someone's artwork; the patcher builds everything else locally
 $media = '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tga', '.dds', '.psd', '.ico', '.svg', '.tif', '.tiff', '.ogg', '.mp3', '.wav', '.flac', '.mp4', '.webm', '.avi', '.mov'
-foreach ($f in $files) { if ($media -contains $f.Extension.ToLower()) { Fail "image/audio/video file: $($f.FullName.Substring($Package.Length + 1))" } }
+foreach ($f in $files) { if ($media -contains $f.Extension.ToLower() -and $f.FullName -ne "$Package\patcher\forge-logo.png") { Fail "image/audio/video file: $($f.FullName.Substring($Package.Length + 1))" } }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 foreach ($j in Get-ChildItem "$Package\server\lib" -Filter *.jar) {
     $za = [IO.Compression.ZipFile]::OpenRead($j.FullName)

@@ -44,6 +44,7 @@ Run 'dotnet' @('build', "$root\bridge\Launcher\Launcher.csproj", '-c', 'Release'
 Run 'dotnet' @('build', "$root\bridge\ForgeBridge\ForgeBridge.csproj", '-c', 'Release', '--no-incremental', '-o', "$tmp\bridge", "-p:ManagedDir=$ManagedDir", '-nologo', '-v', 'q') 'ForgeBridge build'
 Copy-Item "$tmp\patcher\*" "$Out\patcher" -Exclude '*.pdb', 'Mono.Cecil.Mdb.dll', 'Mono.Cecil.Rocks.dll'
 Copy-Item "$tmp\bridge\ForgeBridge.dll" "$Out\patcher"
+Copy-Item "$root\tools\bootlogo\forge-logo.png" "$Out\patcher"     # our own boot screen logo, written into the user's client by the patcher (bootlogo step)
 Copy-Item "$tmp\launcher\MTGA-Forge.exe", "$tmp\launcher\MTGA-Forge.exe.config" $Out
 
 # ---- server jars: our class folders become jars, dependencies are copied as they are
