@@ -5,7 +5,7 @@
 # deck builder (every card owned x4, decks saved under data\decks) and press Play -> Bot Match to play vs the Forge AI.
 # Capture file: tools\capture\session-<timestamp>.log (Front Door commands "FD ...", client/server GRE messages,
 # UNHANDLED markers, client exceptions appended at the end)
-param([string]$Deck = '', [switch]$Duel, [string]$AiDeck = '', [int]$Minutes = 30, [switch]$NoBuild)
+param([string]$Deck = '', [switch]$Duel, [string]$AiDeck = '', [string]$Rig = '', [int]$Minutes = 30, [switch]$NoBuild)
 $ErrorActionPreference = 'Stop'
 $root = 'D:\Development\MTGA-Forge'
 $m = "$root\client\MTGA_Data\Managed"
@@ -33,6 +33,7 @@ $guiDir = "$root\forge\forge-gui"
 $serverLog = "$root\tools\capture\server-$stamp.log"
 $javaArgs = @("-Dmtga.capture=`"$cap`"")
 if ($Duel) { $javaArgs += "-Dmtga.deck=$Deck" }
+if ($Rig) { $javaArgs += "-Dmtga.rig=$Rig" }
 if ($AiDeck) { $javaArgs += "-Dmtga.aideck=`"$AiDeck`"" }
 $javaArgs += '-cp', "`"$cp`"", 'forge.mtga.ForgeMtgaMain', "`"$guiDir`"", "`"$root\client`"", '30003'
 $java = Start-Process java -ArgumentList $javaArgs -WorkingDirectory $guiDir -RedirectStandardOutput $serverLog -RedirectStandardError "$serverLog.err" -PassThru -WindowStyle Hidden
