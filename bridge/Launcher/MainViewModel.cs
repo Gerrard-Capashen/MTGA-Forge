@@ -197,8 +197,8 @@ namespace MtgaForgeLauncher
             get
             {
                 return offline
-                    ? "Press Start, then in the game: Play > Find Match > Bot Play. Pick Standard, Pioneer or Modern and a deck of that format."
-                    : "Press Start, then in the game: Play > Find Match. Bot Play is against the Forge AI, Casual Play against another player online. Events has Quick Drafts against bots and Premier Drafts with other players (newest set and the Vintage Cube); challenge a friend from the Friends list.";
+                    ? "Press Start, then in the game go to Play > Find Match > Bot Play, pick a format and a deck, and you are in."
+                    : "Press Start, then in the game go to Play > Find Match for ranked and casual games in Standard, Pioneer, Modern, Legacy, Vintage and Pauper, or to Events to draft. Challenge a friend from the Friends list any time.";
             }
         }
 
@@ -352,7 +352,7 @@ namespace MtgaForgeLauncher
                 runner = null;
                 switch (code)
                 {
-                    case 0: editing = false; Headline = "Ready to play"; Stage = Stage.Ready; break;
+                    case 0: editing = false; Headline = "Ready to play!"; Stage = Stage.Ready; break;
                     case 3: ShowNeedsPrepare(last); break;
                     case 4: Stage = Stage.NeedSource; Headline = "MTGA was not found"; Body = "Choose the folder that contains MTGA.exe."; break;
                     case 5: ShowProblem("Steam is still updating MTGA", "Wait until Steam has finished, then press Check again."); break;
@@ -583,7 +583,7 @@ namespace MtgaForgeLauncher
                     Headline = "Preparing your game"; Body = "This takes several minutes, mostly copying files. You can do something else meanwhile.";
                     for (int k = 0; k < Steps.Count; k++) Steps[k].State = k < 3 ? 2 : k == 3 ? 1 : 0;
                     Progress = 3; Stage = Stage.Preparing; break;
-                case Stage.Ready: Headline = "Ready to play"; PlayStatus = ""; Stage = Stage.Ready; UpdateText = "A newer MTGA Forge is available (2026-10-25). Players on different versions cannot match online."; UpdateAvailable = true; break;
+                case Stage.Ready: Headline = "Ready to play!"; PlayStatus = ""; Stage = Stage.Ready; UpdateText = "A newer MTGA Forge is available (2026-10-25). Players on different versions cannot match online."; UpdateAvailable = true; break;
                 case Stage.Running: PlayStatus = "Game running. Pick a queue or an event in the game. Close the game window to finish."; Stage = Stage.Running; break;
                 default: Stage = s; break;
             }

@@ -14,13 +14,9 @@
     </Grid.RowDefinitions>
 
     <!-- header -->
-    <Border Grid.Row="0" Padding="24,14" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+    <Border Grid.Row="0" Padding="24,6" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
       <DockPanel>
-        <local:ForgeIcon Width="42" Height="42" DockPanel.Dock="Left" Margin="0,0,14,0"/>
-        <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-          <TextBlock FontSize="20" FontWeight="SemiBold" Text="MTGA Forge"/>
-          <TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="Unofficial fan project. Plays on the open source Forge rules engine."/>
-        </StackPanel>
+        <Image Source="forge-logo.png" Height="104" DockPanel.Dock="Left" RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center" ToolTip="Unofficial fan project. Plays on the open source Forge rules engine."/>
         <Border DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Background="{StaticResource Panel2}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="14" Padding="14,5">
           <TextBlock Text="{Binding PillText}" FontSize="12" FontWeight="SemiBold"/>
         </Border>
@@ -171,7 +167,7 @@
       <Grid Margin="32,28,32,16">
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="230"/></Grid.ColumnDefinitions>
         <StackPanel>
-          <TextBlock Text="Ready to play" FontSize="26" FontWeight="SemiBold"/>
+          <TextBlock Text="Ready to play!" FontSize="26" FontWeight="SemiBold"/>
           <TextBlock Text="{Binding PlayHelp}" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,8" MaxWidth="520" HorizontalAlignment="Left"/>
 
           <StackPanel IsEnabled="{Binding CanEditFields}" MaxWidth="420" HorizontalAlignment="Left">

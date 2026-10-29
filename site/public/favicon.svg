@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb04a"/><stop offset="1" stop-color="#e8590c"/></linearGradient>
-    <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4540f"/><stop offset="1" stop-color="#8f2f06"/></linearGradient>
-    <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2b0"/><stop offset="1" stop-color="#ff9f45"/></linearGradient>
+    <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a2b"/><stop offset="1" stop-color="#e0390a"/></linearGradient>
+    <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c42d06"/><stop offset="1" stop-color="#8f2f06"/></linearGradient>
+    <linearGradient id="gt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2b0"/><stop offset="1" stop-color="#ff7a1f"/></linearGradient>
   </defs>
   <g stroke="#2b1208" stroke-width="16" stroke-linejoin="round" stroke-linecap="round">
     <path d="M172 204 L36 214 Q20 218 30 228 Q100 296 188 322 L196 334 Q214 344 204 364 Q192 394 172 408 L412 418 Q372 398 362 374 Q356 346 372 322 Q420 268 468 222 L172 222 Z" fill="url(#ga)"/>

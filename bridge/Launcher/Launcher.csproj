@@ -18,5 +18,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Resource Include="app.ico" />
+    <Resource Include="anvil.png" />
+    <Resource Include="forge-logo.png" />
+    <Resource Include="hammer.png" />
+    <Resource Include="anvil-lava.png" />
+    <Resource Include="hammer-lava.png" />
   </ItemGroup>
 </Project>

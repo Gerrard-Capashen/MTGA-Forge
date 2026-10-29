@@ -9,8 +9,8 @@
   <SolidColorBrush x:Key="Line" Color="#2E3640"/>
   <SolidColorBrush x:Key="Fg" Color="#E7E5E0"/>
   <SolidColorBrush x:Key="Muted" Color="#98A1AB"/>
-  <SolidColorBrush x:Key="Accent" Color="#EE9F4D"/>
-  <SolidColorBrush x:Key="AccentHover" Color="#F6B56F"/>
+  <SolidColorBrush x:Key="Accent" Color="#F5702C"/>
+  <SolidColorBrush x:Key="AccentHover" Color="#FF8A4A"/>
   <SolidColorBrush x:Key="AccentInk" Color="#1A1208"/>
   <SolidColorBrush x:Key="Good" Color="#5FCF94"/>
   <SolidColorBrush x:Key="Bad" Color="#F0705A"/>
