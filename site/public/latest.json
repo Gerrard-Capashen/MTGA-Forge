@@ -1,20 +1,20 @@
 {
     "schema":  1,
-    "released":  "2026-10-28T13:12:21.6718734-03:00",
-    "commit":  "0c08f86",
-    "sha256":  "6933db0db0ef7784ddf92bee81d2149361a7d81638d4fe4702dc688f5dab52aa",
-    "size":  131645884,
-    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.10.28-1612/MTGA-Forge.zip",
-    "notes":  "- Ranked queues (Bronze to Gold): if nobody is found after 25-45 s you play a bot of your own rank, and the result moves your pips.\n- Detailed logs are on by default, with personal data redacted.\n- Deck Manager: buckets for Forge formats.\n- New label for the Ambiguous (all cards) deck format.",
+    "released":  "2026-10-28T23:52:26.9683682-03:00",
+    "commit":  "72d5d2d",
+    "sha256":  "fa8bf085bebf973d5d47d926921d4b7742cbb97aea3d1fa91a25ccad5478249e",
+    "size":  132775275,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.10.29-0252/MTGA-Forge.zip",
+    "notes":  "- New Forge logo on the boot screen and a Forge loading-screen background.\n- Launcher: molten anvil and hammer art, Forge logo in the header.\n- Fix: decks saved or imported during a session no longer vanish after a match.",
     "scan":  {
-                 "at":  "2026-10-28T16:19:13.0347933Z",
-                 "zipReport":  "https://www.virustotal.com/gui/file/6933db0db0ef7784ddf92bee81d2149361a7d81638d4fe4702dc688f5dab52aa",
-                 "zipEngines":  28,
+                 "at":  "2026-10-29T03:29:04.0658866Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/fa8bf085bebf973d5d47d926921d4b7742cbb97aea3d1fa91a25ccad5478249e",
+                 "zipEngines":  34,
                  "zipMalicious":  0,
                  "zipSuspicious":  0,
-                 "exeReport":  "https://www.virustotal.com/gui/file/5020565bf409fe454771b28ca45e18185a6bd86e51ac718b7efbf29b0e4a780a",
+                 "exeReport":  "https://www.virustotal.com/gui/file/8ed7f9d127001d5a85fa3697cd3c2d28d7a44d29192bbc684652748d438d6dbc",
                  "exeEngines":  71,
-                 "exeMalicious":  0,
+                 "exeMalicious":  2,
                  "exeSuspicious":  0
              }
 }
