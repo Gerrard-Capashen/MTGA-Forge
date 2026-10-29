@@ -2,7 +2,6 @@
 /client/
 # Upstream clones; our Forge changes live on branch "mtga" inside forge/.git
 /forge/
-/xmage/
 # Local tooling / run artefacts
 /tools/apache-maven-3.9.9/
 /tools/dl/
