@@ -10,6 +10,7 @@ using Mono.Cecil;
 //   Patcher identity     <globalgamemanagers> [product]   company/product "Wizards Of The Coast"/"MTGA" -> "Forge Bridge Project"/product (4 characters, default "MTGF")
 //   Patcher unityconnect <globalgamemanagers>   Unity analytics / cloud services off (UnityConnectSettings)
 //   Patcher bootlogo    <MTGA_Data> <logo.png>   the Arena logo on the boot/login screen (both the default and the set-promo one) -> our 419x173 logo (BootLogo.cs)
+//   Patcher loadingbg   <MTGA_Data> <texture>  the loading screen background -> that texture out of the player's own downloaded asset bundles (LoadingBg.cs)
 //   Patcher check-bridge <ManagedDir>           every Core/Unity member ForgeBridge.dll references still resolves in ManagedDir
 //   Patcher audit-bridge <ForgeBridge.dll>      the dll defines only our own namespace and embeds no resources (nothing copied from the game)
 static class Tools
@@ -23,6 +24,7 @@ static class Tools
                 case "identity": Identity(args[1], args.Length > 2 ? args[2] : "MTGF"); return 0;
                 case "unityconnect": UnityConnect(args[1]); return 0;
                 case "bootlogo": BootLogo.Apply(args[1], args[2]); return 0;
+                case "loadingbg": LoadingBg.Apply(args[1], args[2]); return 0;
                 case "check-bridge": return CheckBridge(args[1]);
                 case "audit-bridge": return AuditBridge(args[1]);
             }
@@ -89,7 +91,7 @@ static class Tools
         long dataOffset = ((long)Be32(32) << 32) | Be32(36);
         if (b[40] != 0) throw new Exception("expected little-endian metadata");
         int p = Array.IndexOf(b, (byte)0, 48) + 1 + 4;
-        if (b[p] != 0) throw new Exception("file has type trees: only the stripped layout is handled");
+        bool typeTree = b[p] != 0;   // asset bundles carry type trees (skipped: the layouts we read are fixed)
         p++;
         int count = BitConverter.ToInt32(b, p); p += 4;
         var classes = new List<int>();
@@ -97,6 +99,12 @@ static class Tools
         {
             int cid = BitConverter.ToInt32(b, p);
             p += 7 + (cid == 114 ? 16 : 0) + 16;
+            if (typeTree)
+            {
+                int nodes = BitConverter.ToInt32(b, p), strings = BitConverter.ToInt32(b, p + 4);
+                p += 8 + nodes * 32 + strings;
+                p += 4 + 4 * BitConverter.ToInt32(b, p);   // type dependencies
+            }
             classes.Add(cid);
         }
         int n = BitConverter.ToInt32(b, p); p += 4;

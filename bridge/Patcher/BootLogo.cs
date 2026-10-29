@@ -19,7 +19,7 @@ static class BootLogo
     const string PromoName = "AssetLoad_Logo_FRA";
     const int TexRGBA32 = 4, TexDXT5 = 12;
 
-    class Tex
+    internal class Tex
     {
         public string Name, StreamPath;
         public int Width, Height, Format;
@@ -126,14 +126,14 @@ static class BootLogo
         return -1;
     }
 
-    static byte[] ReadAt(FileStream fs, long off, int len)
+    internal static byte[] ReadAt(FileStream fs, long off, int len)
     {
         var d = new byte[len]; fs.Position = off;
         int n = 0; while (n < len) { int r = fs.Read(d, n, len - n); if (r <= 0) throw new Exception("resS ends before the texture"); n += r; }
         return d;
     }
 
-    static void WriteAt(FileStream fs, long off, byte[] d) { fs.Position = off; fs.Write(d, 0, d.Length); fs.Flush(); }
+    internal static void WriteAt(FileStream fs, long off, byte[] d) { fs.Position = off; fs.Write(d, 0, d.Length); fs.Flush(); }
 
     // straight (non-premultiplied) RGBA, top-down
     static byte[] LoadPng(string path)
@@ -163,7 +163,7 @@ static class BootLogo
 
     // Texture2D of Unity 6 without type trees: m_Name, 2 bools (aligned), width, height, complete size, mips stripped, format, mip count ...;
     // the object ends with StreamingInfo (u64 offset, u32 size, path string)
-    static Tex ParseTexture(byte[] b, int start, int size)
+    internal static Tex ParseTexture(byte[] b, int start, int size)
     {
         int p = start;
         int nameLen = BitConverter.ToInt32(b, p); p += 4;
@@ -175,7 +175,7 @@ static class BootLogo
         t.Format = BitConverter.ToInt32(b, p + 16);
         int end = start + size;
         // the path string is the last field: find its length by trying the padded sizes
-        for (int len = 1; len < 64; len++)
+        for (int len = 1; len < 256; len++)
         {
             int padded = (len + 3) & ~3;
             int lp = end - padded - 4;

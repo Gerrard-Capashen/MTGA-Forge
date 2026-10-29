@@ -7,8 +7,8 @@
 # never the copy of the install. A folder patched before these hashes existed counts as changed once.
 #
 # Usage: powershell -NoProfile -File tools\forge-patch.ps1 -Target D:\x\client-fresh [-Source <MTGA install>] [-From <step>] [-Only a,b]
-#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-Product MTG2] [-BuildServer] [-Check]
-# Steps: refresh  orig  identity  unityconnect  bootlogo  storeconfig  bridge  patch  carddb  manifest  firewall
+#        [-Force] [-Firewall] [-SkipFirewall] [-Formats Standard,Pioneer,Modern] [-Product MTG2] [-LoadingArt <texture>] [-BuildServer] [-Check]
+# Steps: refresh  orig  identity  unityconnect  bootlogo  loadingbg  storeconfig  bridge  patch  carddb  manifest  firewall
 #   refresh       robocopy /MIR the install into Target (purges everything we added, incl. stale .orig files)
 #   orig          Core.dll.orig / AK.Wwise.Unity.API.dll.orig = the pristine DLLs of THIS build (ForgeBridge compiles against them)
 #   identity      app.info + globalgamemanagers company/product -> "Forge Bridge Project"/-Product (default "MTGF"; 4 characters; a second client on the
@@ -16,6 +16,9 @@
 #   unityconnect  Unity analytics/cloud services off in globalgamemanagers (Patcher unityconnect)
 #   bootlogo      the Arena logo of the boot/login screen (default + set-promo) -> our logo, written into resources.assets.resS (Patcher bootlogo); cosmetic: a failure
 #                 here is a warning, never a failed patch
+#   loadingbg     the loading screen background (AssetLoading_FRA + handheld) -> -LoadingArt (default BackgroundFull_Queue_Play_Brawl; '' leaves it alone), copied raw
+#                 out of the player's own downloaded bundle Downloads\AssetBundle\Bucket_Event.BackgroundPayload_*.mtga, so none of Wizards' art ships (Patcher loadingbg);
+#                 cosmetic like bootlogo: a missing bundle or texture is a warning
 #   storeconfig   StreamingAssets\StoreConfig.txt provider -> forge-bridge-local (the Steam provider restarts the app via Steam)
 #   bridge        ForgeBridge.dll into Managed: dist = the prebuilt one, dev = dotnet build against Target\MTGA_Data\Managed; then Patcher check-bridge
 #                 (every Core/Unity member it references must still exist in this client build)
@@ -36,6 +39,7 @@ param(
     [switch]$BuildServer,
     [string]$Formats = 'Standard,Pioneer,Modern',
     [ValidatePattern('^[A-Za-z0-9]{4}$')][string]$Product = 'MTGF',
+    [string]$LoadingArt = 'BackgroundFull_Queue_Play_Brawl',
     [switch]$Check
 )
 $ErrorActionPreference = 'Stop'
@@ -102,14 +106,15 @@ $fpJson = $fp | ConvertTo-Json -Compress
 # state: { fingerprint, steps: { name: { ok, at, detail } } }
 $toolFp = Get-ToolFps
 $logoFp = if (Test-Path $BootLogo) { (Sha $BootLogo).Substring(0, 16) } else { '' }
-$state = [ordered]@{ fingerprint = $fpJson; bridgeTools = $toolFp.bridge; dbTools = $toolFp.db; logo = $logoFp; steps = [ordered]@{} }
+$state = [ordered]@{ fingerprint = $fpJson; bridgeTools = $toolFp.bridge; dbTools = $toolFp.db; logo = $logoFp; loadingArt = $LoadingArt; steps = [ordered]@{} }
 $staleTools = @()
 if (Test-Path $statePath) {
     $old = Get-Content $statePath -Raw | ConvertFrom-Json
     if ($old.fingerprint -eq $fpJson) {
         foreach ($p in $old.steps.PSObject.Properties) { $state.steps[$p.Name] = $p.Value }
-        if ($old.bridgeTools -ne $toolFp.bridge) { $staleTools += 'ForgeBridge/Patcher'; foreach ($k in 'bridge', 'patch', 'bootlogo') { $state.steps.Remove($k) } }
+        if ($old.bridgeTools -ne $toolFp.bridge) { $staleTools += 'ForgeBridge/Patcher'; foreach ($k in 'bridge', 'patch', 'bootlogo', 'loadingbg') { $state.steps.Remove($k) } }
         if ($old.logo -ne $logoFp) { $staleTools += 'boot logo'; $state.steps.Remove('bootlogo') }
+        if ($old.loadingArt -ne $LoadingArt) { $staleTools += 'loading art'; $state.steps.Remove('loadingbg') }
         if ($toolFp.db -and $old.dbTools -ne $toolFp.db) { $staleTools += 'card database builder'; foreach ($k in 'carddb', 'manifest') { $state.steps.Remove($k) } }
         if ($staleTools) { Write-Host "tools changed since the last run ($($staleTools -join ', ')): only their steps again" }
     }
@@ -122,7 +127,7 @@ if ($Check) {
     elseif (-not (Test-Path "$Target\MTGA.exe")) { $why = 'client folder is empty' }
     elseif ((Get-Content $statePath -Raw | ConvertFrom-Json).fingerprint -ne $fpJson) { $why = "MTGA was updated (now $($fp.mainManifest), $($fp.steamBuildId))" }
     else {
-        $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'bootlogo', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
+        $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'bootlogo', 'loadingbg', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
         if ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
         elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
     }
@@ -186,6 +191,13 @@ $steps['bootlogo'] = {
     try { Run $PatcherExe @('bootlogo', "$Target\MTGA_Data", $BootLogo) 'Patcher bootlogo' }
     catch { Write-Host "   WARNING: boot logo not replaced: $($_.Exception.Message)" -ForegroundColor Yellow; return "skipped: $($_.Exception.Message)" }
     'Forge logo (default + set promo)'
+}
+
+$steps['loadingbg'] = {
+    if (-not $LoadingArt) { return 'skipped: -LoadingArt is empty' }
+    try { Run $PatcherExe @('loadingbg', "$Target\MTGA_Data", $LoadingArt) 'Patcher loadingbg' }
+    catch { Write-Host "   WARNING: loading background not replaced: $($_.Exception.Message)" -ForegroundColor Yellow; return "skipped: $($_.Exception.Message)" }
+    $LoadingArt
 }
 
 $steps['storeconfig'] = {
@@ -289,7 +301,7 @@ foreach ($n in $names) {
     $done = $state.steps.Contains($n) -and $state.steps[$n].ok
     if ($done -and -not $Force -and $fromIdx -lt 0 -and $Only.Count -eq 0) { Write-Host "== $n : done ($($state.steps[$n].detail))"; continue }
     # re-running a step invalidates the steps built on its output: the patch is built on the bridge, nothing on the patch; the card DB does not depend on either
-    $built = if ($n -eq 'bridge') { @('patch') } elseif ($n -in 'patch', 'manifest', 'bootlogo') { @() } else { @($names[($i + 1)..($names.Count - 1)] | Where-Object { $_ -ne 'firewall' }) }
+    $built = if ($n -eq 'bridge') { @('patch') } elseif ($n -in 'patch', 'manifest', 'bootlogo', 'loadingbg') { @() } else { @($names[($i + 1)..($names.Count - 1)] | Where-Object { $_ -ne 'firewall' }) }
     foreach ($k in $built) { $state.steps.Remove($k) }
     Write-Host "== $n"
     $sw = [Diagnostics.Stopwatch]::StartNew()
