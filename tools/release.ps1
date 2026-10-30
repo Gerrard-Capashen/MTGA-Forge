@@ -26,7 +26,8 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path "$PSScriptRoot\..").Path
 if (-not $Zip) { $Zip = "$root\dist\MTGA-Forge.zip" }
 function Step($t) { Write-Host "== $t" }
-function Native($exe, [string[]]$a) { $o = & $exe @a 2>&1; if ($LASTEXITCODE -ne 0) { throw "$exe $(($a | Select-Object -First 2) -join ' ') failed ($LASTEXITCODE): $o" }; $o }
+# exit code decides, not stderr (npx/gh/vt print warnings and progress there, which 'Stop' would turn into errors)
+function Native($exe, [string[]]$a) { $ErrorActionPreference = 'Continue'; $o = & $exe @a 2>&1 | ForEach-Object { "$_" }; if ($LASTEXITCODE -ne 0) { throw "$exe $(($a | Select-Object -First 2) -join ' ') failed ($LASTEXITCODE): $o" }; $o }
 
 if ($Build) {
     Step 'package'
@@ -59,7 +60,9 @@ if ($Scan) {
         $stats = $null
         for ($i = 0; $i -lt 60 -and -not $stats; $i++) {
             Start-Sleep -Seconds 15
-            $j = (Native 'vt' @('analysis', $id, '--format', 'json', '--apikey', $vtKey)) -join "`n" | ConvertFrom-Json
+            # right after the upload VirusTotal can answer "analysis not found" for a while: keep polling
+            try { $j = (Native 'vt' @('analysis', $id, '--format', 'json', '--apikey', $vtKey)) -join "`n" | ConvertFrom-Json }
+            catch { if ("$_" -match 'not found') { Write-Host '  (analysis not registered yet, waiting)'; continue } else { throw } }
             $a = @($j)[0]; if ($a.attributes) { $a = $a.attributes }
             if ($a.status -eq 'completed') { $stats = $a.stats }
         }
@@ -98,7 +101,10 @@ if ($Upload -eq 'github') {
         Copy-Item $Zip (Join-Path $tmpDir $asset)
         $files = @((Join-Path $tmpDir $asset))
         if ($SourceZip) { $files += (Resolve-Path $SourceZip).Path }
-        Native 'gh' (@('release', 'create', $tag) + $files + @('--repo', $Repo, '--title', "MTGA Forge $tag", '--notes', "sha256 of MTGA-Forge.zip: $sha`n$Notes")) | Out-Host
+        # the notes go through a file: Windows PowerShell 5.1 splits a native argument at embedded double quotes
+        $notesFile = Join-Path $tmpDir 'notes.md'
+        [IO.File]::WriteAllText($notesFile, "sha256 of MTGA-Forge.zip: $sha`n$Notes", (New-Object Text.UTF8Encoding $false))
+        Native 'gh' (@('release', 'create', $tag) + $files + @('--repo', $Repo, '--title', "MTGA Forge $tag", '--notes-file', $notesFile)) | Out-Host
         Remove-Item $tmpDir -Recurse -Force
     } finally { $env:GH_TOKEN = $oldToken }
     $url = "https://github.com/$Repo/releases/download/$tag/$asset"
@@ -113,12 +119,12 @@ if ($Upload -eq 'github') {
 
 if ($url) {
     Step "latest.json -> $url"
-    $scanArg = @()
+    $scanArg = @{}
     if (Test-Path "$Zip.scan.json") {
-        if ((Get-Content "$Zip.scan.json" -Raw | ConvertFrom-Json).zipSha -eq $sha) { $scanArg = @('-ScanFile', "$Zip.scan.json") }
+        if ((Get-Content "$Zip.scan.json" -Raw | ConvertFrom-Json).zipSha -eq $sha) { $scanArg = @{ ScanFile = "$Zip.scan.json" } }
         else { Write-Host '  the scan results on disk belong to another zip: not shown on the site' }
     } else { Write-Host '  no scan results for this zip (run with -Scan): the site will show none' }
-    & powershell -NoProfile -File "$root\tools\publish-latest.ps1" -Zip $Zip -Url $url -Notes $Notes @scanArg
+    & "$root\tools\publish-latest.ps1" -Zip $Zip -Url $url -Notes $Notes @scanArg     # in process: the notes keep their quotes and line breaks
     if ($Deploy) {
         Step 'deploy the site'
         Push-Location "$root\site"; try { Native 'npx' @('wrangler', 'deploy') | Out-Host } finally { Pop-Location }

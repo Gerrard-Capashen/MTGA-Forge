@@ -1,6 +1,6 @@
 # Releasing an update
 
-How a new MTGA Forge version reaches players, and the steps to publish one. Last done: v2026.10.25-1823.
+How a new MTGA Forge version reaches players, and the steps to publish one. Last done: v2026.10.30-1913.
 
 ## How updates work
 
@@ -27,6 +27,8 @@ powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Deploy -Note
 - `-Scan`: VirusTotal (`vt` CLI, key from `vt init` / `%USERPROFILE%\.vt.toml`); stops on any malicious hit unless `-AllowDetections`. Results go to `dist\MTGA-Forge.zip.scan.json` and onto the site.
 - `-Upload github`: `gh release create v<builtAt>` with the token in `%LOCALAPPDATA%\MTGA-Forge-release\token.txt` (fine-grained, owner Gerrard-Capashen, Contents read/write; the script refuses a token of another account).
 - `-Deploy`: writes `site/public/latest.json` and deploys the site.
+- Publishing the GitHub release triggers `.github/workflows/discord-release.yml`, which posts the release notes to Discord (pre-releases are skipped; re-post with the workflow's manual run and a tag).
+- Release notes: short player-facing bullets (`- New: ...`, `- Fix: ...`), from the commits since the last release in BOTH repos (`git log <last release commit>..HEAD` here, `git -C forge log --since <last release time>`). Leave out internal-only changes (PROGRESS.md, dev scripts) and anything PROGRESS marks unverified unless it was tested.
 - Between the two commands, smoke-test the package itself: `cd dist\MTGA-Forge; powershell -NoProfile -File tools\verify.ps1 -SkipClient -Client <dev client> -Only sp-default,sp-queues`.
 
 ## After
@@ -34,6 +36,18 @@ powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Deploy -Note
 1. Check live: `latest.json` has the new commit/SHA, the page shows the new text, a download of the URL hashes to the published SHA.
 2. Commit the new `site/public/latest.json`.
 3. Start an older launcher (e.g. the previous zip unpacked in Downloads): the update banner must appear. Launchers up to 2026-10-24 time out after 6 s on a cold start and may show it only on a second start (fixed after that release).
+
+## Reusable prompt
+
+Paste this into a new session to have Claude run a release:
+
+> Make a new MTGA Forge release, following docs/release.md.
+> 1. Check that both repos (this one and `forge/`) are committed; tell me about anything uncommitted before going on.
+> 2. Find the last release (commit and time in `site/public/latest.json`) and list what changed since then in both repos.
+> 3. Build and scan: `tools\release.ps1 -Build -Scan`. It must end with CHECK OK. If VirusTotal flags anything, show me the engines and links and wait for my call.
+> 4. Smoke-test the package: `tools\verify.ps1 -SkipClient -Client <a patched client folder> -Only sp-default,sp-queues` from `dist\MTGA-Forge`.
+> 5. Draft the release notes (player-facing bullets) and show them to me with the scan results. Publish only after I confirm: `tools\release.ps1 -Upload github -Deploy -Notes '<notes>'` (add `-AllowDetections` only if I accepted the detections).
+> 6. Check live: mtgaforge.com/latest.json has the new commit and SHA, and the download URL works. Then commit `site/public/latest.json` as "Release <tag>: latest.json and notes" and update "Last done" in docs/release.md.
 
 ## Gotchas
 
