@@ -17,6 +17,7 @@ using Mono.Cecil.Cil;
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
+//   6e3. DeckViewUtilities.SortDeckViewInfo: decks saved in the played format first (ForgeBridge.DeckOrder)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
@@ -221,6 +222,22 @@ foreach (var ret in createBuckets.Body.Instructions.Where(i => i.OpCode == OpCod
     dbp.InsertAfter(call, dbp.Create(OpCodes.Ret));
 }
 Console.WriteLine("patched DeckManagerController.CreateDeckBuckets -> " + deckTweaks.FullName);
+
+//   6e3. DeckViewUtilities.SortDeckViewInfo: every return goes through ForgeBridge.DeckOrder.Reorder(result, formatForSort), so decks
+//      saved in the format being played come before decks of other formats that happen to be legal in it.
+var deckOrder = core.ImportReference(bridge.GetType("ForgeBridge.DeckOrder").Methods.Single(m => m.Name == "Reorder"));
+var sortDecks = core.GetType("Wizards.Mtga.Decks.DeckViewUtilities").Methods.Single(m => m.Name == "SortDeckViewInfo");
+if (sortDecks.Parameters.Count != 3 || sortDecks.Parameters[1].Name != "formatForSort")
+    throw new InvalidOperationException("DeckViewUtilities.SortDeckViewInfo changed: update DeckOrder");
+var sdp = sortDecks.Body.GetILProcessor();
+foreach (var ret in sortDecks.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    ret.OpCode = OpCodes.Ldarg_1;          // jumps to the ret now reach the hook too
+    var call = sdp.Create(OpCodes.Call, deckOrder);
+    sdp.InsertAfter(ret, call);
+    sdp.InsertAfter(call, sdp.Create(OpCodes.Ret));
+}
+Console.WriteLine("patched DeckViewUtilities.SortDeckViewInfo -> " + deckOrder.FullName);
 
 //   6f. ZoneTransferGroup.Update: at the start, ForgeBridge.DrawTweaks.Apply(this) shortens the stagger cap of big draw groups
 //      (a mulligan's 7 new cards are dealt in 0.5 s instead of 1.5 s). Throws if the fields it sets moved.
