@@ -39,6 +39,7 @@ html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--body); }
 .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px; }
 a { color: var(--link); text-underline-offset: 3px; }
+a.accent-link { color: var(--accent); font-weight: 600; }
 a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 h1, h2 { font-family: var(--display); line-height: 1.08; margin: 0; text-wrap: balance; letter-spacing: -.015em; }
 p { margin: 0 0 1em; max-width: 64ch; }
@@ -163,7 +164,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
 <div class="hero">
   <div>
   <h1>The client you know. <em>A rules engine you can keep.</em></h1>
-  <p class="lead">Play Magic's best competitive formats in your own copy of MTG Arena: Standard, Pioneer, Modern, Legacy, Vintage and Pauper, ranked or casual, with the open source Forge engine running the game. Every card is free, and every reward is unlocked by playing.</p>
+  <p class="lead">Play Magic's best competitive formats in your own copy of MTG Arena: Standard, Pioneer, Modern, Legacy, Vintage and Pauper, ranked or casual, with the open source <a class="accent-link" href="https://github.com/Card-Forge/forge/" target="_blank" rel="noopener">Forge engine</a> running the game. Every card is free, and every reward is unlocked by playing.</p>
   <div class="get"><button class="btn" id="dl" type="button" disabled>Download for Windows</button><small id="dlnote">Coming soon. Unofficial fan project.</small></div>
   <noscript><p class="lead" style="font-size:.95rem">The download button needs JavaScript.</p></noscript>
   <div class="facts" id="facts" hidden>
