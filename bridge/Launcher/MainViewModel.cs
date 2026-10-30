@@ -82,7 +82,7 @@ namespace MtgaForgeLauncher
         public ObservableCollection<StepItem> Steps { get; } = new ObservableCollection<StepItem>();
         public ObservableCollection<RailItem> Rail { get; } = new ObservableCollection<RailItem>
         {
-            new RailItem { Number = "1", Title = "Find MTGA", Hint = "Your Steam install, read only" },
+            new RailItem { Number = "1", Title = "Find MTGA", Hint = "Your MTGA install, read only" },
             new RailItem { Number = "2", Title = "Pick a folder", Hint = "Where the patched copy goes" },
             new RailItem { Number = "3", Title = "Prepare the game", Hint = "Copy and patch, once" },
             new RailItem { Number = "4", Title = "Play", Hint = "Start the server and the game" },
@@ -330,7 +330,7 @@ namespace MtgaForgeLauncher
             {
                 Stage = Stage.NeedSource;
                 Headline = Sources.Count == 0 ? "MTGA was not found" : "Choose your MTGA install";
-                Body = "Install MTG Arena with Steam, or choose the folder that contains MTGA.exe. It is only read, never changed.";
+                Body = "Install MTG Arena (Steam or the standalone installer), or choose the folder that contains MTGA.exe. It is only read, never changed.";
                 return;
             }
             if (folderProblem != "")
@@ -356,6 +356,7 @@ namespace MtgaForgeLauncher
                     case 3: ShowNeedsPrepare(last); break;
                     case 4: Stage = Stage.NeedSource; Headline = "MTGA was not found"; Body = "Choose the folder that contains MTGA.exe."; break;
                     case 5: ShowProblem("Steam is still updating MTGA", "Wait until Steam has finished, then press Check again."); break;
+                    case 6: ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database) after you sign in, before it shows the main menu. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); break;
                     default: ShowProblem("Could not check your game", "The check failed (exit code " + code + "): " + last + " Open the details below for the full output."); break;
                 }
             });
@@ -368,7 +369,7 @@ namespace MtgaForgeLauncher
             Progress = 0;
             Headline = first ? "First start: prepare your game" : "Your game needs an update";
             Body = first
-                ? "MTGA Forge makes a separate copy of your MTGA install and patches it to talk to the Forge rules engine. Your Steam install is only read. The copy never signs in to MTGA's servers."
+                ? "MTGA Forge makes a separate copy of your MTGA install and patches it to talk to the Forge rules engine. Your MTGA install is only read. The copy never signs in to MTGA's servers."
                 : "MTGA was updated, or this version of MTGA Forge changed, so the patched copy is rebuilt. Your decks stay.";
             Stage = Stage.NeedPrepare;
         }
@@ -400,6 +401,7 @@ namespace MtgaForgeLauncher
                 var lines = runner == null ? new List<string>() : runner.Lines.Where(x => x.Trim() != "").Reverse().Take(3).Reverse().ToList();
                 runner = null;
                 if (code == 0) { foreach (var s in Steps) s.State = 2; Progress = PatchSteps.Length; Recheck(); return; }
+                if (code == 6) { ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database) after you sign in, before it shows the main menu. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); return; }
                 ShowProblem("Preparing the game failed", "Nothing was started and your MTGA install is untouched. " + string.Join(" ", lines));
                 ConsoleOpen = true;
             });

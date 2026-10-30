@@ -1,6 +1,6 @@
 ﻿# One start button: (re)patches the client when MTGA was updated, starts the Forge server, waits for its ports, starts the patched
 # MTGA.exe and stops the server when the client exits.
-# Usage: MTGA-Forge.cmd [-Source <MTGA install>] [-Folder <folder>] [-PatchOnly] [-Repatch] [-Firewall] [-ClientArgs '-screen-width 1280 ...'] [-Instance 2 -Name Bob] [-FriendCode <word>] [-Offline]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File tools\launcher.ps1 [-Source <MTGA install>] [-Folder <folder>] [-PatchOnly] [-Repatch] [-Firewall] [-ClientArgs '-screen-width 1280 ...'] [-Instance 2 -Name Bob] [-FriendCode <word>] [-Offline]
 #   -Folder      where the patched client (client\), your decks and settings (data\) and the logs (logs\) live; default %LOCALAPPDATA%\MTGA-Forge
 #                (the patched client is a full copy of the game, about 14 GB: pick a drive with room; once chosen it is remembered)
 #   -Source      the MTGA install to patch from (found through Steam by default; remembered once given)
@@ -90,8 +90,10 @@ try {
         0 { if ($Repatch) { $code = 3 } }
         3 { }
         4 { if ($haveClient) { Write-Host 'No MTGA install found: starting the client as it is (it cannot be updated).' -ForegroundColor Yellow }
-            else { Stop-WithMessage "MTGA is not installed (or not where Steam says). Install it with Steam, or run MTGA-Forge.cmd -Source <folder that holds MTGA.exe>." } }
+            else { Stop-WithMessage "MTGA is not installed (or not where Steam says). Install it (Steam or the standalone installer), or pick its folder in MTGA-Forge.exe (command line: -Source <folder that holds MTGA.exe>)." } }
         5 { Stop-WithMessage 'Steam is still updating MTGA. Close this window, wait for the update to finish, then start again.' }
+        6 { if ($haveClient) { Write-Host 'MTGA is still downloading an update: starting the client as it is.' -ForegroundColor Yellow; $code = 0 }
+            else { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' } }
         default { Stop-WithMessage "Could not check the install (exit code $code)." }
     }
     if ($code -eq 3) {
@@ -106,6 +108,7 @@ try {
         & powershell @pa
         $paExit = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
+        if ($paExit -eq 6) { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' }
         if ($paExit -ne 0) { Stop-WithMessage "Patching failed (see above). Nothing was started; the original game is untouched. After an MTGA update this can mean the patch needs a new version of MTGA-Forge." }
     } elseif ($Firewall) { & powershell @patchArgs -Only firewall -Firewall }
     if ($PatchOnly) { Write-Host 'Patched. Nothing started (-PatchOnly).'; exit 0 }

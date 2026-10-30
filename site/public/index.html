@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MTGA Forge - Ranked Standard, Pioneer, Modern, Legacy, Vintage and Pauper on the Forge rules engine</title>
-<meta name="description" content="An unofficial project that points your own Steam copy of MTG Arena at the open source Forge rules engine. Play Magic's best competitive formats, Standard, Pioneer, Modern, Legacy, Vintage and Pauper, in ranked play, climb to Mythic, and unlock every reward on the mastery track and daily quests just by playing. Free.">
+<meta name="description" content="An unofficial project that points your own copy of MTG Arena (Steam or the standalone installer) at the open source Forge rules engine. Play Magic's best competitive formats, Standard, Pioneer, Modern, Legacy, Vintage and Pauper, in ranked play, climb to Mythic, and unlock every reward on the mastery track and daily quests just by playing. Free.">
 <link rel="canonical" href="https://mtgaforge.com/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -20,7 +20,7 @@
 <meta property="og:image:alt" content="MTGA Forge: the client you know, a rules engine you can keep.">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MTGA Forge","url":"https://mtgaforge.com/","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11","description":"An unofficial project that points your own Steam copy of MTG Arena at the open source Forge rules engine.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MTGA Forge","url":"https://mtgaforge.com/","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11","description":"An unofficial project that points your own copy of MTG Arena (Steam or the standalone installer) at the open source Forge rules engine.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
@@ -233,7 +233,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
 </div>
 
 <figure>
-  <svg class="wide" viewBox="0 0 880 250" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
+  <svg class="wide" viewBox="0 0 880 250" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your MTGA install is only read.">
     <style>
       .b { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
       .h { fill: var(--fg); font: 600 15px var(--body); }
@@ -246,7 +246,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
     <rect x="10" y="30" width="400" height="200" rx="12" class="g"/>
     <text x="26" y="24" class="s">YOUR PC</text>
     <rect x="30" y="52" width="170" height="64" rx="8" class="b"/>
-    <text x="44" y="80" class="h">Steam install</text><text x="44" y="100" class="s">read only</text>
+    <text x="44" y="80" class="h">MTGA install</text><text x="44" y="100" class="s">read only</text>
     <rect x="30" y="148" width="170" height="64" rx="8" class="b p"/>
     <text x="44" y="176" class="h">Patched client</text><text x="44" y="196" class="s">own profile</text>
     <path d="M115 116v32" class="d"/>
@@ -261,7 +261,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
     <path d="M640 180h60" class="l"/>
     <text x="470" y="100" class="s">Card art loads from Scryfall.</text>
   </svg>
-  <svg class="tall" viewBox="0 0 340 520" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your Steam install is only read.">
+  <svg class="tall" viewBox="0 0 340 520" role="img" aria-label="Diagram: on your PC, the patched client talks to the Forge engine. A matchmaking service connects you to other MTGA Forge players. Your MTGA install is only read.">
     <style>
       .b { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
       .h { fill: var(--fg); font: 600 15px var(--body); }
@@ -274,7 +274,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
     <rect x="10" y="28" width="320" height="268" rx="12" class="g"/>
     <text x="26" y="20" class="s">YOUR PC</text>
     <rect x="30" y="48" width="280" height="56" rx="8" class="b"/>
-    <text x="46" y="73" class="h">Steam install</text><text x="46" y="92" class="s">read only</text>
+    <text x="46" y="73" class="h">MTGA install</text><text x="46" y="92" class="s">read only</text>
     <path d="M170 104v28" class="d"/>
     <rect x="30" y="132" width="280" height="56" rx="8" class="b p"/>
     <text x="46" y="157" class="h">Patched client</text><text x="46" y="176" class="s">own profile</text>
@@ -315,11 +315,11 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
   <div>
     <dl>
       <dt>System</dt><dd>Windows 10 or 11</dd>
-      <dt>Game</dt><dd>MTG Arena, Steam version, on the same PC</dd>
+      <dt>Game</dt><dd>MTG Arena on the same PC: the Steam version or the standalone installer. Start it once and sign in until the main menu, so it finishes downloading</dd>
       <dt>Disk</dt><dd>About 15 GB free</dd>
       <dt>Extras</dt><dd>None. Java and the rest are bundled</dd>
     </dl>
-    <p>Unzip and run the launcher. The first start takes a minute or two while it makes a patched copy of your install. It repeats after a Steam update. Your original install is never changed.</p>
+    <p>Unzip and run the launcher. The first start takes a minute or two while it makes a patched copy of your install. It repeats after an MTGA update. Your original install is never changed.</p>
     <p>The launcher is not code-signed yet, so Windows SmartScreen may warn. Each release's SHA-256 and VirusTotal results are listed under the download button at the top: check the file against them first.</p>
   </div>
 </div>

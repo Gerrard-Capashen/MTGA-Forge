@@ -62,7 +62,7 @@ namespace MtgaForgeLauncher
             catch { }
         }
 
-        /// <summary>The folder MTGA-Forge.cmd / launcher.ps1 remembered.</summary>
+        /// <summary>The folder tools\launcher.ps1 (command-line start) remembered.</summary>
         static string FolderOfCommandLineLauncher()
         {
             try

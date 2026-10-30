@@ -2,7 +2,7 @@
 # Usage: powershell -NoProfile -File tools\package.ps1 [-Out dist\MTGA-Forge] [-ManagedDir <client Managed folder>] [-BuildServer] [-Zip]
 #   dist\MTGA-Forge\
 #     MTGA-Forge.exe(+.config)                        the launcher window (bridge\Launcher): first-start guidance, name / offline
-#     MTGA-Forge.cmd, README.txt, dist.json           command-line start (tools\launcher.ps1) / what it is
+#     README.txt, dist.json                           what it is (command-line start: tools\launcher.ps1)
 #     tools\                                          launcher.ps1 forge-patch.ps1 layout.ps1 redact-log.ps1 verify.ps1 check-package.ps1
 #     patcher\                                        Patcher.exe (.NET Framework 4.8, ships with Windows) + Mono.Cecil, ForgeBridge.dll (our client code)
 #     runtime\                                        jlink JRE (java.exe), only the modules the server needs
@@ -88,7 +88,6 @@ Write-Host "   runtime $([int]((Get-ChildItem "$Out\runtime" -Recurse -File | Me
 foreach ($f in 'launcher.ps1', 'forge-patch.ps1', 'layout.ps1', 'redact-log.ps1', 'verify.ps1', 'check-package.ps1') { Copy-Item "$root\tools\$f" "$Out\tools" }
 New-Item -ItemType Directory -Force "$Out\tools\decks" | Out-Null
 Copy-Item "$root\tools\decks\modern-import-test.txt" "$Out\tools\decks"     # verify.ps1 fixture (fd-import)
-Copy-Item "$root\tools\dist\MTGA-Forge.cmd" $Out
 Copy-Item "$root\tools\dist\README.txt" $Out
 Copy-Item "$root\forge\LICENSE" "$Out\LICENSE-Forge.txt"
 $rev = (git -C $root rev-parse --short HEAD).Trim()

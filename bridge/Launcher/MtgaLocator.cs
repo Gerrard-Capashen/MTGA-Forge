@@ -32,6 +32,13 @@ namespace MtgaForgeLauncher
             }
             foreach (var l in libs) cands.Add(Path.Combine(l, @"steamapps\common\MTGA"));
 
+            // the standalone version (Wizards installer) records its folder, which the player may have changed
+            foreach (var key in new[] { @"SOFTWARE\Wizards of the Coast\MTGArena", @"SOFTWARE\WOW6432Node\Wizards of the Coast\MTGArena" })
+            {
+                string p = Reg(Registry.LocalMachine, key, "Path");
+                if (!string.IsNullOrWhiteSpace(p)) cands.Add(p.TrimEnd('\\'));
+            }
+
             // the same places on every fixed drive (a second library is often D:\SteamLibrary)
             foreach (var d in DriveInfo.GetDrives().Where(x => x.DriveType == DriveType.Fixed && x.IsReady))
                 foreach (var rel in new[] { @"SteamLibrary\steamapps\common\MTGA", @"Steam\steamapps\common\MTGA", @"Program Files (x86)\Steam\steamapps\common\MTGA",
@@ -48,11 +55,13 @@ namespace MtgaForgeLauncher
             catch { return null; }
         }
 
-        /// <summary>"Steam library" for a path inside steamapps, otherwise the plain folder kind.</summary>
+        /// <summary>"Steam library" for a path inside steamapps, "Standalone version" next to the Wizards launcher, otherwise the plain folder kind.</summary>
         public static string Describe(string dir)
         {
-            string root = Path.GetPathRoot(dir) ?? "";
-            return dir.IndexOf("steamapps", StringComparison.OrdinalIgnoreCase) >= 0 ? "Steam library on " + root.TrimEnd('\\') : "Found in " + root.TrimEnd('\\');
+            string root = (Path.GetPathRoot(dir) ?? "").TrimEnd('\\');
+            if (dir.IndexOf("steamapps", StringComparison.OrdinalIgnoreCase) >= 0) return "Steam library on " + root;
+            if (File.Exists(Path.Combine(dir, @"MTGALauncher\MTGALauncher.exe"))) return "Standalone version on " + root;
+            return "Found in " + root;
         }
 
         /// <summary>Size of the install in bytes (what the copy will take), 0 when unreadable.</summary>

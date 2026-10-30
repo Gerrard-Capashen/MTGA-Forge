@@ -1,4 +1,4 @@
-﻿# Builds a Forge-backed MTGA client in a NEW folder from a Steam install (read only), with no manual steps.
+﻿# Builds a Forge-backed MTGA client in a NEW folder from a Steam or standalone (Wizards installer) install (read only), with no manual steps.
 # Ordered, idempotent steps; every step records its result in <Target>\forge-patch\state.json together with a fingerprint of
 # the source install (Steam buildid, main manifest name, Core.dll hash). A re-run skips finished steps; a different fingerprint
 # (Steam updated) throws the results away and starts again at step 1.
@@ -26,7 +26,8 @@
 #   carddb        forge.mtga.CardDbBuilder from the target's own pristine DB (Target\forge-patch\carddb\pristine)
 #   manifest      asserts the main manifest is plain JSON (the builder writes it decompressed) and lists the generated DB
 #   firewall      outbound block rule for Target\MTGA.exe; needs elevation, runs ONLY with -Firewall (prints the command otherwise)
-# -Check only compares the install with Target\forge-patch\state.json (exit 0 = patched and current, 3 = needs patching, 4 = no install found, 5 = Steam is updating MTGA).
+# -Check only compares the install with Target\forge-patch\state.json (exit 0 = patched and current, 3 = needs patching, 4 = no install found, 5 = Steam is updating MTGA,
+#   6 = the install has not finished downloading its game files: MTGA downloads them after sign-in, before its main menu).
 # Needs (dist): robocopy + Windows PowerShell 5.1 + the package (runtime\, server\, patcher\); (dev): dotnet SDK, java 17+, tools\cp.txt, built forge-gui-mtga (-BuildServer compiles it).
 param(
     [Parameter(Mandatory)][string]$Target,
@@ -64,6 +65,14 @@ $bridgeOut = "$pdir\bridge-out"
 $guiDir = $GuiDir
 
 function Sha($f) { (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() }
+function Read-Manifest($f) {
+    $b = [IO.File]::ReadAllBytes($f)
+    if ($b.Length -gt 2 -and $b[0] -eq 0x1f -and $b[1] -eq 0x8b) {
+        $ms = New-Object IO.MemoryStream(, $b); $gz = New-Object IO.Compression.GZipStream($ms, [IO.Compression.CompressionMode]::Decompress)
+        $out = New-Object IO.MemoryStream; $gz.CopyTo($out); $b = $out.ToArray()
+    }
+    [Text.Encoding]::UTF8.GetString($b) | ConvertFrom-Json
+}
 
 # -------------------------------------------------------------------------------------------------- source fingerprint
 function Get-Acf {
@@ -73,11 +82,69 @@ function Get-Acf {
 function Get-Fingerprint {
     $acf = Get-Acf
     $build = if ($acf) { [regex]::Match((Get-Content $acf.FullName -Raw), '"buildid"\s+"(\d+)"').Groups[1].Value } else { '' }
-    $mf = @(Get-ChildItem "$Source\MTGA_Data\Downloads" -Filter 'Manifest_*.mtga' | Where-Object { $_.Name -match '^Manifest_[0-9a-f]{32}\.mtga$' })
-    if ($mf.Count -ne 1) { throw "expected one main manifest in $Source\MTGA_Data\Downloads, found $($mf.Count)" }
-    $fpo = [ordered]@{ steamBuildId = $build; mainManifest = $mf[0].Name; coreSha256 = (Sha "$Source\MTGA_Data\Managed\Core.dll")
+    $fpo = [ordered]@{ steamBuildId = $build; mainManifest = (Get-CurrentManifest); coreSha256 = (Sha "$Source\MTGA_Data\Managed\Core.dll")
                        exeSize = (Get-Item "$Source\MTGA.exe").Length }
     $fpo
+}
+# The main manifest of the content this build plays with. MTGA's doorbell names one current ("General") main manifest and may
+# name "Future" ones, content for the next release that it downloads ahead of time; both sit in Downloads with nothing on disk
+# telling them apart, and the future one can need classes the installed Core.dll does not have yet. In this order:
+#   1. MTGA's own log (LocalLow\<app.info>\Player.log / Player-prev.log), when that run used this install's Downloads folder
+#   2. the manifests whose asset lookup trees name only evaluator classes the installed Core.dll has
+#   3. of what is left, the oldest file
+# (the card DB builder later removes every other main manifest from the copy)
+function Get-CurrentManifest {
+    $d = "$Source\MTGA_Data\Downloads"
+    $mf = @(Get-ChildItem $d -Filter 'Manifest_*.mtga' | Where-Object { $_.Name -match '^Manifest_[0-9a-f]{32}\.mtga$' })
+    if ($mf.Count -eq 0) { throw "no main manifest in $d" }
+    if ($mf.Count -eq 1) { return $mf[0].Name }
+    $names = @($mf | ForEach-Object Name)
+
+    $info = @(Get-Content "$Source\MTGA_Data\app.info" -ErrorAction SilentlyContinue)
+    if ($info.Count -ge 2) {
+        $logDir = Join-Path $env:USERPROFILE "AppData\LocalLow\$($info[0].Trim())\$($info[1].Trim())"
+        $want = ($d -replace '\\', '/').TrimEnd('/')
+        foreach ($log in Get-ChildItem $logDir -Filter 'Player*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending) {
+            $lines = @(Select-String -LiteralPath $log.FullName -Pattern 'Bundle download destination: (.+)$', 'Using manifest metadata: General\|(Manifest_[0-9a-f]{32}\.mtga)')
+            $dest = $lines | Where-Object { $_.Matches[0].Groups[0].Value -like 'Bundle*' } | Select-Object -Last 1
+            if (-not $dest -or (($dest.Matches[0].Groups[1].Value.Trim() -replace '\\', '/').TrimEnd('/') -ne $want)) { continue }
+            $cur = $lines | Where-Object { $_.Matches[0].Groups[0].Value -like 'Using*' } | Select-Object -Last 1
+            if ($cur -and $names -contains $cur.Matches[0].Groups[1].Value) { return $cur.Matches[0].Groups[1].Value }
+        }
+    }
+
+    $core = [Text.Encoding]::GetEncoding(28591).GetString([IO.File]::ReadAllBytes("$Source\MTGA_Data\Managed\Core.dll"))
+    $fits = @($mf | Where-Object {
+        $alts = @((Read-Manifest $_.FullName).Assets | Where-Object { $_.AssetType -eq 'ALT' } | ForEach-Object { "$d\ALT\$($_.Name)" })
+        if (-not $alts.Count -or ($alts | Where-Object { -not (Test-Path -LiteralPath $_) })) { return $false }   # not (fully) downloaded
+        $classes = @($alts | ForEach-Object {
+            $b = [IO.File]::ReadAllBytes($_)
+            if ($b.Length -gt 2 -and $b[0] -eq 0x1f -and $b[1] -eq 0x8b) {
+                $ms = New-Object IO.MemoryStream(, $b); $gz = New-Object IO.Compression.GZipStream($ms, [IO.Compression.CompressionMode]::Decompress)
+                $out = New-Object IO.MemoryStream; $gz.CopyTo($out); $b = $out.ToArray()
+            }
+            [regex]::Matches([Text.Encoding]::UTF8.GetString($b), 'AssetLookupTree\.Evaluators\.(?:[A-Za-z0-9_]+\.)*([A-Za-z0-9_]+)') | ForEach-Object { $_.Groups[1].Value }
+        } | Sort-Object -Unique)
+        -not ($classes | Where-Object { $core.IndexOf($_, [StringComparison]::Ordinal) -lt 0 })
+    })
+    $pool = if ($fits.Count) { $fits } else { $mf }
+    ($pool | Sort-Object LastWriteTimeUtc | Select-Object -First 1).Name
+}
+# The standalone (Wizards installer) version ships ~0.5 GB and MTGA downloads the rest (card art, the card database, audio) at its
+# first start; the patched copy never downloads anything itself, so every file of the main manifest must be on disk before the copy.
+function Get-MissingAssets {
+    $d = "$Source\MTGA_Data\Downloads"
+    $have = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($sub in Get-ChildItem $d -Directory) { foreach ($f in [IO.Directory]::EnumerateFiles($sub.FullName)) { [void]$have.Add($sub.Name + '\' + [IO.Path]::GetFileName($f)) } }
+    $all = @((Read-Manifest "$d\$($fp.mainManifest)").Assets)
+    $miss = @($all | Where-Object { -not $have.Contains($(if ($_.AssetType) { $_.AssetType } else { 'AssetBundle' }) + '\' + $_.Name) }).Count
+    @{ missing = $miss; total = $all.Count }
+}
+function Exit-IfIncomplete {
+    $a = Get-MissingAssets
+    if ($a.missing -eq 0) { return }
+    Write-Host "MTGA has not finished downloading its game files ($($a.missing) of $($a.total) missing in $Source). Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and try again."
+    exit 6
 }
 
 # The tools that built the target: another ForgeBridge / Patcher only needs the bridge and patch steps again (seconds), another CardDbBuilder
@@ -131,7 +198,7 @@ if ($Check) {
         if ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
         elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
     }
-    if ($why) { Write-Host "needs patching: $why"; exit 3 }
+    if ($why) { Exit-IfIncomplete; Write-Host "needs patching: $why"; exit 3 }
     Write-Host "up to date ($($fp.mainManifest))"
     exit 0
 }
@@ -155,9 +222,10 @@ if (-not $Dist) {
 }
 
 $steps['refresh'] = {
-    # /MIR purges whatever the install lacks (our .orig files, generated DB, forge-patch is excluded); /XJ no junctions
+    # /MIR purges whatever the install lacks (our .orig files, generated DB, forge-patch is excluded); /XJ no junctions;
+    # MTGALauncher\ is the standalone version's own updater, not part of the game
     $log = "$pdir\robocopy.log"; New-Item -ItemType Directory -Force $pdir | Out-Null
-    & robocopy $Source $Target /MIR /XD "$pdir" /XJ /MT:16 /R:2 /W:2 /NFL /NDL /NP /NJH "/LOG:$log" | Out-Null
+    & robocopy $Source $Target /MIR /XD "$pdir" "$Source\MTGALauncher" /XJ /MT:16 /R:2 /W:2 /NFL /NDL /NP /NJH "/LOG:$log" | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE), see $log" }
     $global:LASTEXITCODE = 0
     $n = (Get-ChildItem $Target -Recurse -File -Force | Where-Object { $_.FullName -notlike "$pdir\*" }).Count
@@ -247,15 +315,6 @@ $steps['carddb'] = {
     "$($st.db) via $($st.manifest), $($st.cardsAdded) cards added"
 }
 
-function Read-Manifest($f) {
-    $b = [IO.File]::ReadAllBytes($f)
-    if ($b.Length -gt 2 -and $b[0] -eq 0x1f -and $b[1] -eq 0x8b) {
-        $ms = New-Object IO.MemoryStream(, $b); $gz = New-Object IO.Compression.GZipStream($ms, [IO.Compression.CompressionMode]::Decompress)
-        $out = New-Object IO.MemoryStream; $gz.CopyTo($out); $b = $out.ToArray()
-    }
-    [Text.Encoding]::UTF8.GetString($b) | ConvertFrom-Json
-}
-
 $steps['manifest'] = {
     $st = Get-Content "$cardData\state.json" -Raw | ConvertFrom-Json
     $f = "$downloads\$($st.manifest)"
@@ -286,6 +345,7 @@ $steps['firewall'] = {
 }
 
 # ------------------------------------------------------------------------------------------------------------- driver
+Exit-IfIncomplete
 $names = @($steps.Keys)
 $fromIdx = if ($From) { if ($names -notcontains $From) { throw "unknown step $From" }; $names.IndexOf($From) } else { -1 }
 Write-Host "source $Source`ntarget $Target`nfingerprint $fpJson"

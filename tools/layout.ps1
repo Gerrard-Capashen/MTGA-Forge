@@ -21,7 +21,8 @@ if ($Dist) {
     $BootLogo = "$Root\tools\bootlogo\forge-logo.png"
 }
 
-# MTGA install: Steam (registry + libraryfolders.vdf, MTGA = app 2141910), then the Wizards launcher's default folders
+# MTGA install: Steam (registry + libraryfolders.vdf, MTGA = app 2141910), then the standalone version (its registry key, then
+# the Wizards installer's default folders)
 function Find-MtgaInstall {
     $cands = @()
     $steam = (Get-ItemProperty 'HKCU:\Software\Valve\Steam' -ErrorAction SilentlyContinue).SteamPath
@@ -31,6 +32,11 @@ function Find-MtgaInstall {
         $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
         if (Test-Path $vdf) { $libs += [regex]::Matches((Get-Content $vdf -Raw), '"path"\s+"([^"]+)"') | ForEach-Object { $_.Groups[1].Value -replace '\\\\', '\' } }
         foreach ($l in $libs) { $cands += Join-Path $l 'steamapps\common\MTGA' }
+    }
+    # the standalone version (Wizards installer) records its folder, which the player may have changed
+    foreach ($k in 'HKLM:\SOFTWARE\Wizards of the Coast\MTGArena', 'HKLM:\SOFTWARE\WOW6432Node\Wizards of the Coast\MTGArena') {
+        $p = (Get-ItemProperty $k -ErrorAction SilentlyContinue).Path
+        if ($p) { $cands += $p.TrimEnd('\') }
     }
     $cands += 'C:\Program Files (x86)\Steam\steamapps\common\MTGA', 'C:\Program Files\Wizards of the Coast\MTGA', 'C:\Program Files (x86)\Wizards of the Coast\MTGA'
     foreach ($c in $cands) { if (Test-Path "$c\MTGA.exe") { return (Resolve-Path $c).Path } }

@@ -66,7 +66,7 @@ namespace MtgaForgeLauncher
             var items = new List<UninstallItem>();
             bool ours = Guard(folder, source) == null && Directory.Exists(folder) && LooksOurs(folder);
 
-            var copy = new UninstallItem { Title = "Patched game copy", Detail = "The copy of MTGA that talks to Forge. Your Steam install stays.", IsChecked = true };
+            var copy = new UninstallItem { Title = "Patched game copy", Detail = "The copy of MTGA that talks to Forge. Your MTGA install stays.", IsChecked = true };
             var logs = new UninstallItem { Title = "Logs", Detail = "Server logs from earlier sessions.", IsChecked = true };
             var data = new UninstallItem { Title = "Decks, profile and identity", Detail = "Your decks, your name and tag, your friends. Back up your identity first if you may come back.", IsChecked = false };
             if (ours)

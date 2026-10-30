@@ -1,12 +1,15 @@
 MTGA-Forge: play Magic Arena's client against the Forge rules engine (Bot Play and Quick Drafts offline, Casual Play, Premier Drafts and challenges online).
 
 WHAT YOU NEED
-- Windows 10/11 and MTGA installed (Steam). Nothing else: Java and the patch tools are in this folder.
+- Windows 10/11 and MTGA installed: the Steam version or the standalone one from the MTG Arena installer. Nothing else:
+  Java and the patch tools are in this folder.
+- MTGA started once and signed in until its main menu: it downloads most of its game files (about 12 GB) at that point.
+  Our copy never signs in, so it needs those files already on disk.
 - About 15 GB of free disk space for the patched copy of the game, plus ~1 GB for the card database built on first start.
 
 START
   Double-click MTGA-Forge.exe. The window walks you through four steps:
-    1. It finds your MTGA install (Steam libraries on any drive), or you press Browse and pick the folder.
+    1. It finds your MTGA install (Steam libraries on any drive, the standalone installer's folder), or you press Browse and pick the folder.
     2. You choose where the patched copy goes (default C:\Users\<you>\AppData\Local\Programs\MTGA Forge; any folder you can write to works, but not Program Files).
     3. It prepares the game: copies it, patches it, builds the card database from YOUR install.
     4. You pick how to play and press Start.
@@ -41,7 +44,7 @@ PLAY ONLINE (each player with their own MTGA and this package, the same MTGA ver
   Forge server or matchmaking; it is for those who want to be 100% sure the game itself never contacts anything).
 
 WHAT IT DOES TO YOUR GAME
-  Nothing. Your Steam install is only read. The patched game is a separate copy in <Folder>\client; it uses its own
+  Nothing. Your MTGA install is only read. The patched game is a separate copy in <Folder>\client; it uses its own
   settings, never signs in to MTGA's servers and sends nothing to them (the patch switches off its network calls; the optional
   firewall rule blocks it as well). Online play only talks to the matchmaking server, from the Forge server process. Card art of cards that MTGA does not have is fetched from Scryfall on demand.
 
@@ -60,10 +63,10 @@ FILES
 
 UNINSTALL
   Press "Uninstall..." in the window: tick what to remove (the game copy, logs, your decks and identity, the game's saved
-  preferences, the launcher's settings). Nothing outside those is touched, and your Steam MTGA is never modified.
+  preferences, the launcher's settings). Nothing outside those is touched, and your MTGA install is never modified.
 
 COMMAND LINE (optional, for scripting)
-  MTGA-Forge.cmd -Folder D:\MTGA-Forge -Source "D:\Games\MTGA" -PatchOnly -Repatch -Offline -Firewall
+  powershell -NoProfile -ExecutionPolicy Bypass -File tools\launcher.ps1 -Folder D:\MTGA-Forge -Source "D:\Games\MTGA" -PatchOnly -Repatch -Offline -Firewall
   Without -Folder the command-line start uses %LOCALAPPDATA%\MTGA-Forge; the window uses the folder you chose.
 
 THIS PACKAGE CONTAINS

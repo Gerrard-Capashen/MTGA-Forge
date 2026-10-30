@@ -83,7 +83,7 @@
             <StackPanel Visibility="{Binding NotPreparing, Converter={StaticResource B2V}}">
               <Border Style="{StaticResource Card}">
                 <StackPanel IsEnabled="{Binding CanEditFields}">
-                  <TextBlock Style="{StaticResource CardTitle}" Text="Your MTGA install (Steam version)"/>
+                  <TextBlock Style="{StaticResource CardTitle}" Text="Your MTGA install"/>
                   <ListBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
                       <DataTemplate>
@@ -157,7 +157,7 @@
               <Button Style="{StaticResource Primary}" Content="{Binding PrepareLabel}" Command="{Binding PrepareCommand}"/>
             </StackPanel>
             <TextBlock Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,24,0"
-                       Text="Done once, and again after an MTGA update. About 15 GB. Your Steam install is not touched."/>
+                       Text="Done once, and again after an MTGA update. About 15 GB. Your MTGA install is not touched."/>
           </DockPanel>
         </Border>
       </Grid>
