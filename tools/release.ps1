@@ -61,8 +61,11 @@ if ($Scan) {
         for ($i = 0; $i -lt 60 -and -not $stats; $i++) {
             Start-Sleep -Seconds 15
             # right after the upload VirusTotal can answer "analysis not found" for a while: keep polling
-            try { $j = (Native 'vt' @('analysis', $id, '--format', 'json', '--apikey', $vtKey)) -join "`n" | ConvertFrom-Json }
+            # (vt's own text is checked, not the ConvertFrom-Json error: that one is localized)
+            try { $raw = (Native 'vt' @('analysis', $id, '--format', 'json', '--apikey', $vtKey)) -join "`n" }
             catch { if ("$_" -match 'not found') { Write-Host '  (analysis not registered yet, waiting)'; continue } else { throw } }
+            if ($raw -match 'not found' -or $raw -notmatch '^\s*[\[{]') { Write-Host '  (analysis not registered yet, waiting)'; continue }
+            $j = $raw | ConvertFrom-Json
             $a = @($j)[0]; if ($a.attributes) { $a = $a.attributes }
             if ($a.status -eq 'completed') { $stats = $a.stats }
         }
