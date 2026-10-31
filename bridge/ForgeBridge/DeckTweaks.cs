@@ -11,13 +11,13 @@ namespace ForgeBridge
 {
     /// <summary>
     /// The Deck Manager's format dropdown is hardcoded to Arena's formats (Standard, Alchemy, Explorer, Historic, Timeless, Brawl): a
-    /// deck of any other format, which here means Pioneer, Modern, Legacy, Vintage, Pauper and Commander, was only found under
+    /// deck of any other format, which here means Pioneer, Modern, Legacy, Vintage, Pauper, Premodern and Commander, was only found under
     /// "All decks" / "Other decks". The Patcher calls Apply at the end of DeckManagerController.CreateDeckBuckets: one bucket per Forge
     /// format, taking its decks out of "Other decks", sorted with the client's own format order.
     /// </summary>
     public static class DeckTweaks
     {
-        private static readonly string[] Extra = { "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Commander" };
+        private static readonly string[] Extra = { "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Commander" };
         private const BindingFlags Any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
         public static void Apply(DeckManagerController controller)

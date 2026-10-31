@@ -198,7 +198,7 @@ namespace MtgaForgeLauncher
             {
                 return offline
                     ? "Press Start, then in the game go to Play > Find Match > Bot Play, pick a format and a deck, and you are in."
-                    : "Press Start, then in the game go to Play > Find Match for ranked and casual games in Standard, Pioneer, Modern, Legacy, Vintage and Pauper, or to Events to draft. Challenge a friend from the Friends list any time.";
+                    : "Press Start, then in the game go to Play > Find Match for ranked and casual games in Standard, Pioneer, Modern, Legacy, Vintage, Pauper and Premodern, or to Events to draft. Challenge a friend from the Friends list any time.";
             }
         }
 

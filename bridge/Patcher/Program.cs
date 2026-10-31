@@ -210,7 +210,7 @@ foreach (var ret in updateButtons.Body.Instructions.Where(i => i.OpCode == OpCod
 Console.WriteLine("patched NavBarController.UpdateButtons -> " + navTweaks.FullName);
 
 //   6e2. DeckManagerController.CreateDeckBuckets: before its return, ForgeBridge.DeckTweaks.Apply(this) adds the Deck Manager's
-//      format buckets for Forge's formats (Pioneer, Modern, Legacy, Vintage, Pauper, Commander), whose decks sat under "Other decks".
+//      format buckets for Forge's formats (Pioneer, Modern, Legacy, Vintage, Pauper, Premodern, Commander), whose decks sat under "Other decks".
 var deckTweaks = core.ImportReference(bridge.GetType("ForgeBridge.DeckTweaks").Methods.Single(m => m.Name == "Apply"));
 var createBuckets = core.GetType("DeckManagerController").Methods.Single(m => m.Name == "CreateDeckBuckets");
 var dbp = createBuckets.Body.GetILProcessor();

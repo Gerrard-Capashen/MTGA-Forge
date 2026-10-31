@@ -7,7 +7,7 @@ namespace ForgeBridge
 {
     /// <summary>
     /// Labels for the deck formats the local Front Door defines from Forge's format list. The client shows a format as
-    /// loc key MainNav/DeckFormat/&lt;Name&gt; ("LOCME: Name" without one); Modern, Legacy, Vintage and Commander have no
+    /// loc key MainNav/DeckFormat/&lt;Name&gt; ("LOCME: Name" without one); Modern, Legacy, Vintage, Premodern and Commander have no
     /// key in the client's localization DB, and some keys carry Arena wording ("Arena Pioneer").
     /// Inserted first into the client's CompositeLocProvider, so these win over the SQL localization DB.
     /// </summary>
@@ -15,17 +15,19 @@ namespace ForgeBridge
     {
         private static readonly Dictionary<string, string> Text = new Dictionary<string, string>
         {
-            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper
+            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper / Premodern
             { "MainNav/PrivateGame/DeckType_60_Card", "Standard" },
             { "MainNav/PrivateGame/DeckType_Brawl", "Pioneer" },
             { "MainNav/PrivateGame/DeckType_60_Card_Alchemy", "Modern" },
             { "Forge/Challenge/DeckType_Legacy", "Legacy" },
             { "Forge/Challenge/DeckType_Vintage", "Vintage" },
             { "Forge/Challenge/DeckType_Pauper", "Pauper" },
+            { "Forge/Challenge/DeckType_Premodern", "Premodern" },
             { "MainNav/DeckFormat/Pioneer", "Pioneer" },
             { "MainNav/DeckFormat/Modern", "Modern" },
             { "MainNav/DeckFormat/Legacy", "Legacy" },
             { "MainNav/DeckFormat/Vintage", "Vintage" },
+            { "MainNav/DeckFormat/Premodern", "Premodern" },
             { "MainNav/DeckFormat/Commander", "Commander" },
             { "MainNav/DeckFormat/Draft", "Draft" },
             { "MainNav/DeckFormat/Ambiguous", "All cards" },
@@ -38,6 +40,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Modern", "Cards from Eighth Edition onward, with Forge's Modern ban list." },
             { "MainNav/DeckFormatInfo/Legacy", "Every card, with Forge's Legacy ban list." },
             { "MainNav/DeckFormatInfo/Vintage", "Every card, with Forge's Vintage restricted list (one copy)." },
+            { "MainNav/DeckFormatInfo/Premodern", "Cards from Fourth Edition to Scourge (the 1995-2003 card frame), with Forge's Premodern ban list." },
             { "MainNav/DeckFormatInfo/Pauper", "Cards printed at common, with Forge's Pauper ban list." },
             { "MainNav/DeckFormatInfo/Commander", "100-card singleton deck led by a legendary commander. Deck building only: matches ignore the command zone." },
             { "MainNav/DeckFormatInfo/Historic", "Historic as Forge defines it." },
@@ -58,6 +61,7 @@ namespace ForgeBridge
             { "Forge/Quest/PlayVintage_Text", "Play {quantity} Vintage match" },
             { "Forge/Quest/PlayLegacy_Text", "Play {quantity} Legacy match" },
             { "Forge/Quest/PlayPauper_Text", "Play {quantity} Pauper matches" },
+            { "Forge/Quest/PlayPremodern_Text", "Play {quantity} Premodern matches" },
             { "Forge/Quest/PlayModern_Text", "Play {quantity} Modern matches" },
             { "Forge/Quest/PlayPioneer_Text", "Play {quantity} Pioneer matches" },
             { "Forge/Quest/WinStandard_Text", "Win {quantity} Standard match" },
@@ -114,7 +118,7 @@ namespace ForgeBridge
         private const string EventTitle = "Events/Event_Title_";
         private const string EventDesc = "Events/Event_Desc_";
 
-        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper" };
+        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern" };
 
         /// <summary>
         /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; / RankedPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):

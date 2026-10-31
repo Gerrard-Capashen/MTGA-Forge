@@ -14,7 +14,7 @@ namespace ForgeBridge
     /// </summary>
     public static class DeckFormats
     {
-        private static readonly string[] Narrowest = { "Standard", "Pioneer", "Pauper", "Modern", "Legacy", "Vintage", "Timeless" };
+        private static readonly string[] Narrowest = { "Standard", "Pioneer", "Pauper", "Premodern", "Modern", "Legacy", "Vintage", "Timeless" };
 
         public static string Best(string clientChoice, Client_Deck deck, FormatManager formats, CardDatabase db)
         {
