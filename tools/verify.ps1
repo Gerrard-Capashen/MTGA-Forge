@@ -4,7 +4,7 @@
 #
 # Usage: powershell -NoProfile -File tools\verify.ps1 [-Client <folder>] [-Only nc,bolt,...] [-SkipSelfPlay] [-SkipClient]
 #        [-Port 30003 -FdPort 30010 -ArtPort 30011] [-DataDir <dir>] [-ClassPath <file>] [-Out <dir>] [-BuildServer]
-# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-Legacy sp-Vintage sp-Pauper sp-Premodern sp-pvp sp-pvp-concede sp-peer sp-online sp-ranked sp-accounts sp-social sp-profile sp-queues
+# Recipes (client): nc bolt block bf et nf fd-loop fd-newdeck fd-delete fd-import      SelfPlay: sp-default sp-Standard sp-Pioneer sp-Modern sp-Brawl sp-Legacy sp-Vintage sp-Pauper sp-Premodern sp-pvp sp-pvp-concede sp-peer sp-online sp-ranked sp-accounts sp-social sp-profile sp-queues
 # Needs: java + built forge-gui-mtga (-BuildServer compiles it), tools\cp.txt, a card DB in <Client>\MTGA_Data\Downloads, the
 # player's window (Unity renders only on an unlocked desktop), Scryfall access for the "art served" check.
 # Evidence per recipe in <Out>\<recipe>\ (player.log, server.log, capture.log, net.txt, shots\). The data dir (decks) is shared with
@@ -313,7 +313,7 @@ try {
     if (-not $SkipClient) { foreach ($k in $recipes.Keys) { if (Wanted $k) { Run-Recipe $k $recipes[$k] } } }
     if (-not $SkipSelfPlay) {
         if (Wanted 'sp-default') { Run-SelfPlay 'sp-default' $null }
-        foreach ($f in 'Standard', 'Pioneer', 'Modern') { if (Wanted "sp-$f") { Run-SelfPlay "sp-$f" $f } }
+        foreach ($f in 'Standard', 'Pioneer', 'Modern', 'Brawl') { if (Wanted "sp-$f") { Run-SelfPlay "sp-$f" $f } }
         # Legacy / Vintage / Pauper / Premodern: the built-in decks against each other (Moxen, Workshops, Tron... rather than generated piles)
         foreach ($f in 'Legacy', 'Vintage', 'Pauper', 'Premodern') { if (Wanted "sp-$f") { Run-SelfPlay "sp-$f" $null "-Dselfplay.builtin=$f" } }
         if (Wanted 'sp-pvp') { Run-SelfPlay 'sp-pvp' $null '-Dselfplay.pvp=true' 'SELFPLAY PVP OK' }

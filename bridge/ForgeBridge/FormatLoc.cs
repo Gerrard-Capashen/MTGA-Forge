@@ -15,7 +15,7 @@ namespace ForgeBridge
     {
         private static readonly Dictionary<string, string> Text = new Dictionary<string, string>
         {
-            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper / Premodern
+            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper / Premodern / Brawl / Historic
             { "MainNav/PrivateGame/DeckType_60_Card", "Standard" },
             { "MainNav/PrivateGame/DeckType_Brawl", "Pioneer" },
             { "MainNav/PrivateGame/DeckType_60_Card_Alchemy", "Modern" },
@@ -23,6 +23,8 @@ namespace ForgeBridge
             { "Forge/Challenge/DeckType_Vintage", "Vintage" },
             { "Forge/Challenge/DeckType_Pauper", "Pauper" },
             { "Forge/Challenge/DeckType_Premodern", "Premodern" },
+            { "Forge/Challenge/DeckType_Brawl", "Brawl" },
+            { "Forge/Challenge/DeckType_Historic", "Historic" },
             { "MainNav/DeckFormat/Pioneer", "Pioneer" },
             { "MainNav/DeckFormat/Modern", "Modern" },
             { "MainNav/DeckFormat/Legacy", "Legacy" },
@@ -41,6 +43,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Legacy", "Every card, with Forge's Legacy ban list." },
             { "MainNav/DeckFormatInfo/Vintage", "Every card, with Forge's Vintage restricted list (one copy)." },
             { "MainNav/DeckFormatInfo/Premodern", "Cards from Fourth Edition to Scourge (the 1995-2003 card frame), with Forge's Premodern ban list." },
+            { "MainNav/DeckFormatInfo/Brawl", "Commander for two: a legendary creature or planeswalker plus 99 other cards of its colors, one copy of each (basic lands excepted), no sideboard. 25 life, free first mulligan. Commander's card pool and ban list; Commander decks can play it too." },
             { "MainNav/DeckFormatInfo/Pauper", "Cards printed at common, with Forge's Pauper ban list." },
             { "MainNav/DeckFormatInfo/Commander", "100-card singleton deck led by a legendary commander. Deck building only: matches ignore the command zone." },
             { "MainNav/DeckFormatInfo/Historic", "Historic as Forge defines it." },
@@ -118,7 +121,7 @@ namespace ForgeBridge
         private const string EventTitle = "Events/Event_Title_";
         private const string EventDesc = "Events/Event_Desc_";
 
-        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern" };
+        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Brawl" };
 
         /// <summary>
         /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; / RankedPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
@@ -138,7 +141,8 @@ namespace ForgeBridge
             bool bo3 = format.EndsWith("_BO3");
             if (bo3) format = format.Substring(0, format.Length - 4);
             if (System.Array.IndexOf(QueueFormats, format) < 0) return false;
-            if (bo3 && mode != "BotPlay") return false;
+            if (bo3 && (mode != "BotPlay" || format == "Brawl")) return false;       // Brawl is best of one
+            if (mode == "RankedPlay" && format == "Brawl") return false;
             if (mode == "BotPlay" && bo3)
                 loc = title ? "Bot Play: " + format + " (Best of 3)" : "Play a best-of-three " + format + " match against the Forge AI, with sideboarding between games. Only decks legal in " + format + " can be chosen.";
             else if (mode == "BotPlay")
