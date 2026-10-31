@@ -18,6 +18,7 @@ using Mono.Cecil.Cil;
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
 //   6e3. DeckViewUtilities.SortDeckViewInfo: decks saved in the played format first (ForgeBridge.DeckOrder)
+//   6h. PromptTextProvider.GetPromptText(Prompt): prompts with Forge's own wording (ForgeBridge.PromptText)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
 //   7. AkUnitySoundEngine.InitCommunication: no Wwise profiler socket
@@ -261,6 +262,22 @@ var ttFirst = ttSetText.Body.Instructions[0];
 ttp.InsertBefore(ttFirst, ttp.Create(OpCodes.Ldarg_0));
 ttp.InsertBefore(ttFirst, ttp.Create(OpCodes.Call, tooltipTweaks));
 Console.WriteLine("patched TooltipSystem.Tooltip.SetAndSizeTextRect -> " + tooltipTweaks.FullName);
+
+//   6h. PromptTextProvider.GetPromptText(Prompt): at the start, ForgeBridge.PromptText.Custom(prompt); a non-null result is returned
+//      (prompts with Forge's own wording: "Choose a card from this <set> booster pack" under the card browser).
+var promptCustom = core.ImportReference(bridge.GetType("ForgeBridge.PromptText").Methods.Single(m => m.Name == "Custom"));
+var getPromptText = core.GetType("Wotc.Mtga.DuelScene.PromptTextProvider").Methods.Single(m => m.Name == "GetPromptText" && m.Parameters.Count == 1
+    && m.Parameters[0].ParameterType.FullName == "Wotc.Mtgo.Gre.External.Messaging.Prompt");
+var gpp = getPromptText.Body.GetILProcessor();
+var gpFirst = getPromptText.Body.Instructions[0];
+var gpPop = gpp.Create(OpCodes.Pop);
+gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Ldarg_1));
+gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Call, promptCustom));
+gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Dup));
+gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Brfalse, gpPop));
+gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Ret));
+gpp.InsertBefore(gpFirst, gpPop);
+Console.WriteLine("patched PromptTextProvider.GetPromptText(Prompt) -> " + promptCustom.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
