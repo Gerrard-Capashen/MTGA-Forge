@@ -31,6 +31,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormat/Vintage", "Vintage" },
             { "MainNav/DeckFormat/Premodern", "Premodern" },
             { "MainNav/DeckFormat/Commander", "Commander" },
+            { "MainNav/DeckFormat/Brawl", "Brawl" },
             { "MainNav/DeckFormat/Draft", "Draft" },
             { "MainNav/DeckFormat/Ambiguous", "All cards" },
             { "MainNav/Settings/ReportABug/Support_URL", "https://mtgaforge.com" },
