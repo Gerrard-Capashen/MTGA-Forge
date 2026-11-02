@@ -6,6 +6,9 @@
  *   POST /me/xp/bot {match}   (Bearer) -> {gained, ...as /me/mastery}: a local bot match finished, BOT_XP once per match id. It cannot be verified,
  *        so a player gets it at most once every BOT_GAP_MS (a real match lasts longer; 429 otherwise). No daily cap (user, session 20).
  *
+ *   POST /me/xp/event {event}   (Bearer) -> {gained, ...as /me/mastery}: a one-time prize of a local event (EVENT_XP: the three stages of Archenemy: Sparky,
+ *        10,000 XP each). The client reports the win like a bot match, so it is the client's word; each prize is paid once per player (award key).
+ *
  * XP of online matches is applied from the match verdict (results.ts settle, also the Room alarm path), once per (match, player), paying for
  * PLAYING: verified = MATCH_XP to both players + WIN_XP to the winner; forfeit = the winner's MATCH_XP + WIN_XP (the leaver gets nothing);
  * conceded = MATCH_XP to the player who reported the loss; disputed / pending / void = nothing. No daily cap; quests (quests.ts) pay through here too.
@@ -24,6 +27,8 @@ export const LEVEL_XP = 1_000;
 export const MATCH_XP = 250;
 export const WIN_XP = 150;
 export const BOT_XP = 100;
+/** One-time prizes of local events, by event key (the server's ArchenemyEvent stages). */
+export const EVENT_XP: Record<string, number> = { archenemy_1: 10_000, archenemy_2: 10_000, archenemy_3: 10_000 };
 /** Cosmetics per level: the client's two reward rows (level n gives items 2n-2 and 2n-1). */
 export const PER_LEVEL = 2;
 /** At most one bot-match award per player in this time: bot XP is the client's word, a real match takes longer. */
@@ -114,12 +119,20 @@ export async function handleMastery(req: Request, env: MasteryEnv, url: URL): Pr
   if (url.pathname === "/mastery/track" && req.method === "GET") {
     return new Response(JSON.stringify(track), { headers: { "content-type": "application/json", "cache-control": "public, max-age=3600" } });
   }
-  if (url.pathname !== "/me/mastery" && url.pathname !== "/me/xp/bot") return null;
+  if (url.pathname !== "/me/mastery" && url.pathname !== "/me/xp/bot" && url.pathname !== "/me/xp/event") return null;
   const player = await authenticate(env, req);
   if (!player) return fail(401, "sign in first");
   if (url.pathname === "/me/mastery") return req.method === "GET" ? Response.json(await me(env, player)) : fail(404, "not found");
   if (req.method !== "POST") return fail(404, "not found");
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  if (url.pathname === "/me/xp/event") {
+    const prize = typeof body.event === "string" && Object.prototype.hasOwnProperty.call(EVENT_XP, body.event) ? EVENT_XP[body.event] : 0;
+    if (!prize) return fail(400, "unknown event");
+    const evKey = "event:" + body.event;
+    await award(env, evKey, player, "event", prize);
+    const got = await env.DB.prepare("SELECT xp FROM xp_events WHERE award = ?1 AND player_id = ?2").bind(evKey, player).first<{ xp: number }>();
+    return Response.json({ gained: got?.xp ?? 0, ...(await me(env, player)) });
+  }
   if (typeof body.match !== "string" || !MATCH.test(body.match)) return fail(400, "bad match id");
   const key = "bot:" + body.match;
   const again = await env.DB.prepare("SELECT 1 FROM xp_events WHERE award = ?1 AND player_id = ?2").bind(key, player).first();

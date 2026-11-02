@@ -174,7 +174,33 @@ namespace ForgeBridge
             return loc != null;
         }
 
-        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc) || TryWins(key, out loc)
+        private const string ArchTitle = "Events/Event_Title_Archenemy_Sparky";
+        private const string ArchDesc = "Events/Event_Desc_Archenemy_Sparky";
+        private const string ArchWins = "Events/Forge_Arch_Wins_";           // + n: the bubble of n cleared stages; Desc_ and Final_ variants
+        private static readonly string[] ArchStages = { "Sparky", "Enraged Sparky", "Sparky Unleashed" };
+
+        /// <summary>Archenemy: Sparky (server ArchenemyEvent): the event's title and text, and its win track of three stages.</summary>
+        private static bool TryArchenemy(string key, out string loc)
+        {
+            loc = null;
+            if (key == null) return false;
+            if (key == ArchTitle) loc = "Archenemy: Sparky";
+            else if (key == ArchDesc)
+                loc = "Three Brawl matches against Sparky, the Archenemy: Sparky, Enraged Sparky and Sparky Unleashed. He plays first, starts with more life, brings the power nine and sets a scheme in motion every turn. Each stage you beat for the first time pays 10,000 Mastery XP. Lose as often as you like.";
+            else if (key.StartsWith(ArchWins))
+            {
+                string rest = key.Substring(ArchWins.Length);
+                bool desc = rest.StartsWith("Desc_"), fin = rest.StartsWith("Final_");
+                string num = desc ? rest.Substring(5) : fin ? rest.Substring(6) : rest;
+                int n;
+                if (!int.TryParse(num, out n) || n < 0 || n > 3) return false;
+                if (desc || fin) loc = n == 0 ? "Your record starts here: face Sparky." : "Beat " + ArchStages[n - 1] + " for the first time to earn 10,000 Mastery XP (once)." + (n == 3 ? " You can keep playing him." : "");
+                else loc = ArchStages[0];
+            }
+            return loc != null;
+        }
+
+        private static bool TryGet(string key, out string loc) => Text.TryGetValue(key, out loc) || TryDraft(key, out loc) || TryQueue(key, out loc) || TryWins(key, out loc) || TryArchenemy(key, out loc)
             || TryMastery(key, out loc);
 
         private const string TrackTitle = "MainNav/BattlePass/BattlePass_";

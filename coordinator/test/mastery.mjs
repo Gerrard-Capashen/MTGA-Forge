@@ -91,6 +91,17 @@ r = await bot(A, "forge-1");
 check(r.body.gained === 100 && r.body.xp === 100, "the same bot match id pays once");
 check((await bot(A, "bad id!")).status === 400, "a malformed bot match id is refused");
 
+// ---- event prizes (Archenemy: Sparky): 10,000 XP per stage, once each
+const ev = (p, event) => api("POST", "/me/xp/event", { event }, p.token);
+const P = await player("prize");
+r = await ev(P, "archenemy_1");
+check(r.status === 200 && r.body.gained === 10000 && r.body.xp === 10000 && r.body.level === 10, "the first Sparky stage pays 10,000 XP");
+r = await ev(P, "archenemy_1");
+check(r.body.gained === 10000 && r.body.xp === 10000, "the same stage pays once");
+r = await ev(P, "archenemy_2");
+check(r.body.xp === 20000, "the second stage pays its own 10,000 XP");
+check((await ev(P, "archenemy_9")).status === 400 && (await api("POST", "/me/xp/event", { event: "archenemy_3" })).status === 401, "an unknown event is refused, and a prize needs a sign-in");
+
 // ---- online matches (casual)
 let [a, b] = await play(A, B, "win", "CasualPlay_Modern");
 let va = await verdict(A, a), vb = await verdict(B, b);

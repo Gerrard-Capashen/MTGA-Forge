@@ -17,6 +17,7 @@ using Mono.Cecil.Cil;
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
+//   6i. DuelScene_AvatarView.Init: Enraged Sparky / Sparky Unleashed portraits tinted (ForgeBridge.AvatarTint)
 //   6e3. DeckViewUtilities.SortDeckViewInfo: decks saved in the played format first (ForgeBridge.DeckOrder)
 //   6h. PromptTextProvider.GetPromptText(Prompt): prompts with Forge's own wording (ForgeBridge.PromptText)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
@@ -253,6 +254,19 @@ ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Ldarg_0));
 ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Call, drawTweaks));
 Console.WriteLine("patched ZoneTransferGroup.Update -> " + drawTweaks.FullName);
 
+//   6i. DuelScene_AvatarView.Init(player, ...): at the start, ForgeBridge.AvatarTint.Apply(this, player): the opponent's portrait is tinted red /
+//      bright yellow for Enraged Sparky / Sparky Unleashed (Archenemy: Sparky). Throws if Init or the _portrait field moved.
+var avatarTint = core.ImportReference(bridge.GetType("ForgeBridge.AvatarTint").Methods.Single(m => m.Name == "Apply"));
+var avatarView = core.GetType("DuelScene_AvatarView");
+if (!avatarView.Fields.Any(f => f.Name == "_portrait")) throw new InvalidOperationException("DuelScene_AvatarView no longer has _portrait: update AvatarTint");
+var avatarInit = avatarView.Methods.Single(m => m.Name == "Init" && m.Parameters.Count > 0 && m.Parameters[0].ParameterType.Name == "MtgPlayer");
+var avp = avatarInit.Body.GetILProcessor();
+var avFirst = avatarInit.Body.Instructions[0];
+avp.InsertBefore(avFirst, avp.Create(OpCodes.Ldarg_0));
+avp.InsertBefore(avFirst, avp.Create(OpCodes.Ldarg_1));
+avp.InsertBefore(avFirst, avp.Create(OpCodes.Call, avatarTint));
+Console.WriteLine("patched DuelScene_AvatarView.Init -> " + avatarTint.FullName);
+
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: at the start, ForgeBridge.TooltipTweaks.Apply(this) takes the all-caps style off the text
 //      (the prompt tooltip of a greyed-out Submit button shouted its warning).
 var tooltipTweaks = core.ImportReference(bridge.GetType("ForgeBridge.TooltipTweaks").Methods.Single(m => m.Name == "Apply"));
@@ -278,6 +292,23 @@ gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Brfalse, gpPop));
 gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Ret));
 gpp.InsertBefore(gpFirst, gpPop);
 Console.WriteLine("patched PromptTextProvider.GetPromptText(Prompt) -> " + promptCustom.FullName);
+
+//   6j. SqlArtCropProvider.GetCrop(artPath, format): at the start, ForgeBridge.CardArt.Crop(this, artPath, format); a non-null result is returned
+//      (art we serve keeps its proportions in frames of another shape, e.g. a scheme emblem on hover).
+var cropHook = core.ImportReference(bridge.GetType("ForgeBridge.CardArt").Methods.Single(m => m.Name == "Crop"));
+var getCrop = core.GetType("Wotc.Mtga.Cards.ArtCrops.SqlArtCropProvider").Methods.Single(m => m.Name == "GetCrop" && m.Parameters.Count == 2);
+var gcp = getCrop.Body.GetILProcessor();
+var gcFirst = getCrop.Body.Instructions[0];
+var gcPop = gcp.Create(OpCodes.Pop);
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Ldarg_0));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Ldarg_1));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Ldarg_2));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Call, cropHook));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Dup));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Brfalse, gcPop));
+gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Ret));
+gcp.InsertBefore(gcFirst, gcPop);
+Console.WriteLine("patched SqlArtCropProvider.GetCrop -> " + cropHook.FullName);
 
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);

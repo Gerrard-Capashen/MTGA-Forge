@@ -37,6 +37,42 @@ namespace ForgeBridge
             return m.Success && int.TryParse(m.Groups[1].Value, out int id) && id >= MinArtId ? id : 0;
         }
 
+        private static readonly Dictionary<string, Wotc.Mtga.Cards.ArtCrops.ArtCrop> crops = new Dictionary<string, Wotc.Mtga.Cards.ArtCrops.ArtCrop>();
+        /// <summary>A crop lookup names the art without an extension ("Assets/Core/CardArt/901000/9011370_AIF").</summary>
+        private static readonly Regex CropPath = new Regex(@"^Assets/Core/CardArt/\d{6}/(\d{7,9})_AIF(\.(tga|jpg|png))?$", RegexOptions.Compiled);
+                private static readonly HashSet<string> loggedFormats = new HashSet<string>();
+        private const float SourceRatio = 626f / 457f;      // Scryfall's art crops
+
+        /// <summary>
+        /// Hook (SqlArtCropProvider.GetCrop): our art (Scryfall crops, 1.37:1, no crop rows in the client's database) is stretched over a frame of any other
+        /// shape (an emblem's hover card is taller than the board's): a centred crop to the format's aspect keeps its proportions. Null = the client's own answer.
+        /// </summary>
+        public static Wotc.Mtga.Cards.ArtCrops.ArtCrop Crop(object provider, string artPath, string format)
+        {
+            try
+            {
+                if (artPath == null || !CropPath.IsMatch(artPath) || !int.TryParse(CropPath.Match(artPath).Groups[1].Value, out int cropArt) || cropArt < MinArtId) return null;
+                lock (crops)
+                {
+                    if (loggedFormats.Add(format ?? "<null>")) Log.Info("art crop requested: format '" + (format ?? "<null>") + "' ratio " + ((provider as Wotc.Mtga.Cards.ArtCrops.IArtCropProvider)?.GetFormat(format)?.Ratio.ToString() ?? "unknown") + " path " + artPath);
+                    if (format == null) return null;
+                    if (crops.TryGetValue(format, out var cached)) return cached;
+                    var f = (provider as Wotc.Mtga.Cards.ArtCrops.IArtCropProvider)?.GetFormat(format);
+                    Wotc.Mtga.Cards.ArtCrops.ArtCrop crop = null;
+                    if (f != null && f.Ratio > 0.05f && Math.Abs(f.Ratio - SourceRatio) / SourceRatio > 0.02f)
+                    {
+                        float r = f.Ratio;
+                        crop = new Wotc.Mtga.Cards.ArtCrops.ArtCrop();
+                        if (r < SourceRatio) { float xs = r / SourceRatio; crop.ScaleOffset = new Vector4(xs, 1f, (1f - xs) / 2f, 0f); }
+                        else { float ys = SourceRatio / r; crop.ScaleOffset = new Vector4(1f, ys, 0f, (1f - ys) / 2f); }
+                    }
+                    crops[format] = crop;
+                    return crop;
+                }
+            }
+            catch (Exception e) { Log.Error("CardArt.Crop: " + e); return null; }
+        }
+
         /// <summary>Hook (AssetLoader.HaveAsset/ReleaseAsset/AddReferenceCount): the path is one of ours, not a bundle asset.</summary>
         public static bool Owns(string path) => ArtId(path) != 0 || EventSet(path) != null || CosmeticIcons.Owns(path);
 
@@ -94,10 +130,20 @@ namespace ForgeBridge
             try { name = ctx?.PlayerEvent?.EventUXInfo?.PublicEventName; } catch (Exception) { }
             string prefix = name == null ? null : name.StartsWith("QuickDraft_", StringComparison.Ordinal) ? "QuickDraft_"
                 : name.StartsWith("PremierDraft_", StringComparison.Ordinal) ? "PremierDraft_" : null;
+            if (name == "Archenemy_Sparky") return ArchenemyKey(current, suffix);
             if (prefix == null) return current;
             // a premier draft has its own tile ("<SET>-p"), so it differs from the same set's quick draft
             string key = name.Substring(prefix.Length) + (prefix == "PremierDraft_" ? "-p" : "") + suffix;
             if (eventFailed.Contains(key)) return current;      // no art for it this session: the client's own
+            if (!string.IsNullOrEmpty(current)) eventDefaults[key] = current;
+            return "forge-event-art/" + key + ".jpg";
+        }
+
+        /// <summary>Archenemy: Sparky has its own art (the art server's "SPARKY" key: an MH3 illustration for the tile, a FRA one for the page).</summary>
+        private static string ArchenemyKey(string current, string suffix)
+        {
+            string key = "SPARKY" + suffix;
+            if (eventFailed.Contains(key)) return current;
             if (!string.IsNullOrEmpty(current)) eventDefaults[key] = current;
             return "forge-event-art/" + key + ".jpg";
         }
