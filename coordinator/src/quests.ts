@@ -22,6 +22,7 @@ export const POOL: { id: string; metric: string; goal: number; xp: number }[] = 
   { id: "PlayModern", metric: "MatchPlayed_Modern", goal: 2, xp: 500 },
   { id: "PlayPioneer", metric: "MatchPlayed_Pioneer", goal: 2, xp: 500 },
   { id: "WinStandard", metric: "MatchWon_Standard", goal: 1, xp: 500 },
+  { id: "PlayMomir", metric: "MatchPlayed_Momir", goal: 2, xp: 500 },
   { id: "PlayRanked", metric: "RankedPlayed", goal: 2, xp: 750 },
   { id: "PlayDraft", metric: "DraftPlayed", goal: 2, xp: 750 },
   { id: "AttackCreatures", metric: "CreaturesAttacked", goal: 20, xp: 500 },

@@ -20,6 +20,7 @@ using Mono.Cecil.Cil;
 //   6k. VSScreen.SetPlayerNames: the versus screen's opponent avatar tinted the same way (ForgeBridge.AvatarTint.ApplyVs)
 //   6i. DuelScene_AvatarView.Init: Enraged Sparky / Sparky Unleashed portraits tinted (ForgeBridge.AvatarTint)
 //   6e3. DeckViewUtilities.SortDeckViewInfo: decks saved in the played format first (ForgeBridge.DeckOrder)
+//   6e4. FindMatchBladeView.UpdateViewFromSelection: the Momir Basic queue picks the Momir deck itself (ForgeBridge.MomirDeck)
 //   6h. PromptTextProvider.GetPromptText(Prompt): prompts with Forge's own wording (ForgeBridge.PromptText)
 //   6e. NavBarController.UpdateButtons: no Packs / Store / Mastery tabs or currency counters (ForgeBridge.NavTweaks)
 // and to AK.Wwise.Unity.API.dll:
@@ -241,6 +242,23 @@ foreach (var ret in sortDecks.Body.Instructions.Where(i => i.OpCode == OpCodes.R
     sdp.InsertAfter(call, sdp.Create(OpCodes.Ret));
 }
 Console.WriteLine("patched DeckViewUtilities.SortDeckViewInfo -> " + deckOrder.FullName);
+
+//   6e4. FindMatchBladeView.UpdateViewFromSelection: before its return, ForgeBridge.MomirDeck.Apply(this) selects the Momir deck
+//      when the Momir Basic queue is selected (the blade enables Play only with a deck; Momir needs no choice).
+var momirDeck = core.ImportReference(bridge.GetType("ForgeBridge.MomirDeck").Methods.Single(m => m.Name == "Apply"));
+var fmView = core.GetType("Wizards.Mtga.PlayBlade.FindMatchBladeView");
+if (!fmView.Fields.Any(f => f.Name == "_selectionInfo") || !fmView.Fields.Any(f => f.Name == "_data") || !fmView.Methods.Any(m => m.Name == "SendUpdatedSelection"))
+    throw new InvalidOperationException("FindMatchBladeView changed: update MomirDeck");
+var fmUpdate = fmView.Methods.Single(m => m.Name == "UpdateViewFromSelection");
+var fmp = fmUpdate.Body.GetILProcessor();
+foreach (var ret in fmUpdate.Body.Instructions.Where(i => i.OpCode == OpCodes.Ret).ToList())
+{
+    ret.OpCode = OpCodes.Ldarg_0;          // jumps to the ret now reach the hook too
+    var call = fmp.Create(OpCodes.Call, momirDeck);
+    fmp.InsertAfter(ret, call);
+    fmp.InsertAfter(call, fmp.Create(OpCodes.Ret));
+}
+Console.WriteLine("patched FindMatchBladeView.UpdateViewFromSelection -> " + momirDeck.FullName);
 
 //   6f. ZoneTransferGroup.Update: at the start, ForgeBridge.DrawTweaks.Apply(this) shortens the stagger cap of big draw groups
 //      (a mulligan's 7 new cards are dealt in 0.5 s instead of 1.5 s). Throws if the fields it sets moved.

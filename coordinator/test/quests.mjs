@@ -30,7 +30,7 @@ const swap = (p, questId) => api("POST", "/me/quests/swap", { questId }, p.token
 const mastery = async p => (await api("GET", "/me/mastery", undefined, p.token)).body;
 // the counter a quest kind adds up (as in quests.ts)
 const METRIC = { PlayVintage: "MatchPlayed_Vintage", PlayLegacy: "MatchPlayed_Legacy", PlayPauper: "MatchPlayed_Pauper", PlayPremodern: "MatchPlayed_Premodern", PlayModern: "MatchPlayed_Modern",
-  PlayPioneer: "MatchPlayed_Pioneer", WinStandard: "MatchWon_Standard", PlayRanked: "RankedPlayed", PlayDraft: "DraftPlayed", AttackCreatures: "CreaturesAttacked",
+  PlayPioneer: "MatchPlayed_Pioneer", PlayMomir: "MatchPlayed_Momir", WinStandard: "MatchWon_Standard", PlayRanked: "RankedPlayed", PlayDraft: "DraftPlayed", AttackCreatures: "CreaturesAttacked",
   CastWhiteSpells: "WhiteSpellsCast", CastBlueSpells: "BlueSpellsCast", CastBlackSpells: "BlackSpellsCast", CastRedSpells: "RedSpellsCast", CastGreenSpells: "GreenSpellsCast",
   CastInstantsSorceries: "InstantsAndSorceriesCast", CastCreatures: "CreaturesCast", PlayLands: "LandsPlayed", DealDamage: "DamageDealt",
   KillCreatures: "OpponentCreaturesDied", CastArtifactsEnchantments: "ArtifactsAndEnchantmentsCast" };

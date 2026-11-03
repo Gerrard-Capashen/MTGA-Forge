@@ -32,6 +32,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormat/Premodern", "Premodern" },
             { "MainNav/DeckFormat/Commander", "Commander" },
             { "MainNav/DeckFormat/Brawl", "Brawl" },
+            { "MainNav/DeckFormat/Momir", "Momir Basic" },
             { "MainNav/DeckFormat/Draft", "Draft" },
             { "MainNav/DeckFormat/Ambiguous", "All cards" },
             { "MainNav/Settings/ReportABug/Support_URL", "https://mtgaforge.com" },
@@ -45,6 +46,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Vintage", "Every card, with Forge's Vintage restricted list (one copy)." },
             { "MainNav/DeckFormatInfo/Premodern", "Cards from Fourth Edition to Scourge (the 1995-2003 card frame), with Forge's Premodern ban list." },
             { "MainNav/DeckFormatInfo/Brawl", "Commander for two: a legendary creature or planeswalker plus 99 other cards of its colors, one copy of each (basic lands excepted), no sideboard. 25 life, free first mulligan. Commander's card pool and ban list; Commander decks can play it too." },
+            { "MainNav/DeckFormatInfo/Momir", "Momir Basic: 60 basic lands, nothing else. Momir Vig's avatar turns lands into creatures." },
             { "MainNav/DeckFormatInfo/Pauper", "Cards printed at common, with Forge's Pauper ban list." },
             { "MainNav/DeckFormatInfo/Commander", "100-card singleton deck led by a legendary commander. Deck building only: matches ignore the command zone." },
             { "MainNav/DeckFormatInfo/Historic", "Historic as Forge defines it." },
@@ -69,6 +71,7 @@ namespace ForgeBridge
             { "Forge/Quest/PlayModern_Text", "Play {quantity} Modern matches" },
             { "Forge/Quest/PlayPioneer_Text", "Play {quantity} Pioneer matches" },
             { "Forge/Quest/WinStandard_Text", "Win {quantity} Standard match" },
+            { "Forge/Quest/PlayMomir_Text", "Play {quantity} Momir Basic matches" },
             { "Forge/Quest/PlayRanked_Text", "Play {quantity} Ranked matches" },
             { "Forge/Quest/PlayDraft_Text", "Play {quantity} draft matches" },
             { "Forge/Quest/AttackCreatures_Text", "Attack with {quantity} creatures" },
@@ -122,7 +125,7 @@ namespace ForgeBridge
         private const string EventTitle = "Events/Event_Title_";
         private const string EventDesc = "Events/Event_Desc_";
 
-        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Brawl" };
+        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Brawl", "Momir" };
 
         /// <summary>
         /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; / RankedPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
@@ -142,6 +145,14 @@ namespace ForgeBridge
             bool bo3 = format.EndsWith("_BO3");
             if (bo3) format = format.Substring(0, format.Length - 4);
             if (System.Array.IndexOf(QueueFormats, format) < 0) return false;
+            if ((format == "Momir") != (mode == "MomirPlay")) return false;       // Momir Basic has its own queue and no other
+            if (mode == "MomirPlay")
+            {
+                if (bo3) return false;
+                loc = title ? "Momir Basic" : "Play Momir Basic against another player (or, if nobody is queueing, the Forge AI): a deck of 60 basic lands and Momir Vig's avatar. "
+                    + "Pay X mana and discard a card to create a copy of a random creature with mana value X, once each turn. Casual: Mastery XP only, no rank.";
+                return true;
+            }
             if (bo3 && (mode != "BotPlay" || format == "Brawl")) return false;       // Brawl is best of one
             if (mode == "RankedPlay" && format == "Brawl") return false;
             if (mode == "BotPlay" && bo3)
