@@ -1,20 +1,20 @@
 {
     "schema":  1,
-    "released":  "2026-11-03T16:54:10.1621234-03:00",
-    "commit":  "26b9af4",
-    "sha256":  "be8c3e90f40b37545fa222c27bdb76c9eb770ac4cb2e13da94b6c2c90324ecb6",
-    "size":  132842419,
-    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.03-1954/MTGA-Forge.zip",
-    "notes":  "- New: Momir Basic casual queue: 60 basic lands and a random creature every turn, against players or a bot, plus a daily quest.\n- New: Archenemy event: beat Sparky in three Brawl matches as he sets his schemes in motion, with 10,000 Mastery XP for each stage\u0027s first win.\n- Fix: planeswalkers in hand, library or on the stack show their starting loyalty.\n- Fix: loyalty abilities granted by other cards (Ichormoon Gauntlet) now work.\n- Fix: you can now attack planeswalkers.\n- Fix: cards with granted affinity (Sami, Mycosynth Golem) are offered and shown at the reduced cost.\n- Fix: the Brawl deck format is labelled Brawl.",
+    "released":  "2026-11-03T18:41:45.5680515-03:00",
+    "commit":  "1bfda7b",
+    "sha256":  "7f8f80b7e6a37072f14cea22f06bc0c7ac25f79586a7a0924b169646582e3987",
+    "size":  132842020,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.03-2141/MTGA-Forge.zip",
+    "notes":  "- Fix: works with the latest MTG Arena update (the patch failed after the update).\n- Fix: your custom boot logo and loading screen are back after the update.\n- New: Star Trek cosmetics (sleeves, emotes, titles, pets) added to the mastery track.\n- Fix: each half of a split card (Beck // Call, Fire // Ice) and Room now shows its own art.",
     "scan":  {
-                 "at":  "2026-11-03T20:17:40.4410289Z",
-                 "zipReport":  "https://www.virustotal.com/gui/file/be8c3e90f40b37545fa222c27bdb76c9eb770ac4cb2e13da94b6c2c90324ecb6",
-                 "zipEngines":  39,
+                 "at":  "2026-11-03T23:11:19.9968710Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/7f8f80b7e6a37072f14cea22f06bc0c7ac25f79586a7a0924b169646582e3987",
+                 "zipEngines":  37,
                  "zipMalicious":  0,
                  "zipSuspicious":  0,
-                 "exeReport":  "https://www.virustotal.com/gui/file/018f64a40844f059d3f8c21b55ea813f8264022cb06e035edfa650e7cc304a84",
+                 "exeReport":  "https://www.virustotal.com/gui/file/8ef77f97ddbc175eaf75ece5a0ce708d23712a88af16c92db634baf3101b8561",
                  "exeEngines":  71,
-                 "exeMalicious":  2,
+                 "exeMalicious":  1,
                  "exeSuspicious":  0
              }
 }
