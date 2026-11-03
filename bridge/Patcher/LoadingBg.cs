@@ -5,14 +5,14 @@ using System.Linq;
 using System.Text;
 
 // Patcher loadingbg <MTGA_Data> <texture name>
-// The loading screen background (AssetLoading_FRA, and its handheld twin) is a 1920x1080 BC7 texture in resources.assets.resS. The art we want
+// The loading screen background (AssetLoading_<set>, e.g. FRA or TRK, and its handheld twin) is a 1920x1080 BC7 texture in resources.assets.resS. The art we want
 // (e.g. BackgroundFull_Queue_Play_Brawl) is a texture of the same size and format in one of the player's own downloaded asset bundles
 // (Downloads\AssetBundle\Bucket_Event.BackgroundPayload_*.mtga, Unity FS with LZ4 blocks). Its raw bytes are copied over the old ones in place:
 // no re-encoding, no offset moves, and nothing of Wizards' art travels with our package.
 static class LoadingBg
 {
     const int W = 1920, H = 1080, Size = W * H, TexBC7 = 25;
-    static readonly string[] Targets = { "AssetLoading_FRA", "AssetLoading_FRA_handheld" };
+    static readonly System.Text.RegularExpressions.Regex MainPattern = new System.Text.RegularExpressions.Regex("^AssetLoading_[A-Z0-9]{3}$");   // the set code changes (FRA, TRK...)
 
     public static void Apply(string dataDir, string artName)
     {
@@ -21,6 +21,9 @@ static class LoadingBg
         var textures = new List<BootLogo.Tex>();
         foreach (var o in Tools.Objects(b).Where(o => o.cid == 28)) textures.Add(BootLogo.ParseTexture(b, (int)o.start, (int)o.size));
         var dests = new List<BootLogo.Tex>();
+        var main = textures.Where(x => MainPattern.IsMatch(x.Name)).ToList();
+        if (main.Count != 1) throw new Exception("expected one AssetLoading_<set> texture, found " + main.Count);
+        var Targets = new[] { main[0].Name, main[0].Name + "_handheld" };
         foreach (var name in Targets)
         {
             var t = textures.Where(x => x.Name == name).ToList();

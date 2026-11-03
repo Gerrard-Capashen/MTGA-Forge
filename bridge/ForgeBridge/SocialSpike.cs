@@ -145,14 +145,14 @@ namespace ForgeBridge
         {
             var f = Friends.Find(x => x.FullName == fullPlayerName);
             Trace("GetPlayerIdFromFullPlayerName " + fullPlayerName + " -> " + (f?.PlayerId ?? "(unknown)"));
-            return f != null ? new SimplePromise<string>(f.PlayerId) : new SimplePromise<string>();
+            return f != null ? new SimplePromise<string>(f.PlayerId) : (Promise<string>)new OpenPromise<string>();
         }
 
         public Promise<string> GetAccountIdFromFullPlayerName(string fullPlayerName)
         {
             var f = Friends.Find(x => x.FullName == fullPlayerName);
             Trace("GetAccountIdFromFullPlayerName " + fullPlayerName + " -> " + (f?.SocialId ?? "(unknown)"));
-            return f != null ? new SimplePromise<string>(f.SocialId) : new SimplePromise<string>();
+            return f != null ? new SimplePromise<string>(f.SocialId) : (Promise<string>)new OpenPromise<string>();
         }
 
         public void ForwardNotificationAlert(SocialMessage socialMessage) { Trace("ForwardNotificationAlert"); }

@@ -348,7 +348,7 @@ namespace ForgeBridge
         {
             var friend = Friends.Find(f => f.FullName == fullName);
             if (friend != null) return new SimplePromise<string>(friend.PlayerId);
-            var promise = new SimplePromise<string>();
+            var promise = new OpenPromise<string>();
             Post("resolve", new JObject { ["full"] = fullName }, answer =>
             {
                 if (answer["playerId"] != null) promise.SetResult((string)answer["playerId"]);

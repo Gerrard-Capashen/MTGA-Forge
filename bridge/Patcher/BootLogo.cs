@@ -8,7 +8,7 @@ using System.Text;
 
 // Patcher bootlogo <MTGA_Data> <logo.png>
 // The Arena logo of the boot/login screen exists twice in resources.assets: the default one (MTGA_Logo_White) is a sprite inside the
-// "Login" sprite atlas (DXT5), the set-promo one (AssetLoad_Logo_FRA) is a texture of its own (RGBA32). Both are 419x173. The pixels
+// "Login" sprite atlas (DXT5), the set-promo one (AssetLoad_Logo_<set>, e.g. FRA or TRK) is a texture of its own (RGBA32). Both are 419x173. The pixels
 // live in resources.assets.resS, so nothing in resources.assets moves: the logo is written into the raw texture data, in place.
 // The original bytes of the two places go to resources.assets.resS.bootlogo.orig first (a few hundred KB, not a copy of the 80 MB resS);
 // every run starts from them, so running again, or with another logo, never degrades the atlas (DXT5 is lossy).
@@ -16,7 +16,8 @@ static class BootLogo
 {
     const int W = 419, H = 173;
     const int SpriteAtlasClass = 687078895;
-    const string PromoName = "AssetLoad_Logo_FRA";
+    // the set code of the promo texture changes with the set Arena promotes (FRA, TRK...), so it is found by pattern
+    static readonly System.Text.RegularExpressions.Regex PromoPattern = new System.Text.RegularExpressions.Regex("^AssetLoad_Logo_[A-Z0-9]{3}$");
     const int TexRGBA32 = 4, TexDXT5 = 12;
 
     internal class Tex
@@ -32,7 +33,8 @@ static class BootLogo
         var b = File.ReadAllBytes(assets);
         var textures = new List<Tex>();
         foreach (var o in Tools.Objects(b).Where(o => o.cid == 28)) { var t = ParseTexture(b, (int)o.start, (int)o.size); t.Id = o.id; textures.Add(t); }
-        var promo = textures.Where(t => t.Name == PromoName).ToList();
+        var promo = textures.Where(t => PromoPattern.IsMatch(t.Name)).ToList();
+        var PromoName = promo.Count == 1 ? promo[0].Name : "AssetLoad_Logo_???";
         var atlas = textures.Where(t => t.Name.StartsWith("sactx-") && t.Name.Contains("-Login-")).ToList();
         if (promo.Count != 1 || atlas.Count != 1) throw new Exception("expected one " + PromoName + " texture and one Login sprite atlas, found " + promo.Count + " / " + atlas.Count);
         var pt = promo[0]; var at = atlas[0];
