@@ -9,6 +9,7 @@
 /tools/capture/
 /tools/*.log
 /tools/*.err
+/tools/*.out
 /tools/shot.png
 /tools/cp.txt
 # Build output
