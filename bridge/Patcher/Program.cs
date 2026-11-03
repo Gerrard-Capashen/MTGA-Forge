@@ -17,6 +17,7 @@ using Mono.Cecil.Cil;
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
+//   6k. VSScreen.SetPlayerNames: the versus screen's opponent avatar tinted the same way (ForgeBridge.AvatarTint.ApplyVs)
 //   6i. DuelScene_AvatarView.Init: Enraged Sparky / Sparky Unleashed portraits tinted (ForgeBridge.AvatarTint)
 //   6e3. DeckViewUtilities.SortDeckViewInfo: decks saved in the played format first (ForgeBridge.DeckOrder)
 //   6h. PromptTextProvider.GetPromptText(Prompt): prompts with Forge's own wording (ForgeBridge.PromptText)
@@ -266,6 +267,15 @@ avp.InsertBefore(avFirst, avp.Create(OpCodes.Ldarg_0));
 avp.InsertBefore(avFirst, avp.Create(OpCodes.Ldarg_1));
 avp.InsertBefore(avFirst, avp.Create(OpCodes.Call, avatarTint));
 Console.WriteLine("patched DuelScene_AvatarView.Init -> " + avatarTint.FullName);
+
+//   6k. VSScreen.SetPlayerNames(): at the start, ForgeBridge.AvatarTint.ApplyVs(this): the versus screen's opponent avatar gets the Sparky stage tint too.
+var vsTint = core.ImportReference(bridge.GetType("ForgeBridge.AvatarTint").Methods.Single(m => m.Name == "ApplyVs"));
+var vsSetNames = core.GetType("VSScreen").Methods.Single(m => m.Name == "SetPlayerNames" && m.Parameters.Count == 0);
+var vsp = vsSetNames.Body.GetILProcessor();
+var vsFirst = vsSetNames.Body.Instructions[0];
+vsp.InsertBefore(vsFirst, vsp.Create(OpCodes.Ldarg_0));
+vsp.InsertBefore(vsFirst, vsp.Create(OpCodes.Call, vsTint));
+Console.WriteLine("patched VSScreen.SetPlayerNames -> " + vsTint.FullName);
 
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: at the start, ForgeBridge.TooltipTweaks.Apply(this) takes the all-caps style off the text
 //      (the prompt tooltip of a greyed-out Submit button shouted its warning).

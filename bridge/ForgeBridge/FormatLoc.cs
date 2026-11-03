@@ -186,7 +186,7 @@ namespace ForgeBridge
             if (key == null) return false;
             if (key == ArchTitle) loc = "Archenemy: Sparky";
             else if (key == ArchDesc)
-                loc = "Three Brawl matches against Sparky, the Archenemy: Sparky, Enraged Sparky and Sparky Unleashed. He plays first, starts with more life, brings the power nine and sets a scheme in motion every turn. Each stage you beat for the first time pays 10,000 Mastery XP. Lose as often as you like.";
+                loc = "Three Brawl/Commander matches against Sparky, the Archenemy: Sparky, Enraged Sparky and Sparky Unleashed. He plays first, starts with more life, brings the power nine and sets a scheme in motion every turn. Each stage you beat for the first time pays 10,000 Mastery XP. Lose as often as you like.";
             else if (key.StartsWith(ArchWins))
             {
                 string rest = key.Substring(ArchWins.Length);
