@@ -139,9 +139,16 @@ try {
     $deadline = (Get-Date).AddSeconds(180)
     while ($true) {
         if ($server.HasExited) { Stop-WithMessage "The server stopped at start-up (exit code $($server.ExitCode)):`n$((Get-Content "$serverLog.err" -ErrorAction SilentlyContinue | Select-Object -First 8) -join "`n")`nLog: $serverLog" }
-        $up = @(Get-NetTCPConnection -State Listen -LocalPort $ports -OwningProcess $server.Id -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique)
+        # .NET's listener list, not Get-NetTCPConnection: that one goes through WMI, which comes back empty or partial on some machines (the server was up, the launcher saw none of its ports)
+        # (the ports were free when the server started, so a listener on one of them is the server's)
+        $up = @([Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() | ForEach-Object { $_.Port } | Where-Object { $ports -contains $_ } | Sort-Object -Unique)
         if ($up.Count -eq $ports.Count) { break }
-        if ((Get-Date) -gt $deadline) { Stop-WithMessage "The server did not open its ports within 3 minutes (open: $($up -join ', ')). Log: $serverLog" }
+        # backup for a port list that comes back wrong: the server prints this as its last start-up line, after the Match Door and the Front Door
+        if (Select-String -Path $serverLog -Pattern 'Art server listening' -SimpleMatch -Quiet -ErrorAction SilentlyContinue) { Write-Host '(the server log says it is up; the port list did not show all ports)'; break }
+        if ((Get-Date) -gt $deadline) {
+            $tail = @(Get-Content $serverLog -Tail 15 -ErrorAction SilentlyContinue) + @(Get-Content "$serverLog.err" -Tail 15 -ErrorAction SilentlyContinue)
+            Stop-WithMessage "The server did not open its ports within 3 minutes (open: $($up -join ', '); expected: $($ports -join ', ')). Last server output:`n$($tail -join "`n")`nLog: $serverLog"
+        }
         Start-Sleep -Milliseconds 500
     }
     Write-Host "[$Name, instance $Instance] Server ready on ports $($ports -join ', ')."
