@@ -1,20 +1,20 @@
 {
     "schema":  1,
-    "released":  "2026-11-03T18:41:45.5680515-03:00",
-    "commit":  "1bfda7b",
-    "sha256":  "7f8f80b7e6a37072f14cea22f06bc0c7ac25f79586a7a0924b169646582e3987",
-    "size":  132842020,
-    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.03-2141/MTGA-Forge.zip",
-    "notes":  "- Fix: works with the latest MTG Arena update (the patch failed after the update).\n- Fix: your custom boot logo and loading screen are back after the update.\n- New: Star Trek cosmetics (sleeves, emotes, titles, pets) added to the mastery track.\n- Fix: each half of a split card (Beck // Call, Fire // Ice) and Room now shows its own art.",
+    "released":  "2026-11-04T12:08:05.4290334-03:00",
+    "commit":  "3338b5d",
+    "sha256":  "2b30ea2bccfdbfd6789e5d5329a524655631a45376be92c829475cce57ee50ad",
+    "size":  132844297,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.04-1508/MTGA-Forge.zip",
+    "notes":  "- Fix: the launcher no longer reports an error and stops a server that did start (it could miss the server\u0027s ports on some PCs).\n- Fix: duel animations keep up when many triggers go on the stack at once (Vorinclex and similar).",
     "scan":  {
-                 "at":  "2026-11-03T23:11:19.9968710Z",
-                 "zipReport":  "https://www.virustotal.com/gui/file/7f8f80b7e6a37072f14cea22f06bc0c7ac25f79586a7a0924b169646582e3987",
-                 "zipEngines":  37,
+                 "at":  "2026-11-04T15:14:26.0771653Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/2b30ea2bccfdbfd6789e5d5329a524655631a45376be92c829475cce57ee50ad",
+                 "zipEngines":  29,
                  "zipMalicious":  0,
                  "zipSuspicious":  0,
-                 "exeReport":  "https://www.virustotal.com/gui/file/8ef77f97ddbc175eaf75ece5a0ce708d23712a88af16c92db634baf3101b8561",
-                 "exeEngines":  71,
-                 "exeMalicious":  1,
+                 "exeReport":  "https://www.virustotal.com/gui/file/d3c6aac88443dfb57af6829e5d80f243ef3d7d5f9b12970160c9dd69bd4ec913",
+                 "exeEngines":  70,
+                 "exeMalicious":  2,
                  "exeSuspicious":  0
              }
 }
