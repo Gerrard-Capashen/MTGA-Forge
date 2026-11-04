@@ -16,6 +16,7 @@ using Mono.Cecil.Cil;
 //   6c. SettingsMenu.Open: ForgeBridge.SettingsTweaks.Apply (options menu without log out / privacy entries)
 //   6d. ProfileDetailsPanel: no set collection entry (ForgeBridge.ProfileTweaks; UpdateSetCollectionBadge and SetCollectionClicked emptied)
 //   6f. ZoneTransferGroup.Update: faster stagger for big draws (ForgeBridge.DrawTweaks)
+//   6l. UXEventQueue.Update + SplineMovementSystem.UpdateMovement: animation queue fast-forwards with a backlog of stack events (ForgeBridge.QueueTweaks)
 //   6g. TooltipSystem.Tooltip.SetAndSizeTextRect: tooltips are not shown in capitals (ForgeBridge.TooltipTweaks)
 //   6k. VSScreen.SetPlayerNames: the versus screen's opponent avatar tinted the same way (ForgeBridge.AvatarTint.ApplyVs)
 //   6i. DuelScene_AvatarView.Init: Enraged Sparky / Sparky Unleashed portraits tinted (ForgeBridge.AvatarTint)
@@ -272,6 +273,26 @@ var ztFirst = ztUpdate.Body.Instructions[0];
 ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Ldarg_0));
 ztp.InsertBefore(ztFirst, ztp.Create(OpCodes.Call, drawTweaks));
 Console.WriteLine("patched ZoneTransferGroup.Update -> " + drawTweaks.FullName);
+
+//   6l. UXEventQueue.Update / SplineMovementSystem.UpdateMovement: ForgeBridge.QueueTweaks fast-forwards the animation queue while stack events pile up
+//      (15 Vorinclex triggers): Tick scales Update's dt, Move sets the spline system's speed modifier. Throws if the methods moved.
+var queueTick = core.ImportReference(bridge.GetType("ForgeBridge.QueueTweaks").Methods.Single(m => m.Name == "Tick"));
+var queueMove = core.ImportReference(bridge.GetType("ForgeBridge.QueueTweaks").Methods.Single(m => m.Name == "Move"));
+var uxQueue = core.GetType("Wotc.Mtga.DuelScene.UXEvents.UXEventQueue");
+var uxUpdate = uxQueue.Methods.Single(m => m.Name == "Update" && m.Parameters.Count == 1);
+var uxp = uxUpdate.Body.GetILProcessor();
+var uxFirst = uxUpdate.Body.Instructions[0];
+uxp.InsertBefore(uxFirst, uxp.Create(OpCodes.Ldarg_0));
+uxp.InsertBefore(uxFirst, uxp.Create(OpCodes.Ldarg_1));
+uxp.InsertBefore(uxFirst, uxp.Create(OpCodes.Call, queueTick));
+uxp.InsertBefore(uxFirst, uxp.Create(OpCodes.Starg_S, uxUpdate.Parameters[0]));
+var splineSys = core.GetType("MovementSystem.SplineMovementSystem");
+var splineUpdate = splineSys.Methods.Single(m => m.Name == "UpdateMovement" && m.Parameters.Count == 0);
+var spp = splineUpdate.Body.GetILProcessor();
+var spFirst = splineUpdate.Body.Instructions[0];
+spp.InsertBefore(spFirst, spp.Create(OpCodes.Ldarg_0));
+spp.InsertBefore(spFirst, spp.Create(OpCodes.Call, queueMove));
+Console.WriteLine("patched UXEventQueue.Update + SplineMovementSystem.UpdateMovement -> " + queueTick.FullName);
 
 //   6i. DuelScene_AvatarView.Init(player, ...): at the start, ForgeBridge.AvatarTint.Apply(this, player): the opponent's portrait is tinted red /
 //      bright yellow for Enraged Sparky / Sparky Unleashed (Archenemy: Sparky). Throws if Init or the _portrait field moved.
