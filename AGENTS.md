@@ -16,6 +16,7 @@ MTGA Forge runs MTG Arena's client against the Forge rules engine. Read [CONTRIB
 - `forge/` is a separate git repo (the Forge fork, branch `mtga`). `forge/forge-gui-mtga` is the game server (Java 17): Front Door (lobby) and Match Door (GRE game protocol).
 - `coordinator/` (TypeScript, Cloudflare Worker + Durable Objects + D1): accounts, friends, matchmaking, tables, ranks, mastery, quests.
 - `site/`: mtgaforge.com. `tools/`: build, patch, test, package, release scripts (PowerShell 5.1).
+- `docs/architecture.md`: how the pieces fit, online play and the trust model. Read it first.
 - `PROGRESS.md`: the dev log, with findings and decisions per feature. `docs/`: protocol, profile, rigs, release, distribution rules.
 
 ## Commands

@@ -89,6 +89,8 @@ flowchart LR
 - **The coordinator** is a small Cloudflare Worker that introduces players to each other: matchmaking queues, friends, challenges, draft tables, ranks, the mastery track and quests. In an online match, one player's PC runs the game and the other connects through the coordinator. No router setup is needed. It never sees your MTGA account and stores no deck lists.
 - **Card data** comes from your own install: the card database is built on your PC from the client's files. Art for cards the client lacks is fetched from Scryfall on demand.
 
+More detail, with diagrams of a game, an online match and the trust model: [docs/architecture.md](docs/architecture.md).
+
 ## Privacy and safety
 
 - The patched copy never signs in to MTGA's servers. Its network calls are switched off, and an optional setting adds a Windows Firewall rule that blocks it completely.
