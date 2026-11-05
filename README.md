@@ -127,7 +127,7 @@ Games are sold as things you own, then switched off as services. [Stop Killing G
 | Repository | What's in it |
 |---|---|
 | **this one** | patcher and ForgeBridge (C#), launcher (WPF), coordinator and website (TypeScript, Cloudflare Workers), build, test and release scripts, design notes |
-| **[Gerrard-Capashen/forge](https://github.com/Gerrard-Capashen/forge/tree/mtga)**, branch `mtga` | the Forge fork; `forge-gui-mtga` is the game server |
+| **[forge](https://github.com/Gerrard-Capashen/forge/tree/mtga)**, branch `mtga` | the Forge fork; `forge-gui-mtga` is the game server |
 
 Neither repository contains Wizards material. Developers generate what they need (the protocol schemas, a decompiled reference) from their own install with the scripts in `tools\`.
 
