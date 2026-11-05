@@ -190,6 +190,13 @@ try {
         try { [void]$clientProc.WaitForExit(5000); Protect-PlayerLogs -ClientDir $client -Folders @($homeDir) } catch { }
     }
     if ($server -and -not $server.HasExited) {
+        # a match result may still be on its way to the coordinator (closing the game mid-match reports a loss): give it up to 5 s
+        $until = (Get-Date).AddSeconds(5)
+        while ((Get-Date) -lt $until) {
+            try { $n = (Invoke-RestMethod -Uri "http://127.0.0.1:$($ports[2])/results/pending" -TimeoutSec 1).pending } catch { break }   # older server: no such page
+            if (-not $n) { break }
+            Start-Sleep -Milliseconds 250
+        }
         Write-Host 'Stopping the Forge server.'
         & taskkill /PID $server.Id /T /F 2>&1 | Out-Null
     }

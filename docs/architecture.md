@@ -124,7 +124,7 @@ sequenceDiagram
 
 - Pairing needs the same queue, the same **card DB fingerprint** (same MTGA version and MTGA Forge release) and the same peer protocol version.
 - The player who waited longest hosts. Draft tables work the same way: the first player at the table hosts the draft and the bots.
-- **Results are two-sided.** Each seat reports its own outcome with its match token and session token, and a match counts only when both agree. With one report only: a reported loss is taken at its word, and a reported win counts only if the relay saw the opponent drop for good after 90 seconds of play. Contradicting reports are `disputed` and pay nothing (`coordinator/src/results.ts`).
+- **Results are two-sided.** Each seat reports its own outcome with its match token and session token, and a match counts only when both agree. With one report only: a reported loss is taken at its word, and a reported win counts only if the relay saw the opponent drop for good after 90 seconds of play. Contradicting reports are `disputed` and pay nothing (`coordinator/src/results.ts`). Closing the game mid-match counts as conceding: that player's own server reports the loss (`ForgeBackend.concedeByLeaving`, `RemoteSeatBackend.onDisconnect`), and the launcher waits for reports still on their way (`/results/pending`) before it stops the server.
 
 ### Why peer to peer, and not a hosted game server
 
