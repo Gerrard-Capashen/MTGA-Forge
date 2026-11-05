@@ -34,6 +34,7 @@ reproduce a bug or regression-test a feature without playing to it by chance. Ri
 | Rig | Setup | Used for |
 |---|---|---|
 | `sami` (deck `sami`) | Me: 3 Plains + 3 Ornithopter + Sami, Wildcat Captain in play, Wurmcoil Engine {6} in hand. AI: passive Mountains | Granted affinity (`AffectedZone$ Stack` statics) must make the hand spell castable and shown at {3}. SelfPlay asserts the shown cost is 3 |
+| `mill` (deck `mill`) | Me: 5 Islands + 3 Swamps in play, Doomsday + Traumatize in hand. AI: passive Mountains | Mass moves out of a library: Doomsday exiles it, Traumatize mills half the target's. Only the first `-Dmtga.massmove` (6) cards of each move get a ZoneTransfer animation. SelfPlay asserts one big diff with a capped number of Mill transfers |
 | `dv` | Wastes x7 in play, Devourer of Destiny in hand, AI Grizzly Bears | cast trigger targeting |
 | `ascend` | 9 Plains, Ocelot Pride, two 99-loyalty planeswalkers | Ascend + emblems |
 | `menace`, `block`, `bf`, `bt`, `bolt` | creatures in play / burn deck, passive or attacking AI | combat, blocking, targeting |
