@@ -40,7 +40,7 @@ powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Deploy -Note
 
 ## Reusable prompt
 
-Paste this into a new session to have Claude run a release:
+Paste this into an AI coding agent session to have it run a release:
 
 > Make a new MTGA Forge release, following docs/release.md.
 > 1. Check that both repos (this one and `forge/`) are committed; tell me about anything uncommitted before going on.
