@@ -20,7 +20,7 @@
 <meta property="og:image:alt" content="MTGA Forge: the client you know, a rules engine you can keep.">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MTGA Forge","url":"https://mtgaforge.com/","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11","description":"An unofficial project that points your own copy of MTG Arena (Steam or the standalone installer) at the open source Forge rules engine.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MTGA Forge","url":"https://mtgaforge.com/","applicationCategory":"GameApplication","operatingSystem":"Windows 10, Windows 11","description":"An unofficial project that points your own copy of MTG Arena (Steam or the standalone installer) at the open source Forge rules engine.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","sameAs":["https://github.com/Gerrard-Capashen/MTGA-Forge"]}
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
 <style>
@@ -47,7 +47,7 @@ p { margin: 0 0 1em; max-width: 64ch; }
 header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 0; }
 .logo { font: 700 1.2rem var(--display); color: var(--fg); text-decoration: none; }
 .logo span { color: var(--accent); }
-header nav { display: flex; gap: 20px; font-size: .92rem; }
+header nav { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .92rem; }
 header nav a { color: var(--muted); text-decoration: none; }
 header nav a:hover { color: var(--fg); }
 header nav .discord { display: inline-flex; align-items: center; gap: 6px; }
@@ -131,7 +131,7 @@ dt { color: var(--muted); } dd { margin: 0; }
 code { font: .85rem Consolas, monospace; background: var(--panel); padding: 2px 6px; border-radius: 4px; word-break: break-all; }
 .dates { list-style: none; padding: 0; }
 .dates li { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
-.dates time { color: var(--accent); font-weight: 600; font-size: .92rem; }
+.dates time, .dates .label { color: var(--accent); font-weight: 600; font-size: .92rem; }
 details { border-top: 1px solid var(--line); padding: 12px 0; }
 details:last-of-type { border-bottom: 1px solid var(--line); }
 summary { cursor: pointer; font-weight: 600; }
@@ -158,7 +158,7 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
 
 <header>
   <a class="logo" href="/">MTGA<span>/</span>Forge</a>
-  <nav><a href="#play">Play</a><a href="#install">Install</a><a href="#why">Why</a><a href="#faq">FAQ</a><a class="discord" href="https://discord.gg/xQSgHsEnQ"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>Discord</a></nav>
+  <nav><a href="#play">Play</a><a href="#install">Install</a><a href="#why">Why</a><a href="#source">Source</a><a href="#faq">FAQ</a><a class="discord gh" href="https://github.com/Gerrard-Capashen/MTGA-Forge"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>GitHub</a><a class="discord" href="https://discord.gg/xQSgHsEnQ"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>Discord</a></nav>
 </header>
 
 <div class="hero">
@@ -340,6 +340,19 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
   </div>
 </div>
 
+<div class="row" id="source">
+  <h2>Open source</h2>
+  <div>
+    <p>MTGA Forge is open source under the <a href="https://github.com/Gerrard-Capashen/MTGA-Forge/blob/main/LICENSE">GPL-3.0</a>, the same license as Forge. Everything is on GitHub: the launcher, the client patcher, the game server and the matchmaking service.</p>
+    <ul class="dates">
+      <li><span class="label">Main repository</span><span><a href="https://github.com/Gerrard-Capashen/MTGA-Forge">Gerrard-Capashen/MTGA-Forge</a>: launcher, patcher, client bridge, matchmaking and this website.</span></li>
+      <li><span class="label">Forge fork</span><span><a href="https://github.com/Gerrard-Capashen/forge/tree/mtga">Gerrard-Capashen/forge</a>, branch <code>mtga</code>: the game server that speaks the client's protocol.</span></li>
+    </ul>
+    <p>Neither repository contains any of Wizards of the Coast's code, art or data. Developers generate what they need from their own install. Releases are built from this source, signed, and scanned on VirusTotal.</p>
+    <p>Want to help? Read the <a href="https://github.com/Gerrard-Capashen/MTGA-Forge/blob/main/CONTRIBUTING.md">contributing guide</a> and <a href="https://github.com/Gerrard-Capashen/MTGA-Forge/blob/main/docs/architecture.md">how it works</a>. Contributions made with AI coding agents are welcome.</p>
+  </div>
+</div>
+
 <div class="row" id="faq">
   <h2>Questions</h2>
   <div>
@@ -347,12 +360,13 @@ posthog.init('phc_yoBGYWCmghUcLivbh43Srf5ucHwytowyoeZjqCQSsNAA', { api_host: 'ht
     <details><summary>Does it connect to MTGA's servers?</summary><p>In our testing it does not. Telemetry and analytics are removed. The only traffic we saw was matchmaking and card art from Scryfall.</p></details>
     <details><summary>Does it touch my install or account?</summary><p>No. Your install is only read, and the patched copy uses its own profile.</p></details>
     <details><summary>Do you redistribute the game?</summary><p>No game files, code, art or audio are shipped or hosted here. The copy is made on your PC from your own install.</p></details>
+    <details><summary>Is it open source?</summary><p>Yes, under the GPL-3.0. The source is on <a href="https://github.com/Gerrard-Capashen/MTGA-Forge">GitHub</a>, and anyone can read what the launcher, the patcher and the server do, build it themselves, or send fixes.</p></details>
     <details><summary>Is it allowed?</summary><p>We cannot speak for MTGA's terms of service, so use it at your discretion.</p></details>
   </div>
 </div>
 
 <footer>
-  <p>Rules engine: <a href="https://github.com/Card-Forge/forge">Forge</a> (GPL, source available). Card art from <a href="https://scryfall.com/">Scryfall</a>, never bundled.</p>
+  <p>MTGA Forge is open source (<a href="https://github.com/Gerrard-Capashen/MTGA-Forge">GitHub</a>, GPL-3.0). Rules engine: <a href="https://github.com/Card-Forge/forge">Forge</a> (GPL). Card art from <a href="https://scryfall.com/">Scryfall</a>, never bundled.</p>
   <p>Magic: The Gathering, MTG Arena and related names are trademarks of their respective owners. Provided as is, with no warranty. Built by players, for players.</p>
 </footer>
 
