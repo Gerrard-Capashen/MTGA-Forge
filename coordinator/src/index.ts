@@ -4,9 +4,11 @@
  *   GET  /health
  *   WS   /queue?q=CasualPlay_Modern&fp=<card db>&v=<peer protocol>&id=<player id>&name=<name>[&code=<friend code>]
  *        waits until a second player asks for the same (queue, card db, protocol, code); both get
- *        {"t":"paired","role":"host"|"guest","match":"<id>","token":"<hex>","opp":"<name>"} and the socket is closed.
- *        Ranked queues (RankedPlay_<Format>, src/rank.ts) need "Authorization: Bearer <session token>" on the upgrade request (a header,
- *        never the query: tokens in URLs are why logs are off); the account replaces `id`, and the pairing records who sits where.
+ *        {"t":"paired","role":"host"|"guest","match":"<id>","token":"<hex>","opp":"<name>","oppVerified":bool[,"oppId","oppTag"]}
+ *        and the socket is closed. "Authorization: Bearer <session token>" on the upgrade request (a header, never the query: tokens in
+ *        URLs are why logs are off) signs the ticket in: the opponent is then told the account's own name and tag (oppVerified) instead
+ *        of the `name` the URL claims, which no one checks. Ranked queues (RankedPlay_<Format>, src/rank.ts) need it; there the
+ *        account also replaces `id`, and the pairing records who sits where.
  *   WS   /match/<id>?role=host|guest&token=<hex>
  *        relays every message to the other side. Binary messages = peer frames (type byte + body), text = control:
  *        {"t":"peer"} the other side is connected, {"t":"left"} the other side is gone (the relay closes both).
@@ -96,12 +98,13 @@ export default {
       if (!NAME.test(q) || !NAME.test(v) || fp.length < 1 || fp.length > 128 || code.length > 32) return text(400, "bad queue request");
       const headers = new Headers(req.headers);
       headers.delete("x-player-id");                                    // only set below, from a verified session token
+      headers.delete("x-verified-id");
       const pool = poolOf(q);
-      if (pool) {
-        const id = await authenticate(env, req);
-        if (!id && pool === "constructed") return text(401, "sign in first (ranked)");
-        if (id) headers.set("x-player-id", id);                         // a premier draft match plays without an account too, it just does not count
-      }
+      const id = await authenticate(env, req);
+      if (!id && pool === "constructed") return text(401, "sign in first (ranked)");
+      // pool queues: the account is the seat (a premier draft match plays without an account too, it just does not count);
+      // casual queues: the account only vouches for the name the opponent is shown
+      if (id) headers.set(pool ? "x-player-id" : "x-verified-id", id);
       return env.QUEUE.get(env.QUEUE.idFromName(`${q}|${fp}|${v}|${code}`)).fetch(new Request(req, { headers }));
     }
 
@@ -116,8 +119,11 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-/** `account` = the signed-in player of a ranked ticket (its id is then the account too). */
-interface Ticket { id: string; name: string; at: number; account?: string }
+/**
+ * `account` = the signed-in player of a ranked ticket (its id is then the account too). `verified` = the signed-in player of any
+ * ticket, with the name and tag the database holds for it; `name` is then that name, else whatever the URL said.
+ */
+interface Ticket { id: string; name: string; at: number; account?: string; verified?: { id: string; tag: string } }
 
 /** One instance per (queue, card database, protocol, friend code): the players in it can play each other. */
 export class Queue implements DurableObject {
@@ -129,11 +135,16 @@ export class Queue implements DurableObject {
   async fetch(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const account = req.headers.get("x-player-id") ?? undefined;
+    const signedIn = account ?? req.headers.get("x-verified-id") ?? undefined;
+    const row = signedIn
+      ? await this.env.DB.prepare("SELECT name, tag FROM players WHERE player_id = ?1").bind(signedIn).first<{ name: string; tag: string }>()
+      : null;
     const ticket: Ticket = {
       id: account ?? ((url.searchParams.get("id") ?? "").slice(0, 64) || crypto.randomUUID()),
-      name: (url.searchParams.get("name") ?? "Player").slice(0, 40),
+      name: row ? row.name : (url.searchParams.get("name") ?? "Player").slice(0, 40),
       at: Date.now(),
       account,
+      ...(row && signedIn ? { verified: { id: signedIn, tag: row.tag } } : {}),
     };
     await this.ctx.storage.put("queue", url.searchParams.get("q") ?? "");
     const pair = new WebSocketPair();
@@ -163,12 +174,13 @@ export class Queue implements DurableObject {
         return;                              // no seat record = the match could not count: leave both waiting rather than pair them unranked
       }
     }
-    const send = async (w: WebSocket, role: Role, opp: string) => {
-      w.send(JSON.stringify({ t: "paired", role, match, token: await token(this.env, match, role), opp }));
+    const send = async (w: WebSocket, role: Role, opp: Ticket) => {
+      const who = opp.verified ? { oppVerified: true, oppId: opp.verified.id, oppTag: opp.verified.tag } : { oppVerified: false };
+      w.send(JSON.stringify({ t: "paired", role, match, token: await token(this.env, match, role), opp: opp.name, ...who }));
       w.close(1000, "paired");
     };
-    await send(first.w, "host", mine.name);
-    await send(ws, "guest", first.t.name);
+    await send(first.w, "host", mine);
+    await send(ws, "guest", first.t);
   }
 
   webSocketMessage(): void { /* pings are auto-answered; nothing else is expected */ }

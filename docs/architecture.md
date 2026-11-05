@@ -162,7 +162,7 @@ flowchart LR
 | **A modified host** sees the guest's hand and library, or rigs shuffles | Possible. The host's engine is the referee and sees everything. | No technical fix short of a neutral server. Commit-reveal seeds (each side commits a random value before the game; the shuffle uses both) would stop rigged shuffles but not peeking. Pick the host randomly at pairing instead of "longest wait" so a cheater can't choose to host. Rely on reports and reputation for ranked. |
 | **Fake results** | Hard: both seats must agree. A lone win needs the opponent to really drop after 90 s. | Count disputes per account and flag or pause repeat offenders; add a report button (the client already has a report-player screen, `ReportPlayerReq`). |
 | **XP farming** | Bot-match XP is the client's word, capped at one award per 2 minutes. Quest progress is the client's own counters, once per match id. | Low stakes: mastery only unlocks cosmetics, and every card is free. If it matters, add a daily cap on bot XP and count quest progress only for online matches the coordinator verified. |
-| **Win trading** between two accounts of one person | Possible, and ranked rewards nothing beyond the leaderboard. | Cap the rating two accounts can move between each other; watch the Mythic leaderboard by hand. |
+| **Win trading** between two accounts of one person | Limited: only 3 ranked results a day between the same two accounts move rank; the rest are recorded with no change (`rank.ts`, `pair-cap`). Ranked rewards nothing beyond the leaderboard. | Watch the Mythic leaderboard by hand; lower the cap if trading shows up. |
 
 The honest summary for players: **ranked is a friendly ladder, not a tournament.** It's protected against fake results, not against a determined cheater who hosts the game.
 
@@ -170,8 +170,9 @@ The honest summary for players: **ranked is a friendly ladder, not a tournament.
 
 - **Without the key file, nobody can act as you.** Logging in needs a signature from the private key, and the coordinator only has the public key. Session tokens are HMAC-signed, last 24 hours and are sent in headers, not URLs.
 - **The key file is the account.** Anyone who copies `data/identity.json` (malware, a shared backup, a screenshot of its contents) becomes you. Planned hardening: encrypt the key at rest with Windows DPAPI (bound to the Windows user), protect backups with a passphrase, and add a "this key was stolen" flow that registers a new key using a recovery code shown once at registration.
-- **Display names in a match are not verified yet.** Pairing passes the `name` the opponent's server put in its queue URL, even in ranked, where the account behind the result is verified. A modified server can therefore show itself as `SomeoneElse#12345` during a game. The fix is for the coordinator to send the account's verified `Name#tag` whenever the ticket is signed in, and to sign in for every queue. It's a small change in `coordinator/src/index.ts` (the `Queue` ticket) and `forge/mtga/peer/Coordinator.java`.
-- Developer accounts (orange names) are set by hand in the database and can't be claimed by a client.
+- **Opponent names in online matches come from the coordinator.** Every queue (casual, ranked, Premier Draft matches) sends the session token. The coordinator then tells each side the other's account name, id and tag (`oppVerified`), whatever name the queue URL or the peer handshake claims (`coordinator/src/index.ts` `Queue`, `FrontDoor.vouched`). Challenges use the coordinator's friend record the same way. An opponent nobody vouches for, such as an older release that doesn't sign in for casual queues, is shown as `Name (unverified)` with no player id.
+- **Developer accounts** (orange names) are set by hand in the database. The badge is looked up by the vouched player id, so a client can't claim it.
+- **Still self-reported:** the opponent's rank badge and cosmetics shown on the versus screen come from their handshake. Names inside a Premier Draft pod come from the table's host (`coordinator/src/tables.ts` doesn't sign tickets in yet). Both only affect what's displayed; results and rank are unaffected.
 
 ## Where to look
 
