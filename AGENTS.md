@@ -17,7 +17,7 @@ MTGA Forge runs MTG Arena's client against the Forge rules engine. Read [CONTRIB
 - `coordinator/` (TypeScript, Cloudflare Worker + Durable Objects + D1): accounts, friends, matchmaking, tables, ranks, mastery, quests.
 - `site/`: mtgaforge.com. `tools/`: build, patch, test, package, release scripts (PowerShell 5.1).
 - `docs/architecture.md`: how the pieces fit, online play and the trust model. Read it first.
-- `PROGRESS.md`: the dev log, with findings and decisions per feature. `docs/`: protocol, profile, rigs, release, distribution rules.
+- `docs/development.md`: how the client consumes game state, the card database, MTGA updates, testing. `docs/`: protocol, profile, rigs, release, distribution rules.
 
 ## Commands
 
@@ -34,7 +34,7 @@ Server build: `cd forge; ..\tools\apache-maven-3.9.9\bin\mvn.cmd -B -q -o -Dskip
 
 ## Working style
 
-- Read the relevant `PROGRESS.md` sections and `docs/` notes before changing a feature; add your findings there when you learn something non-obvious about the client.
+- Read `docs/development.md` and the relevant `docs/` notes before changing a feature; add a finding there when you learn something non-obvious about the client.
 - Check behaviour against the decompiled client rather than guessing what it expects.
 - Prove changes with a `verify.ps1` recipe or a test rig (`docs/rigs.md`), not just a compile.
 - PowerShell 5.1 is the target: no `&&`, `??` or ternaries in scripts.

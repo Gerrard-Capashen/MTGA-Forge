@@ -39,3 +39,5 @@ __pycache__/
 # Node / Wrangler caches (hold machine paths and Cloudflare location data)
 node_modules/
 .wrangler/
+# Internal notes: dev log, hand-off prompts, design logs (kept locally, never published)
+/docs/internal/

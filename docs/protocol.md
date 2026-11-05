@@ -145,7 +145,7 @@ Also: debug path server errors with `NotAuthorized` unless account has role `MTG
 `Downloads/Raw/Raw_CardDatabase_*.mtga` is SQLite: Cards(GrpId PK, TitleId, Types, Subtypes, Colors, AbilityIds, Power, Toughness, ...), Abilities, Localizations_*.
 GrpId is what GRE messages use for all card identity; names via Localizations_enUS(TitleId).
 The patched copy's card DB is extended by `forge.mtga.CardDbBuilder` (reserved ids: GrpId/AbilityId/ArtId 9,000,000+,
-LocId 900,000,000+); see PROGRESS.md session 4b for the row conventions (mana text "o2oB", CARDNAME, "{o..}" symbol
+LocId 900,000,000+); see docs/development.md, "The card database", for the row conventions (mana text "o2oB", CARDNAME, "{o..}" symbol
 groups, NULL id lists, manifest Length + SHA-256, manifest file named by the MD5 of its bytes).
 
 ## Options to get a local game (decided: C = local Front Door + EventAiBotMatch; B stays available as FORGEBRIDGE_MODE=duel)

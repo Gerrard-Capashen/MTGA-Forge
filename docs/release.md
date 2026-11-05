@@ -25,11 +25,11 @@ powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Deploy -Note
 
 - `-Build`: `package.ps1 -BuildServer -Zip` (~8 min) incl. `check-package` (must say CHECK OK; the note about Wizards-named protocol definitions in the server jar is known and accepted).
 - `-Scan`: VirusTotal (`vt` CLI, key from `vt init` / `%USERPROFILE%\.vt.toml`); stops on any malicious hit unless `-AllowDetections`. Results go to `dist\MTGA-Forge.zip.scan.json` and onto the site.
-  Known and accepted (user, 2026-11-05): a couple of machine-learning / heuristic false positives (engine results like `ML`, `AI`, `Heuristic`, `Generic`) on every build. These need no confirmation: rerun with `-AllowDetections` and list the engines in the release report. Stop and ask only when a detection is a named signature or clearly more than the usual two.
+  Known and accepted (2026-11-05): a couple of machine-learning / heuristic false positives (engine results like `ML`, `AI`, `Heuristic`, `Generic`) on every build. These need no confirmation: rerun with `-AllowDetections` and list the engines in the release report. Stop and ask only when a detection is a named signature or clearly more than the usual two.
 - `-Upload github`: `gh release create v<builtAt>` with the token in `%LOCALAPPDATA%\MTGA-Forge-release\token.txt` (fine-grained, owner Gerrard-Capashen, Contents read/write; the script refuses a token of another account).
 - `-Deploy`: writes `site/public/latest.json` and deploys the site.
 - Publishing the GitHub release triggers `.github/workflows/discord-release.yml`, which posts the release notes to Discord (pre-releases are skipped; re-post with the workflow's manual run and a tag).
-- Release notes: short player-facing bullets (`- New: ...`, `- Fix: ...`), from the commits since the last release in BOTH repos (`git log <last release commit>..HEAD` here, `git -C forge log --since <last release time>`). Leave out internal-only changes (PROGRESS.md, dev scripts) and anything PROGRESS marks unverified unless it was tested.
+- Release notes: short player-facing bullets (`- New: ...`, `- Fix: ...`), from the commits since the last release in BOTH repos (`git log <last release commit>..HEAD` here, `git -C forge log --since <last release time>`). Leave out internal-only changes (docs, dev scripts) and anything PROGRESS marks unverified unless it was tested.
 - Between the two commands, smoke-test the package itself: `cd dist\MTGA-Forge; powershell -NoProfile -File tools\verify.ps1 -SkipClient -Client <dev client> -Only sp-default,sp-queues`.
 
 ## After

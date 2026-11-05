@@ -27,7 +27,7 @@ reproduce a bug or regression-test a feature without playing to it by chance. Ri
    (Git Bash syntax; `tools/cp.txt` holds the classpath). The last line is `SELFPLAY OK` or `SELFPLAY FAILED`. Per-rig assertions live in
    `SelfPlay.java` (search `"sami".equals(...)`), plain `PROBLEM` lines are generic protocol checks. Mulligans are skipped for rigs that assert on the hand.
 2. **Real client recipes (scripted clicks + screenshots):** `powershell -NoProfile -File tools\verify.ps1 -Only <rig,...>`; recipes are the
-   table in `tools\verify.ps1` (`Rig`, `Deck`, `Clicks`). See PROGRESS.md "verify".
+   table in `tools\verify.ps1` (`Rig`, `Deck`, `Clicks`). See the recipe table in `tools\verify.ps1`.
 
 ## Rigs
 

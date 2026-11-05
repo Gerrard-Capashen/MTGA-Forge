@@ -1,10 +1,10 @@
 /**
- * Mastery: one endless XP track; every level gives one cosmetic (migrations/0007_mastery.sql, docs/results-rank-mastery.md section 3).
+ * Mastery: one endless XP track; every level gives one cosmetic (migrations/0007_mastery.sql).
  *
  *   GET  /mastery/track   the track: {version, items: [[kind, cosmetic id], ...]}, level n gives items[2n-2] and items[2n-1] (public, the same for everybody)
  *   GET  /me/mastery      (Bearer) -> {xp, level, levelXp, todayXp, trackVersion, owned: {avatars, sleeves, pets, emotes, titles}}
  *   POST /me/xp/bot {match}   (Bearer) -> {gained, ...as /me/mastery}: a local bot match finished, BOT_XP once per match id. It cannot be verified,
- *        so a player gets it at most once every BOT_GAP_MS (a real match lasts longer; 429 otherwise). No daily cap (user, session 20).
+ *        so a player gets it at most once every BOT_GAP_MS (a real match lasts longer; 429 otherwise). No daily cap.
  *
  *   POST /me/xp/event {event}   (Bearer) -> {gained, ...as /me/mastery}: a one-time prize of a local event (EVENT_XP: the three stages of Archenemy: Sparky,
  *        10,000 XP each). The client reports the win like a bot match, so it is the client's word; each prize is paid once per player (award key).

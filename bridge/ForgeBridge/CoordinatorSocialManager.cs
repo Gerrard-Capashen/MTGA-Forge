@@ -16,7 +16,7 @@ using Wizards.Arena.Promises;
 namespace ForgeBridge
 {
     /// <summary>
-    /// The client's <see cref="ISocialManager"/> backed by the coordinator's friends service (docs/online-identity-friends.md, stage 3).
+    /// The client's <see cref="ISocialManager"/> backed by the coordinator's friends service (coordinator/src/friends.ts, hub.ts).
     /// It never talks to the internet: it long-polls the local Forge server (<c>/social/state</c> on the art server's loopback port),
     /// mirrors that snapshot into the objects the Friends UI reads (friends with presence, invites, blocks) and raises the same events the
     /// Hasbro Go implementation did, and sends the player's actions (invite, accept, block, presence...) back as <c>/social/*</c> posts.

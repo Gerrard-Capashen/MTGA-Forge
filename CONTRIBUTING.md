@@ -64,7 +64,7 @@ Start with [docs/architecture.md](docs/architecture.md): diagrams of the pieces,
 | `coordinator\` | Cloudflare Worker: accounts, friends, matchmaking, ranks, quests (TypeScript) |
 | `site\` | mtgaforge.com (static) |
 | `tools\` | build, patch, test, package and release scripts |
-| `docs\` | design notes and findings; `PROGRESS.md` is the running dev log |
+| `docs\` | how it works: architecture, development notes, protocol, profile, rigs, release |
 
 Game-rule or server changes go to the Forge fork (PR against its `mtga` branch). Everything else goes here (PR against `main`).
 
@@ -82,7 +82,7 @@ How to get good results:
 
 1. **Give it the project rules.** [AGENTS.md](AGENTS.md) holds the rules and commands an agent needs. Most agents read it on their own; otherwise point yours at it at the start of a session.
 2. **Give it the client reference.** Run `tools\decompile.ps1` and `tools\gen-protos.ps1 -Docs` once. The agent can then search `docs\decompiled` and `docs\proto` locally to see what the client expects. Both stay on your machine.
-3. **Let it read the notes first.** `docsrchitecture.md`, `PROGRESS.md` (the dev log, newest sections at the end), `docs\protocol.md`, `docs\profile.md` and `docs\rigs.md` record why things are the way they are. Ask the agent to read the relevant parts before it changes code.
+3. **Let it read the notes first.** `docs\architecture.md`, `docs\development.md`, `docs\protocol.md`, `docs\profile.md` and `docs\rigs.md` record why things are the way they are. Ask the agent to read the relevant parts before it changes code.
 4. **Make it prove the change.** Ask for a `verify.ps1` recipe or a test rig that shows the fix, and have it run them. A change that was only compiled isn't done.
 5. **You own the PR.** Read every line before you open it, and be ready to explain it. Watch for one failure in particular: an agent copying code out of `docs\decompiled` into ours. Reimplementing behaviour is fine; copied Wizards code is not.
 

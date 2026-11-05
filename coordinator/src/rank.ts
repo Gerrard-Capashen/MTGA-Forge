@@ -1,5 +1,5 @@
 /**
- * Rank: pips per ranked match, Mythic leaderboard by rating (migrations/0006_ratings.sql, docs/results-rank-mastery.md section 2).
+ * Rank: pips per ranked match, Mythic leaderboard by rating (migrations/0006_ratings.sql).
  *
  *   GET /me/rank   (Bearer) -> {season, seasonStart, seasonEnd, ladder: [{class, level, steps}], pools: {constructed: {...}, limited: {...}}}
  *

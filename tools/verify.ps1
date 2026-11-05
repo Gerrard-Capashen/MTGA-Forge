@@ -1,4 +1,4 @@
-﻿# Does a patched client folder work? Runs the scripted recipes of PROGRESS.md against a fresh Java server each, checks them by
+﻿# Does a patched client folder work? Runs scripted recipes against a fresh Java server each, checks them by
 # log assertions + screenshots + a socket check on MTGA.exe, runs SelfPlay, and prints a pass/fail table (exit code 1 on any FAIL).
 # Read only: it neither builds nor patches anything (use deploy.ps1 / the patcher first).
 #
@@ -123,7 +123,7 @@ function Wait-ServerUp($logFile, $proc) {
 }
 
 # ------------------------------------------------------------------------------------------------------- client recipes
-# Clicks are the recipes of PROGRESS.md (times in seconds after launch). Server = capture (GRE traffic) + stdout ([mtga] lines).
+# Clicks are scripted click recipes (times in seconds after launch). Server = capture (GRE traffic) + stdout ([mtga] lines).
 function Pass-Clicks($from, $to, $step) { ($from..$to | Where-Object { ($_ - $from) % $step -eq 0 } | ForEach-Object { "$($_):promptbutton_primary" }) -join ',' }
 $recipes = [ordered]@{
     'nc' = @{ Deck = 'newcards'; Rig = 'nc'; Seconds = 80; Shots = '44,60'; Clicks = '45:keep,52:hand0|dbl'

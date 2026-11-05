@@ -156,7 +156,7 @@ check(g.length === 6 && [2, 3].every(i => g.some(x => x.cosmetic_id === track.it
   && [4, 5].every(i => g.some(x => x.cosmetic_id === track.items[i][1] && x.source === "mastery:3")),
   "crossing levels 2 and 3 at once grants both levels' two cosmetics (levels never skipped)");
 
-// ---- no daily cap (user, session 20); bot XP at most once per MASTERY_BOT_GAP_MS (1500 ms in the dev server)
+// ---- no daily cap; bot XP at most once per MASTERY_BOT_GAP_MS (1500 ms in the dev server)
 const F = await player("frank");
 setProgress(F, 0, 9000);
 r = await bot(F, "gap-1");

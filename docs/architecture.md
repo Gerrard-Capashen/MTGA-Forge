@@ -1,6 +1,6 @@
 # How MTGA Forge works
 
-A map for contributors: the pieces, how a game flows through them, how online play works, and what is and isn't protected. Details live in the code and in `docs/protocol.md`, `docs/profile.md` and `PROGRESS.md`.
+A map for contributors: the pieces, how a game flows through them, how online play works, and what is and isn't protected. Details live in the code and in `docs/development.md`, `docs/protocol.md` and `docs/profile.md`.
 
 ## The pieces
 

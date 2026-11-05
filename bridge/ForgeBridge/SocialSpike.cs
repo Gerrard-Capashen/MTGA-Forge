@@ -9,7 +9,7 @@ using Wizards.Arena.Promises;
 namespace ForgeBridge
 {
     /// <summary>
-    /// Stage 2 spike of docs/online-identity-friends.md: an <see cref="ISocialManager"/> with a FAKE friend list, to see which parts of the
+    /// Early spike of the friends UI: an <see cref="ISocialManager"/> with a FAKE friend list, to see which parts of the
     /// client's Friends / chat / challenge UI work without the Hasbro Go SDK and which calls they make (everything is logged as
     /// "social: ..."). Enabled with FORGEBRIDGE_SOCIAL=spike (the launcher's -SocialSpike also switches the server's social kill switches off).
     /// The real implementation (friends from the coordinator) replaces the fake data and keeps this shape.

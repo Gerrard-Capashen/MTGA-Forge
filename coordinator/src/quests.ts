@@ -1,5 +1,5 @@
 /**
- * Daily quests (migrations/0008_quests.sql, docs/results-rank-mastery.md section 3.5). Three slots per player, Arena-like: a slot keeps its
+ * Daily quests (migrations/0008_quests.sql). Three slots per player, Arena-like: a slot keeps its
  * quest until it is finished, a finished quest is replaced on the next UTC day, each quest can be swapped once a day. A finished quest pays
  * its mastery XP (mastery.ts award, key "quest:<quest id>", so once).
  *
