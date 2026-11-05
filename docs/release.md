@@ -1,6 +1,6 @@
 # Releasing an update
 
-How a new MTGA Forge version reaches players, and the steps to publish one. Last done: v2026.11.04-1508.
+How a new MTGA Forge version reaches players, and the steps to publish one. Last done: v2026.11.05-1430.
 
 ## How updates work
 
