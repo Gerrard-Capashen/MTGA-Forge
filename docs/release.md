@@ -25,6 +25,7 @@ powershell -NoProfile -File tools\release.ps1 -Scan -Upload github -Deploy -Note
 
 - `-Build`: `package.ps1 -BuildServer -Zip` (~8 min) incl. `check-package` (must say CHECK OK; the note about Wizards-named protocol definitions in the server jar is known and accepted).
 - `-Scan`: VirusTotal (`vt` CLI, key from `vt init` / `%USERPROFILE%\.vt.toml`); stops on any malicious hit unless `-AllowDetections`. Results go to `dist\MTGA-Forge.zip.scan.json` and onto the site.
+  Known and accepted (user, 2026-11-05): a couple of machine-learning / heuristic false positives (engine results like `ML`, `AI`, `Heuristic`, `Generic`) on every build. These need no confirmation: rerun with `-AllowDetections` and list the engines in the release report. Stop and ask only when a detection is a named signature or clearly more than the usual two.
 - `-Upload github`: `gh release create v<builtAt>` with the token in `%LOCALAPPDATA%\MTGA-Forge-release\token.txt` (fine-grained, owner Gerrard-Capashen, Contents read/write; the script refuses a token of another account).
 - `-Deploy`: writes `site/public/latest.json` and deploys the site.
 - Publishing the GitHub release triggers `.github/workflows/discord-release.yml`, which posts the release notes to Discord (pre-releases are skipped; re-post with the workflow's manual run and a tag).
@@ -44,9 +45,9 @@ Paste this into a new session to have Claude run a release:
 > Make a new MTGA Forge release, following docs/release.md.
 > 1. Check that both repos (this one and `forge/`) are committed; tell me about anything uncommitted before going on.
 > 2. Find the last release (commit and time in `site/public/latest.json`) and list what changed since then in both repos.
-> 3. Build and scan: `tools\release.ps1 -Build -Scan`. It must end with CHECK OK. If VirusTotal flags anything, show me the engines and links and wait for my call.
+> 3. Build and scan: `tools\release.ps1 -Build -Scan`. It must end with CHECK OK. The usual machine-learning / heuristic false positives (about two engines) are accepted: go on with `-AllowDetections` and list them in your report. Wait for my call only on a named signature or more detections than usual.
 > 4. Smoke-test the package: `tools\verify.ps1 -SkipClient -Client <a patched client folder> -Only sp-default,sp-queues` from `dist\MTGA-Forge`.
-> 5. Draft the release notes (player-facing bullets) and show them to me with the scan results. Publish only after I confirm: `tools\release.ps1 -Upload github -Deploy -Notes '<notes>'` (add `-AllowDetections` only if I accepted the detections).
+> 5. Draft the release notes (player-facing bullets) and show them to me with the scan results. Publish only after I confirm: `tools\release.ps1 -Upload github -Deploy -Notes '<notes>'` (add `-AllowDetections` when the scan had only the accepted false positives).
 > 6. Check live: mtgaforge.com/latest.json has the new commit and SHA, and the download URL works. Then commit `site/public/latest.json` as "Release <tag>: latest.json and notes" and update "Last done" in docs/release.md.
 
 ## Gotchas
