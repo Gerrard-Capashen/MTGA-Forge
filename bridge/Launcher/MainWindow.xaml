@@ -23,11 +23,12 @@
       </DockPanel>
     </Border>
 
-    <!-- a newer release exists (from the website's latest.json) -->
+    <!-- a newer release exists: installable (signed update list from GitHub) or, for older releases, only a link from the website's latest.json -->
     <Border Grid.Row="1" Background="{StaticResource Panel2}" BorderBrush="{StaticResource Accent}" BorderThickness="0,0,0,1" Padding="24,9" Visibility="{Binding UpdateAvailable, Converter={StaticResource B2V}}">
       <DockPanel>
-        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Dismiss" Command="{Binding DismissUpdateCommand}" Margin="16,0,0,0"/>
-        <Button DockPanel.Dock="Right" Content="Get the update" Command="{Binding OpenUpdateCommand}" Padding="14,5" FontSize="13"/>
+        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Dismiss" Command="{Binding DismissUpdateCommand}" Margin="16,0,0,0" Visibility="{Binding UpdateLinkVisible, Converter={StaticResource B2V}}"/>
+        <Button DockPanel.Dock="Right" Content="Get the update" Command="{Binding OpenUpdateCommand}" Padding="14,5" FontSize="13" Visibility="{Binding UpdateLinkVisible, Converter={StaticResource B2V}}"/>
+        <Button DockPanel.Dock="Right" Content="Update now" Command="{Binding UpdateNowCommand}" Padding="14,5" FontSize="13" Margin="16,0,0,0" Visibility="{Binding UpdateReady, Converter={StaticResource B2V}}"/>
         <TextBlock Text="{Binding UpdateText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
       </DockPanel>
     </Border>

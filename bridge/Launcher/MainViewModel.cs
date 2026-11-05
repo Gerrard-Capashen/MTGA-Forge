@@ -73,8 +73,10 @@ namespace MtgaForgeLauncher
         Stage stage = Stage.Checking;
         string headline = "Looking for your game...", body = "", sourceNote = "", folder = "", diskInfo = "", folderProblem = "";
         string name = "", playStatus = "", profileNote = "";
-        bool offline, consoleOpen, diskLow, firewallOn, updateAvailable;
+        bool offline, consoleOpen, diskLow, firewallOn, updateAvailable, updateReady;
         string updateText = "", updateUrl = "";
+        UpdateRelease pendingRelease;
+        List<UpdatePart> pendingParts;
         SourceItem selectedSource;
         double progress;
 
@@ -97,6 +99,7 @@ namespace MtgaForgeLauncher
         public ICommand ToggleConsoleCommand { get; }
         public ICommand OpenUpdateCommand { get; }
         public ICommand DismissUpdateCommand { get; }
+        public ICommand UpdateNowCommand { get; }
 
         /// <summary>A line for the console panel.</summary>
         public event Action<string> LogAdded;
@@ -104,8 +107,10 @@ namespace MtgaForgeLauncher
         public MainViewModel(bool demo, string folderOverride = null)
         {
             tools = Path.Combine(FindRoot(), "tools");
-            PrepareCommand = new RelayCommand(Prepare, () => !busy && (stage == Stage.NeedPrepare || stage == Stage.Problem) && HasSource && folderProblem == "");
-            StartCommand = new RelayCommand(Start, () => !busy && stage == Stage.Ready);
+            // a known update comes first: the game is prepared and started only with the newest tools (players on other versions can't meet online)
+            PrepareCommand = new RelayCommand(Prepare, () => !busy && !updateReady && (stage == Stage.NeedPrepare || stage == Stage.Problem) && HasSource && folderProblem == "");
+            StartCommand = new RelayCommand(Start, () => !busy && !updateReady && stage == Stage.Ready);
+            UpdateNowCommand = new RelayCommand(InstallUpdate, () => !busy && updateReady && stage != Stage.Running && stage != Stage.Preparing);
             StopCommand = new RelayCommand(() => { if (runner != null) runner.KillTree(); }, () => stage == Stage.Running);
             RecheckCommand = new RelayCommand(Recheck, () => !busy && stage != Stage.Running);
             ChangeLocationCommand = new RelayCommand(() => { editing = true; RaiseStage(); }, () => stage == Stage.Ready);
@@ -159,7 +164,11 @@ namespace MtgaForgeLauncher
         public bool HasSource { get { return selectedSource != null; } }
         public string Name { get { return name; } set { Set(ref name, value); } }
         public bool Offline { get { return offline; } set { if (Set(ref offline, value)) Raise("OnlineEnabled"); } }
-        public bool UpdateAvailable { get { return updateAvailable; } private set { Set(ref updateAvailable, value); } }
+        public bool UpdateAvailable { get { return updateAvailable; } private set { if (Set(ref updateAvailable, value)) Raise("UpdateLinkVisible"); } }
+        /// <summary>A signed update can be installed from here (the banner's Update now button; Start waits for it).</summary>
+        public bool UpdateReady { get { return updateReady; } private set { if (Set(ref updateReady, value)) { Raise("UpdateLinkVisible"); CommandManager.InvalidateRequerySuggested(); } } }
+        /// <summary>Only a link to the download (no installable update list): the old banner with Get the update / Dismiss.</summary>
+        public bool UpdateLinkVisible { get { return updateAvailable && !updateReady; } }
         public string UpdateText { get { return updateText; } private set { Set(ref updateText, value); } }
         public bool FirewallOn { get { return firewallOn; } }
         public string FirewallTip { get { return Firewall.Explanation; } }
@@ -460,11 +469,73 @@ namespace MtgaForgeLauncher
         }
 
         // ------------------------------------------------------------------------------------------ updates
+        string PackageRoot { get { return Path.GetDirectoryName(tools); } }
+
+        /// <summary>
+        /// On start: the latest release's signed update list (GitHub). A newer release shows "Update now" and holds Prepare / Start
+        /// until it is installed. Without a usable list (offline, a release from before auto-update) the old website check shows a link.
+        /// </summary>
         void CheckForUpdate()
         {
             DateTimeOffset built; string commit;
-            if (!UpdateChecker.OwnVersion(Path.GetDirectoryName(tools), out built, out commit)) { Log("Update check skipped: this is a development copy."); return; }
-            Log("Update check: this package is commit " + commit + ", built " + built.ToString("yyyy-MM-dd HH:mm") + ". Asking " + UpdateChecker.Endpoint);
+            if (!UpdateChecker.OwnVersion(PackageRoot, out built, out commit)) { Log("Update check skipped: this is a development copy."); return; }
+            Log("Update check: this package is commit " + commit + ", built " + built.ToString("yyyy-MM-dd HH:mm") + ". Asking " + Updater.ManifestUrl);
+            string error = ""; bool missing = false;
+            string ua = "MTGA-Forge-Launcher/" + commit;
+            Task.Run(() => Updater.Fetch(ua, out error, out missing)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
+            {
+                var r = t.Result;
+                if (r == null) { Log("Update check: no update list (" + error + ")" + (missing ? ", asking the website instead." : ". You can still play.")); if (missing) CheckWebsite(built, commit); return; }
+                if (r.BuiltAt <= built.AddMinutes(1)) { Log("Update check: you have the latest version (" + r.Version + ")."); return; }
+                var parts = Updater.Changed(r, PackageRoot);
+                long size = parts.Sum(p => p.Size);
+                Log("Update check: " + r.Version + " is available (commit " + r.Commit + "); parts to download: " +
+                    (parts.Count == 0 ? "none" : string.Join(", ", parts.Select(p => p.Name + " " + (p.Size / 1048576.0).ToString("0.0") + " MB"))));
+                pendingRelease = r; pendingParts = parts;
+                UpdateText = "MTGA Forge " + r.Version + " is ready to install (" + (size / 1048576.0).ToString("0.0") + " MB). Update before you play: players on different versions can't meet online.";
+                UpdateReady = true;
+                UpdateAvailable = true;
+            })));
+        }
+
+        /// <summary>Downloads and installs the pending update; restarts the launcher when its own files changed.</summary>
+        void InstallUpdate()
+        {
+            if (busy || pendingRelease == null) return;
+            busy = true;
+            CommandManager.InvalidateRequerySuggested();
+            var r = pendingRelease; var parts = pendingParts;
+            string root = PackageRoot, ua = "MTGA-Forge-Launcher/" + r.Commit;
+            Log("Update: installing " + r.Version + " into " + root);
+            Action<string> progress = s => ui.BeginInvoke((Action)(() => UpdateText = s));
+            Task.Run(() => Updater.Install(r, parts, root, ua, progress)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
+            {
+                busy = false;
+                if (t.IsFaulted)
+                {
+                    string why = t.Exception.GetBaseException().Message;
+                    Log("Update failed: " + why);
+                    UpdateText = "The update failed: " + why;
+                    CommandManager.InvalidateRequerySuggested();
+                    return;
+                }
+                Log("Update: " + r.Version + " installed.");
+                if (t.Result)
+                {
+                    Log("Update: the launcher changed, restarting it.");
+                    try { Updater.Restart(); Application.Current.Shutdown(); return; }
+                    catch (Exception e) { Log("Could not restart the launcher: " + e.Message); UpdateText = "Updated to " + r.Version + ". Close and open MTGA Forge again to finish."; return; }
+                }
+                pendingRelease = null; pendingParts = null;
+                UpdateReady = false;
+                UpdateAvailable = false;
+                Recheck();          // the game check sees new patch tools or server files and asks to prepare again
+            })));
+        }
+
+        /// <summary>The website's latest.json (releases from before auto-update): a link to the download, nothing installed.</summary>
+        void CheckWebsite(DateTimeOffset built, string commit)
+        {
             string error = "";
             Task.Run(() => UpdateChecker.Fetch(commit, out error)).ContinueWith(t => ui.BeginInvoke((Action)(() =>
             {

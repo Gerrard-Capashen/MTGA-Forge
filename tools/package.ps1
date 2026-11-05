@@ -6,7 +6,8 @@
 #     tools\                                          launcher.ps1 forge-patch.ps1 layout.ps1 redact-log.ps1 verify.ps1 check-package.ps1
 #     patcher\                                        Patcher.exe (.NET Framework 4.8, ships with Windows) + Mono.Cecil, ForgeBridge.dll (our client code)
 #     runtime\                                        jlink JRE (java.exe), only the modules the server needs
-#     server\lib\                                     forge-*.jar, forge-gui-mtga.jar and their dependencies
+#     server\lib\                                     forge-*.jar, forge-gui-mtga.jar (ours: change in most releases)
+#     server\ext\                                     their third-party dependencies (rarely change: their own auto-update part)
 #     server\forge-gui\res\                           Forge rules data (card scripts, editions, formats, AI profiles, en-US texts); no images, music, adventure mode
 # Then runs check-package.ps1 against the result (fails the build when the not-allowed list is violated).
 # -ManagedDir: a patched or unpatched client's MTGA_Data\Managed holding Core.dll.orig, only used to compile ForgeBridge.dll.
@@ -34,7 +35,7 @@ if ($BuildServer) {
 }
 
 Remove-Item $Out -Recurse -Force -ErrorAction SilentlyContinue
-foreach ($d in 'tools', 'patcher', 'server\lib', 'server\forge-gui') { New-Item -ItemType Directory -Force "$Out\$d" | Out-Null }
+foreach ($d in 'tools', 'patcher', 'server\lib', 'server\ext', 'server\forge-gui') { New-Item -ItemType Directory -Force "$Out\$d" | Out-Null }
 
 # ---- patcher + client code
 Write-Host '== patcher'
@@ -57,9 +58,9 @@ foreach ($e in @($entries) + "$root\forge\forge-gui-mtga\target\classes") {
     if (Test-Path $e -PathType Container) {
         $name = Split-Path (Split-Path (Split-Path $e -Parent) -Parent) -Leaf     # <module>\target\classes
         Run "$jdk\bin\jar.exe" @('--create', '--file', "$Out\server\lib\$name.jar", '-C', $e, '.') "jar $name"
-    } else { Copy-Item $e "$Out\server\lib" }
+    } else { Copy-Item $e "$Out\server\ext" }
 }
-$jars = @(Get-ChildItem "$Out\server\lib\*.jar")
+$jars = @(Get-ChildItem "$Out\server\lib\*.jar", "$Out\server\ext\*.jar")
 Write-Host "   $($jars.Count) jars, $([int](($jars | Measure-Object Length -Sum).Sum / 1MB)) MB"
 
 # ---- Forge rules data
@@ -76,7 +77,7 @@ Copy-Item "$res\languages\en-US.properties" "$Out\server\forge-gui\res\languages
 Write-Host '== runtime (jlink)'
 $own = @(Get-ChildItem "$Out\server\lib\forge-*.jar" | ForEach-Object FullName)     # analysed with -R: the libraries are followed through the class path
 $ErrorActionPreference = 'Continue'
-$mods = (& "$jdk\bin\jdeps.exe" --multi-release 17 --ignore-missing-deps --print-module-deps -R -cp "$Out\server\lib\*" $own 2>$null) -join ''
+$mods = (& "$jdk\bin\jdeps.exe" --multi-release 17 --ignore-missing-deps --print-module-deps -R -cp "$Out\server\lib\*;$Out\server\ext\*" $own 2>$null) -join ''
 $ErrorActionPreference = 'Stop'
 if ($LASTEXITCODE -ne 0 -or -not $mods) { throw 'jdeps found no modules' }
 $extra = 'java.desktop', 'java.logging', 'java.sql', 'java.naming', 'java.management', 'jdk.unsupported', 'jdk.crypto.ec', 'jdk.zipfs', 'jdk.localedata'
@@ -95,6 +96,11 @@ $rev = (git -C $root rev-parse --short HEAD).Trim()
 [ordered]@{ name = 'MTGA-Forge'; commit = $rev; builtAt = (Get-Date -Format o); compiledAgainst = (Get-Item "$ManagedDir\Core.dll.orig").Length } |
     ConvertTo-Json | Set-Content "$Out\dist.json" -Encoding utf8
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+
+Write-Host '== auto-update parts'
+# components.json: the content hash of each part, which the launcher compares with a release's update.json
+& powershell -NoProfile -File "$root\tools\update-manifest.ps1" -Package $Out -StateOnly
+if ($LASTEXITCODE -ne 0) { throw 'update-manifest failed' }
 
 Write-Host '== check-package'
 & powershell -NoProfile -File "$root\tools\check-package.ps1" -Package $Out

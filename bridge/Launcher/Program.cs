@@ -26,6 +26,9 @@ namespace MtgaForgeLauncher
             if (args.Length >= 2 && args[0] == "--shots") return Shots(app, args[1]);
             if (args.Length >= 2 && args[0] == "--ico") return MakeIcon(args[1]);
             if (args.Length >= 2 && args[0] == "--probe") return Probe(app, args[1], args.Length > 2 ? args[2] : null);
+            // a packaged copy (dist.json next to the exe): remove what an auto-update left behind (MTGA-Forge.exe.old, .update\)
+            string own = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+            if (File.Exists(Path.Combine(own, "dist.json"))) Updater.CleanUp(own);
             var window = new MainWindow(new MainViewModel(false));
             return app.Run(window);
         }

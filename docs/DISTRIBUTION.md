@@ -12,7 +12,7 @@ Built by `tools\package.ps1`, checked by `tools\check-package.ps1` (the build fa
 | `patcher\Patcher.exe` + `Mono.Cecil*.dll` | Cecil patcher on .NET Framework 4.8 (part of Windows 10/11: no SDK or runtime to install). Verbs: (none) patch Core.dll + AK dll, `identity`, `unityconnect`, `check-bridge`, `audit-bridge` |
 | `patcher\ForgeBridge.dll` | our client code, prebuilt (netstandard2.1), contains only namespace `ForgeBridge` |
 | `runtime\` | jlink JRE 21 (60 MB, 15 modules), `runtime\bin\java.exe` |
-| `server\lib\` | `forge-core/game/ai/gui/gui-mtga` jars + 75 third-party jars (no Maven, no source checkout) |
+| `server\lib\`, `server\ext\` | `forge-core/game/ai/gui/gui-mtga` jars; their 75 third-party jars (no Maven, no source checkout) |
 | `server\forge-gui\res\` | Forge rules data: card scripts, editions, formats, AI profiles, `languages\en-US.properties`. No adventure mode, images, music, sounds, skins, fonts, quest/conquest data |
 | `dist.json` | marker for "packaged" mode (`tools\layout.ps1` switches paths on it) + commit and build time |
 

@@ -17,7 +17,7 @@ MTGA Forge runs MTG Arena's client against the Forge rules engine. Read [CONTRIB
 - `coordinator/` (TypeScript, Cloudflare Worker + Durable Objects + D1): accounts, friends, matchmaking, tables, ranks, mastery, quests.
 - `site/`: mtgaforge.com. `tools/`: build, patch, test, package, release scripts (PowerShell 5.1).
 - `docs/architecture.md`: how the pieces fit, online play and the trust model. Read it first.
-- `docs/development.md`: how the client consumes game state, the card database, MTGA updates, testing. `docs/`: protocol, profile, rigs, release, distribution rules.
+- `docs/development.md`: how the client consumes game state, the card database, MTGA updates, testing. `docs/`: protocol, profile, rigs, distribution rules.
 
 ## Commands
 

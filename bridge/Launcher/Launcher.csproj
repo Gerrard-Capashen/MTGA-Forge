@@ -24,4 +24,11 @@
     <Resource Include="anvil-lava.png" />
     <Resource Include="hammer-lava.png" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- auto-update: zips and the JSON reader of .NET Framework (Updater.cs) -->
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+  </ItemGroup>
 </Project>

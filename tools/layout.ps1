@@ -2,12 +2,12 @@
 #   dev  (repo checkout): java + dotnet on PATH, server classes in forge\*\target\classes (tools\cp.txt), Forge res in forge\forge-gui,
 #                         Patcher and ForgeBridge built from bridge\ on demand
 #   dist (dist.json next to tools\): everything below the package root, nothing on PATH is needed (Windows PowerShell 5.1 + robocopy only)
-#                         runtime\ (jlink JRE), server\lib\*.jar, server\forge-gui\res, patcher\Patcher.exe, patcher\ForgeBridge.dll
+#                         runtime\ (jlink JRE), server\lib\*.jar (ours) + server\ext\*.jar (libraries), server\forge-gui\res, patcher\Patcher.exe, patcher\ForgeBridge.dll
 $Root = (Resolve-Path "$PSScriptRoot\..").Path
 $Dist = Test-Path "$Root\dist.json"
 if ($Dist) {
     $JavaExe = "$Root\runtime\bin\java.exe"
-    $ServerCp = "$Root\server\lib\*"
+    $ServerCp = "$Root\server\lib\*;$Root\server\ext\*"
     $GuiDir = "$Root\server\forge-gui"
     $PatcherExe = "$Root\patcher\Patcher.exe"
     $BridgeDll = "$Root\patcher\ForgeBridge.dll"

@@ -174,6 +174,37 @@ The honest summary for players: **ranked is a friendly ladder, not a tournament.
 - **Developer accounts** (orange names) are set by hand in the database. The badge is looked up by the vouched player id, so a client can't claim it.
 - **Still self-reported:** the opponent's rank badge and cosmetics shown on the versus screen come from their handshake. Names inside a Premier Draft pod come from the table's host (`coordinator/src/tables.ts` doesn't sign tickets in yet). Both only affect what's displayed; results and rank are unaffected.
 
+## How releases and updates reach players
+
+A release is a GitHub release of this repository. It carries the full zip (the first download for new players) and, for the launchers already out there, a signed update list with one zip per part of the package:
+
+| Part | What | Changes |
+|---|---|---|
+| `app` | the launcher and the top-level files | most releases |
+| `tools`, `patcher` | patch and start scripts, the patcher and ForgeBridge | most releases |
+| `server` | our jars (`server\lib`) | most releases |
+| `libs` | third-party jars (`server\ext`) | rarely |
+| `res` | Forge's rules data and card scripts | when Forge adds cards |
+| `runtime` | the Java runtime | rarely |
+
+```mermaid
+sequenceDiagram
+    participant L as Launcher (player's PC)
+    participant G as GitHub release
+    L->>G: update.json + update.json.sig
+    Note over L: signature valid for the key built into the launcher?<br/>newer than this package?
+    L->>L: compare each part's hash with components.json
+    L->>G: download only the changed parts
+    Note over L: zip SHA-256 and unpacked content hash<br/>match the signed list?
+    L->>L: swap the parts in (roll back on any failure),<br/>restart if the launcher itself changed
+```
+
+- **Signed.** The launcher installs nothing whose update list wasn't signed with the project's release key, and it re-hashes every part it unpacks. A changed list, a damaged download or a swapped file is refused, and the installed copy stays as it was (`bridge/Launcher/Updater.cs`, `tools/update-manifest.ps1`).
+- **Before playing, never during.** The launcher checks on start and holds Prepare and Start until the update is installed. A running game is never touched.
+- **Only what changed.** A part that didn't change keeps the zip of an earlier release, so a typical update is a few MB. Old releases therefore stay on GitHub.
+- **Versions split the queues.** Players only meet with the same card database and peer protocol, so a release separates updated players from the rest until they restart the launcher. Coordinator changes stay compatible with the previous release and are deployed before it.
+- **Forks** that publish their own builds make their own key (`tools/update-key.ps1` writes its public half into `bridge/Launcher/UpdateKey.cs`) and point `Updater.DefaultManifestUrl` at their own releases.
+
 ## Where to look
 
 | To change... | Start in |

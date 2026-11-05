@@ -15,7 +15,7 @@ function Warn($m) { Write-Host "  NOTE: $m" -ForegroundColor Yellow }
 function Pass($m) { Write-Host "  ok: $m" }
 
 # 1. Only the known top-level layout
-$topAllowed = 'MTGA-Forge.exe', 'MTGA-Forge.exe.config', 'README.txt', 'dist.json', 'LICENSE-Forge.txt', 'tools', 'patcher', 'runtime', 'server'
+$topAllowed = 'MTGA-Forge.exe', 'MTGA-Forge.exe.config', 'README.txt', 'dist.json', 'LICENSE-Forge.txt', 'components.json', 'tools', 'patcher', 'runtime', 'server'
 foreach ($e in Get-ChildItem $Package -Force) { if ($topAllowed -notcontains $e.Name) { Fail "unexpected top-level entry: $($e.Name)" } }
 foreach ($d in 'tools', 'patcher', 'runtime', 'server') { if (-not (Test-Path "$Package\$d")) { Fail "missing $d" } }
 $files = @(Get-ChildItem $Package -Recurse -File -Force)
@@ -38,7 +38,7 @@ foreach ($d in Get-ChildItem $Package -Recurse -Directory -Force) { if ($gameDir
 $media = '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tga', '.dds', '.psd', '.ico', '.svg', '.tif', '.tiff', '.ogg', '.mp3', '.wav', '.flac', '.mp4', '.webm', '.avi', '.mov'
 foreach ($f in $files) { if ($media -contains $f.Extension.ToLower() -and $f.FullName -ne "$Package\patcher\forge-logo.png") { Fail "image/audio/video file: $($f.FullName.Substring($Package.Length + 1))" } }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-foreach ($j in Get-ChildItem "$Package\server\lib" -Filter *.jar) {
+foreach ($j in Get-ChildItem "$Package\server\lib", "$Package\server\ext" -Filter *.jar -ErrorAction SilentlyContinue) {
     $za = [IO.Compression.ZipFile]::OpenRead($j.FullName)
     try {
         # a library's own icon (Jetty's favicon) is the only allowed media entry
@@ -87,17 +87,24 @@ if ($Install -and (Test-Path $Install)) {
 } else { Write-Host '  skipped: no MTGA install found for the byte comparison (pass -Install)' }
 
 # 6. Nothing machine- or user-specific (paths, e-mail), no tokens
+# the folder this checkout lives in (where a build could leak its own paths from), any user profile path, any e-mail address
+$here = [regex]::Escape((Resolve-Path "$PSScriptRoot\..").Path)
+$personal = "C:\\Users\\[A-Za-z]|$here|[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}|steamapps\\common\\MTGA\\MTGA_Data"
+# placeholder addresses on reserved domains (RFC 2606: the bridge's local@forgebridge.invalid) are not anyone's
+function Personal($s) { ([regex]::Matches($s, $personal) | Where-Object { $_.Value -notmatch '\.(invalid|test|example|localhost)$|@example\.(com|org|net)$' } | Select-Object -First 1).Value }
 $textExt = '.ps1', '.cmd', '.txt', '.json', '.properties', '.xml', '.config'
 foreach ($f in $files | Where-Object { $textExt -contains $_.Extension.ToLower() -and $_.Length -lt 2MB -and $_.FullName -notlike "$Package\server\forge-gui\res\*" }) {
     $s = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
-    if ($s -match 'C:\\Users\\[A-Za-z]|D:\\Development|@gmail\.com|steamapps\\common\\MTGA\\MTGA_Data') { Fail "machine/user specific text in $($f.FullName.Substring($Package.Length + 1)): $($Matches[0])" }
+    $hit = if ($s) { Personal $s }
+    if ($hit) { Fail "machine/user specific text in $($f.FullName.Substring($Package.Length + 1)): $hit" }
 }
 
 # 6b. Same for our own binaries: no debug-symbol path or user folder compiled in (ASCII and UTF-16)
 foreach ($f in $files | Where-Object { $_.Extension -in '.exe', '.dll' -and $_.Length -lt 4MB -and $_.Name -notlike 'Mono.Cecil*' -and $_.FullName -notlike "$Package\runtime\*" }) {   # runtime\: Microsoft's and OpenJDK's own binaries
     $b = [IO.File]::ReadAllBytes($f.FullName)
     foreach ($s in [Text.Encoding]::ASCII.GetString($b), [Text.Encoding]::Unicode.GetString($b), [Text.Encoding]::Unicode.GetString($b, 1, $b.Length - 2)) {
-        if ($s -match '[A-Za-z]:\\[^\x00]{0,200}\.pdb|C:\\Users\\[A-Za-z]|D:\\Development|@gmail\.com') { Fail "machine/user specific text compiled into $($f.FullName.Substring($Package.Length + 1)): $($Matches[0])"; break }
+        $hit = if ($s -match '[A-Za-z]:\\[^\x00]{0,200}\.pdb') { $Matches[0] } else { Personal $s }
+        if ($hit) { Fail "machine/user specific text compiled into $($f.FullName.Substring($Package.Length + 1)): $hit"; break }
     }
 }
 

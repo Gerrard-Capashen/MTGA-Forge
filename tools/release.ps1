@@ -104,6 +104,20 @@ if ($Upload -eq 'github') {
         Copy-Item $Zip (Join-Path $tmpDir $asset)
         $files = @((Join-Path $tmpDir $asset))
         if ($SourceZip) { $files += (Resolve-Path $SourceZip).Path }
+        # auto-update: the parts that changed since the latest release, and the signed update.json the launchers read
+        Step 'auto-update parts'
+        $prevDir = Join-Path $tmpDir 'previous'
+        $prev = ''
+        try {
+            Native 'gh' @('release', 'download', '--repo', $Repo, '--pattern', 'update.json', '--dir', $prevDir) | Out-Null
+            if (Test-Path "$prevDir\update.json") { $prev = "$prevDir\update.json"; Write-Host '  previous update.json found: unchanged parts keep their zips' }
+        } catch { Write-Host '  no update.json in the latest release: every part is uploaded' }
+        $updDir = Join-Path $tmpDir 'update'
+        # in process (not powershell -File): an empty -Previous or notes with quotes would not survive as native arguments
+        $um = @{ Package = $pkg; Out = $updDir; Tag = $tag; BaseUrl = "https://github.com/$Repo/releases/download/$tag"; Notes = $Notes }
+        if ($prev) { $um.Previous = $prev }
+        & "$root\tools\update-manifest.ps1" @um
+        $files += @(Get-Content "$updDir\assets.txt" | Where-Object { $_ })
         # the notes go through a file: Windows PowerShell 5.1 splits a native argument at embedded double quotes
         $notesFile = Join-Path $tmpDir 'notes.md'
         [IO.File]::WriteAllText($notesFile, "sha256 of MTGA-Forge.zip: $sha`n$Notes", (New-Object Text.UTF8Encoding $false))

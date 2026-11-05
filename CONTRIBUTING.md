@@ -64,7 +64,7 @@ Start with [docs/architecture.md](docs/architecture.md): diagrams of the pieces,
 | `coordinator\` | Cloudflare Worker: accounts, friends, matchmaking, ranks, quests (TypeScript) |
 | `site\` | mtgaforge.com (static) |
 | `tools\` | build, patch, test, package and release scripts |
-| `docs\` | how it works: architecture, development notes, protocol, profile, rigs, release |
+| `docs\` | how it works: architecture (incl. releases and updates), development notes, protocol, profile, rigs |
 
 Game-rule or server changes go to the Forge fork (PR against its `mtga` branch). Everything else goes here (PR against `main`).
 

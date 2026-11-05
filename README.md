@@ -61,7 +61,7 @@ It's an early project: expect rough edges and some missing or broken cards. Bugs
 
 The launcher isn't code-signed yet, so Windows SmartScreen may warn the first time.
 
-**Updates.** When the launcher opens it asks the website for the latest version (one plain request with nothing about you in it). If yours is older, a banner links to the new download. Nothing downloads or installs by itself. Your decks and identity live in `<folder>\data` and survive updates.
+**Updates.** You download the zip once. When the launcher opens it checks GitHub for a newer release. If there is one, it shows **Update now**, which you press before playing: it downloads only what changed (usually a few MB), checks it, installs it and restarts itself. Updates are signed: the launcher installs nothing that wasn't signed with the project's release key. It never updates while the game is running. Your decks and identity live in `<folder>\data` and survive updates.
 
 **Uninstall.** Press **Uninstall...** in the launcher and tick what to remove. Your MTGA install is never touched.
 
