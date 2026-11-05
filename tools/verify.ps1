@@ -44,6 +44,7 @@ foreach ($f in @($exe, "$Client\MTGA_Data\Managed\ForgeBridge.dll") + @($ClassPa
     if (-not (Test-Path $f)) { throw "missing: $f" }
 }
 if ($BuildServer -and -not $Dist) {
+    & "$root\tools\gen-protos.ps1" -IfMissing
     Push-Location "$root\forge"
     & "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" -B -q -o -DskipTests -pl forge-gui-mtga -am compile
     if ($LASTEXITCODE -ne 0) { throw 'server build failed' }

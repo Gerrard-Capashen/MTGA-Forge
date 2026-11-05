@@ -7,7 +7,7 @@
 # UNHANDLED markers, client exceptions appended at the end)
 param([string]$Deck = '', [switch]$Duel, [string]$AiDeck = '', [string]$Rig = '', [int]$Minutes = 30, [switch]$NoBuild)
 $ErrorActionPreference = 'Stop'
-$root = 'D:\Development\MTGA-Forge'
+$root = (Resolve-Path "$PSScriptRoot\..").Path
 $m = "$root\client\MTGA_Data\Managed"
 $log = "$env:USERPROFILE\AppData\LocalLow\Forge Bridge Project\MTGF\Player.log"
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -20,6 +20,7 @@ Get-Process MTGA -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$
 Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -like '*ForgeMtgaMain*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
 if (-not $NoBuild) {
+    & "$root\tools\gen-protos.ps1" -IfMissing
     Push-Location "$root\forge"
     & "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" -B -q -o -DskipTests -pl forge-gui-mtga -am compile
     Pop-Location

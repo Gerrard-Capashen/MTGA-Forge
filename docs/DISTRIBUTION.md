@@ -54,8 +54,8 @@ Forge's `res\` is read from the package (working directory of the server = `serv
 
 ### Open decisions (for the owner, not the script)
 
-- **Protocol definitions.** `forge-gui-mtga.jar` carries `Wizards.Arena.*.proto` and the generated classes (`com/wizards/mtga`): the message formats our server must speak, reconstructed from the client's descriptors. They are interface descriptions, not game assets, and the check lists them as a NOTE, but they are derived from Wizards' client: decide before publishing.
-- **The git repository is not the package.** The repo itself contains `docs\decompiled` (decompiled Wizards code), `tools\mock\*` and capture-derived notes. Never publish the repo as the patch distribution; if the repo is ever made public, remove those first.
+- **Protocol definitions.** `forge-gui-mtga.jar` carries `Wizards.Arena.*.proto` and the generated classes (`com/wizards/mtga`): the message formats our server must speak, reconstructed from the client's descriptors. They are interface descriptions, not game assets, and the check lists them as a NOTE. Decided (2026-11-05): the compiled classes ship in the jar, the `.proto` sources are never in git (generated at build time by `tools\gen-protos.ps1`).
+- **The git repository is not the package.** The repo is public and holds no Wizards code: `docs\decompiled` (`tools\decompile.ps1`), the `.proto` schemas (`tools\gen-protos.ps1`) and the mock's generated bindings are made locally from the developer's own install and are gitignored. Never commit them.
 - **Forge is GPL.** The package ships Forge's jars and card scripts (`LICENSE-Forge.txt`); our changes live in the `forge-gui-mtga` module and the `mtga` branch of the Forge clone, so the matching source has to be offered with any distribution.
 - **Trademarks / terms.** The README says the project is unofficial; whether patching the client is acceptable under the Arena EULA is the owner's call, the package only avoids shipping any Wizards content.
 - **Scryfall.** Art is fetched live (Forge's ImageFetcher); fine for personal use, a published launcher should respect their API rules (user agent, rate limit).

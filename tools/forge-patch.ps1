@@ -295,6 +295,7 @@ $steps['patch'] = {
 
 $steps['carddb'] = {
     if (-not $Dist -and ($BuildServer -or -not (Test-Path "$root\forge\forge-gui-mtga\target\classes\forge\mtga\CardDbBuilder.class"))) {
+        & "$root\tools\gen-protos.ps1" -IfMissing
         Push-Location "$root\forge"
         try { Run "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" @('-B', '-q', '-o', '-DskipTests', '-pl', 'forge-gui-mtga', '-am', 'compile') 'forge-gui-mtga build' } finally { Pop-Location }
     }

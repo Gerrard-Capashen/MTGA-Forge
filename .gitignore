@@ -27,3 +27,15 @@ __pycache__/
 /dist/
 /bridge/patcher-out/
 /bridge/launcher-out/
+# Generated from your own MTGA install (Wizards' code and definitions): never commit
+/docs/decompiled/
+/docs/proto/
+/tools/mock/gen/
+/tools/protogen-tmp/
+# Local mock run artefacts (the cert is regenerated on first run)
+/tools/mock/*.pem
+/tools/mock/*.log
+/tools/mock/*.txt
+# Node / Wrangler caches (hold machine paths and Cloudflare location data)
+node_modules/
+.wrangler/

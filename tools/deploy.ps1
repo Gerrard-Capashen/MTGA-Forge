@@ -6,7 +6,7 @@
 # menu clicks always start from the same UI state.
 param([switch]$Run, [switch]$Mock, [switch]$Forge, [switch]$Duel, [switch]$FreshPrefs, [int]$Seconds = 40, [int]$Shot = 0, [string]$Shots = "", [string]$Clicks = "")
 $ErrorActionPreference = 'Stop'
-$root = 'D:\Development\MTGA-Forge'
+$root = (Resolve-Path "$PSScriptRoot\..").Path
 $m = "$root\client\MTGA_Data\Managed"
 $log = "$env:USERPROFILE\AppData\LocalLow\Forge Bridge Project\MTGF\Player.log"
 $mockLog = "$root\tools\mock\mock.log"

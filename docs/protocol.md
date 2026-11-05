@@ -1,9 +1,9 @@
 # MTGA client protocol notes (extracted from decompiled client)
 
-Source paths below refer to the decompiled output (see PROGRESS.md for how to regenerate).
+Source paths below refer to the decompiled output in `docs/decompiled` (make it from your own install with `tools/decompile.ps1`; gitignored).
 
 ## Schemas
-`docs/proto/*.proto` + `gre.desc` are generated from the descriptors embedded in `Wizards.MDN.GreProtobuf.dll`
+`docs/proto/*.proto` + `gre.desc` (gitignored; `tools/gen-protos.ps1 -Docs`) are generated from the descriptors embedded in `Wizards.MDN.GreProtobuf.dll`
 (`tools/desc2proto.py`; extractor is a tiny .NET console app that reads `<X>Reflection.Descriptor.SerializedData`).
 - GREMessages.proto (181 msgs), GREMessagesCommon.proto (125 enums), GRETHHostMessages.proto (45),
   MatchServiceMessages.proto (17 msgs), ServiceMessagesCommon.proto (6).

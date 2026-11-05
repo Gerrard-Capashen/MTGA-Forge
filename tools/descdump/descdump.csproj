@@ -4,8 +4,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
     <RollForward>Major</RollForward>
+    <!-- The client's MTGA_Data\Managed folder; tools\gen-protos.ps1 passes -p:ManagedDir=... -->
+    <ManagedDir Condition="'$(ManagedDir)' == ''">$(MSBuildThisFileDirectory)..\..\client\MTGA_Data\Managed</ManagedDir>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Google.Protobuf"><HintPath>D:\Development\MTGA-Forge\client\MTGA_Data\Managed\Google.Protobuf.dll</HintPath></Reference>
+    <Reference Include="Google.Protobuf"><HintPath>$(ManagedDir)\Google.Protobuf.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

@@ -28,6 +28,7 @@ function Run($exe, [string[]]$a, $what) {
 }
 
 if ($BuildServer) {
+    & "$root\tools\gen-protos.ps1" -IfMissing -ManagedDir $ManagedDir
     Push-Location "$root\forge"
     try { Run "$root\tools\apache-maven-3.9.9\bin\mvn.cmd" @('-B', '-q', '-o', '-DskipTests', '-pl', 'forge-gui-mtga', '-am', 'compile') 'server build' } finally { Pop-Location }
 }

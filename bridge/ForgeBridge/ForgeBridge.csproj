@@ -7,7 +7,8 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <DebugType>none</DebugType>   <!-- no pdb path (this machine's folders) inside the shipped binary -->
     <NoWarn>MSB3277;CS1701;CS1702;CS8981</NoWarn>
-    <ManagedDir>D:\Development\MTGA-Forge\client\MTGA_Data\Managed</ManagedDir>
+    <!-- The client's MTGA_Data\Managed folder (override with -p:ManagedDir=...) -->
+    <ManagedDir Condition="'$(ManagedDir)' == ''">$(MSBuildThisFileDirectory)..\..\client\MTGA_Data\Managed</ManagedDir>
   </PropertyGroup>
   <ItemGroup>
     <!-- Always compile against the ORIGINAL Core.dll so rebuilds don't depend on our own patch -->

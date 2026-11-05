@@ -1,6 +1,6 @@
 # Launch the client copy (+mock), then report window handle/rect/visibility after N seconds.
 param([int]$Wait = 35)
-$root = 'D:\Development\MTGA-Forge'
+$root = (Resolve-Path "$PSScriptRoot\..").Path
 Get-Process MTGA -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$root\*" } | Stop-Process -Force
 Add-Type @"
 using System; using System.Runtime.InteropServices;
