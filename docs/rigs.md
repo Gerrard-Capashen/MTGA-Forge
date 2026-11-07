@@ -26,7 +26,8 @@ reproduce a bug or regression-test a feature without playing to it by chance. Ri
    ```
    (Git Bash syntax; `tools/cp.txt` holds the classpath). The last line is `SELFPLAY OK` or `SELFPLAY FAILED`. Per-rig assertions live in
    `SelfPlay.java` (search `"sami".equals(...)`), plain `PROBLEM` lines are generic protocol checks. Mulligans are skipped for rigs that assert on the hand.
-2. **Real client recipes (scripted clicks + screenshots):** `powershell -NoProfile -File tools\verify.ps1 -Only <rig,...>`; recipes are the
+2. **Real client, by hand:** `powershell -NoProfile -File tools\play.ps1 -Duel -Rig <rig>` (`-Duel` goes straight into the rigged match; without it the client boots to the main menu and the rig is not used).
+3. **Real client recipes (scripted clicks + screenshots):** `powershell -NoProfile -File tools\verify.ps1 -Only <rig,...>`; recipes are the
    table in `tools\verify.ps1` (`Rig`, `Deck`, `Clicks`). See the recipe table in `tools\verify.ps1`.
 
 ## Rigs
@@ -35,6 +36,7 @@ reproduce a bug or regression-test a feature without playing to it by chance. Ri
 |---|---|---|
 | `sami` (deck `sami`) | Me: 3 Plains + 3 Ornithopter + Sami, Wildcat Captain in play, Wurmcoil Engine {6} in hand. AI: passive Mountains | Granted affinity (`AffectedZone$ Stack` statics) must make the hand spell castable and shown at {3}. SelfPlay asserts the shown cost is 3 |
 | `mill` (deck `mill`) | Me: 5 Islands + 3 Swamps in play, Doomsday + Traumatize in hand. AI: passive Mountains | Mass moves out of a library: Doomsday exiles it, Traumatize mills half the target's. Only the first `-Dmtga.massmove` (6) cards of each move get a ZoneTransfer animation. SelfPlay asserts one big diff with a capped number of Mill transfers |
+| `room` | Me: 6 Plains in play, Surgical Suite (Room) in hand, Grizzly Bears in graveyard. AI: passive Mountains | A Room in hand is offered as `CastLeftRoom` + `CastRightRoom` (the client shows the choice); the unlocked-later door is a `Special` action with ability 349 (left) / 350 (right). SelfPlay casts the right half, then unlocks the left, and asserts both were offered |
 | `dv` | Wastes x7 in play, Devourer of Destiny in hand, AI Grizzly Bears | cast trigger targeting |
 | `ascend` | 9 Plains, Ocelot Pride, two 99-loyalty planeswalkers | Ascend + emblems |
 | `menace`, `block`, `bf`, `bt`, `bolt` | creatures in play / burn deck, passive or attacking AI | combat, blocking, targeting |
