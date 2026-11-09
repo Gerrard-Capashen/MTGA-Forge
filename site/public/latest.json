@@ -1,20 +1,20 @@
 {
     "schema":  1,
-    "released":  "2026-11-05T16:23:05.8572941-03:00",
-    "commit":  "04d817e",
-    "sha256":  "bf00e913fb735b19c865712e2d0ee62f3bfd3b9db24773072ceca075e805efbc",
-    "size":  132857103,
-    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.05-1923/MTGA-Forge.zip",
-    "notes":  "- Fix: library and graveyard mass moves (Doomsday exiling the library, big mills) no longer play one animation per card: they arrive together and only the first few cards animate.\n- Fix: avatars show up again on newer MTGA builds (read from the cosmetic data when the old thumbnail lists are gone).",
+    "released":  "2026-11-09T17:21:13.5765608-03:00",
+    "commit":  "402fa05",
+    "sha256":  "397e6075369588aa12a461c338b8f21695cd0950c6589ea0455a78fcee57eb7a",
+    "size":  132867183,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.09-2021/MTGA-Forge.zip",
+    "notes":  "- New: choose the dungeon and the room when you venture.\n- New: Room cards: cast either half, unlock doors from the battlefield.\n- Fix: targeted spells and abilities show their target arrows on the stack.\n- Fix: modal triggers (like Shambling Ghast) ask for the targets of the chosen modes.\n- Fix: the install check no longer fails when MTGA sits at a drive root.",
     "scan":  {
-                 "at":  "2026-11-05T19:29:47.2439419Z",
-                 "zipReport":  "https://www.virustotal.com/gui/file/bf00e913fb735b19c865712e2d0ee62f3bfd3b9db24773072ceca075e805efbc",
-                 "zipEngines":  35,
+                 "at":  "2026-11-09T20:27:49.7325949Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/397e6075369588aa12a461c338b8f21695cd0950c6589ea0455a78fcee57eb7a",
+                 "zipEngines":  36,
                  "zipMalicious":  1,
                  "zipSuspicious":  0,
-                 "exeReport":  "https://www.virustotal.com/gui/file/f3ef6f151e9c8bb223aa19775e866943ed046f394c5bfdf4fec040d672f79c53",
-                 "exeEngines":  69,
-                 "exeMalicious":  2,
+                 "exeReport":  "https://www.virustotal.com/gui/file/830ad6a7e61b7551769a7ef81742aad6d66e7b2ee4a1f1e9fff04c96bc0ce3a4",
+                 "exeEngines":  71,
+                 "exeMalicious":  3,
                  "exeSuspicious":  0
              }
 }
