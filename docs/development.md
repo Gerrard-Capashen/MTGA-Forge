@@ -54,6 +54,16 @@ The patcher's hooks name methods in `Core.dll`. After an MTGA update:
    - promoted-set art was renamed: the patcher finds boot logo and loading textures by name pattern
    - new cosmetics appeared: the mastery track inserts them (it stays append-only for what players already earned)
 4. Run `tools\gen-protos.ps1` against the new client and rebuild: new enum values appear, and placeholder names sometimes get real names.
+5. A new set brings new booster collations. `CollationIds` is kept by hand from the client's `CollationMapping` enum (`tools\decompile.ps1 -Assemblies SharedClientCore -Force`). Without the set's entries the event page shows no pack art.
+
+## Merging upstream Forge
+
+`forge/` tracks Card-Forge/forge as the `upstream` remote; merge `upstream/master` into `mtga` with a merge commit (the clone is shallow, so commit counts against upstream are meaningless; use `git merge-tree --write-tree mtga upstream/master` for a dry run).
+
+- Our engine changes are a few hooks (`ComputerUtil`, `GameRules`, `CopyPermanentEffect`, `MakeCardEffect`, `Card`, `Cost`). They usually merge cleanly; the real risk is API drift in what `forge-gui-mtga` uses, which only the compile shows (for example `getUserAgent()` moving from `BuildInfo` to `IGuiBase`).
+- `MtgaController` extends `PlayerControllerAi`, so upstream AI changes reach the human seat: check new `PlayerController` hooks against what it overrides.
+- A new set in Forge's editions (with a booster template, in Standard) becomes `QuickDraft_<SET>` and the premier set on its own once the client has its cards. Add its name and blurb to `SetBlurbs.cs`.
+- In a dev tree `forge-patch.ps1` rebuilds the card DB only when `CardDbBuilder.java` changes, not when Forge's card data does: after a merge run it with `-BuildServer -Only bridge,patch,carddb,manifest`. The new DB changes the card DB fingerprint used for online pairing.
 
 ## Testing
 

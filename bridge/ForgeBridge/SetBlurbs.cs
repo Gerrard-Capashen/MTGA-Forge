@@ -7,6 +7,7 @@ namespace ForgeBridge
     {
         private static readonly Dictionary<string, string> Text = new Dictionary<string, string>
         {
+            { "TRK", "A Universes Beyond set spanning the Star Trek franchise, from the original series to its newest crews. Released in November 2026." },
             { "FRA", "The climax of the Echoverse arc, where the multiverse fractures and Jace Beleren's story comes to a head. An event set released in October 2026." },
             { "HOB", "A Universes Beyond set based on J.R.R. Tolkien's The Hobbit, designed with the four-player Pick-Two Draft in mind." },
             { "MSH", "A Universes Beyond set based on the original Marvel comics, not the films, with heroes and villains from across the Marvel universe." },
@@ -155,6 +156,7 @@ namespace ForgeBridge
             { "SOM", "Scars of Mirrodin" },
             { "SOS", "Secrets of Strixhaven" },
             { "SOI", "Shadows over Innistrad" },
+            { "TRK", "Star Trek" },
             { "SNC", "Streets of New Capenna" },
             { "STX", "Strixhaven: School of Mages" },
             { "TDM", "Tarkir: Dragonstorm" },
