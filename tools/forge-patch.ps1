@@ -76,7 +76,11 @@ function Read-Manifest($f) {
 
 # -------------------------------------------------------------------------------------------------- source fingerprint
 function Get-Acf {
-    Get-ChildItem (Join-Path (Split-Path $Source -Parent | Split-Path -Parent) '*.acf') -ErrorAction SilentlyContinue |
+    # Steam: <library>\steamapps\common\MTGA. A standalone install can sit at a drive root (E:\MTGA), where the grandparent is empty.
+    $common = Split-Path $Source -Parent
+    $steamapps = if ($common) { Split-Path $common -Parent } else { '' }
+    if (-not $steamapps) { return }
+    Get-ChildItem (Join-Path $steamapps '*.acf') -ErrorAction SilentlyContinue |
         Where-Object { (Get-Content $_.FullName -Raw) -match '"installdir"\s+"MTGA"' } | Select-Object -First 1
 }
 function Get-Fingerprint {
