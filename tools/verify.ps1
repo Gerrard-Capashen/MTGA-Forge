@@ -131,6 +131,8 @@ $recipes = [ordered]@{
         Note = 'generated card (CardDbBuilder) cast, art from the Scryfall server' }
     'bolt' = @{ Rig = 'bolt'; Seconds = 100; Shots = '62,80'; Clicks = '45:keep,50:fullcontrol,56:cdc #101|dbl,62:player #2,66:promptbutton_primary,71:cdc #125|primary,78:promptbutton_primary'
         Capture = @('SERVER -> PayCostsReq', 'CLIENT -> .*ActionType_Activate_Mana', 'ModifiedLife'); Note = 'Full Control, target, manual mana' }
+    'bolt-arrow' = @{ Rig = 'bolt'; Seconds = 90; Shots = '59,64,69,74'; Clicks = '45:keep,50:fullcontrol,56:cdc #101|dbl,59:arrows,62:player #2,64:arrows,66:promptbutton_primary,69:arrows,71:cdc #125|primary,74:arrows,78:promptbutton_primary'
+        Capture = @('SERVER -> PayCostsReq', 'ModifiedLife'); Server = @('duel camera: Camera.main is Camera \(DuelScene\)'); Note = 'target arrow: shots + arrows_<t>.txt (cameras, spline, renderers) while Bolt is on the stack' }
     'block' = @{ Rig = 'block'; Seconds = 90; Shots = '72,80'; Clicks = '45:keep,52:bf0|primary,55:bf1|primary,58:promptbutton_primary'
         Capture = @('SERVER -> DeclareBlockersReq', 'CLIENT -> .*DeclareBlockersResp'); Note = 'blocking' }
     'bf' = @{ Rig = 'bf'; Seconds = 140; Shots = '105,125'; Clicks = ('45:keep,52:cdc #101|dbl,' + (Pass-Clicks 55 135 3))

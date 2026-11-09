@@ -82,6 +82,7 @@ namespace ForgeBridge
             bootstrap.StartCoroutine(CosmeticCatalogs.Watch());
             bootstrap.StartCoroutine(MasteryTweaks.Watch());
             bootstrap.StartCoroutine(RewardPopupIcons.Watch());
+            bootstrap.StartCoroutine(DuelCamera.Watch());
             bootstrap.StartCoroutine(DebugShots.Run());
             bootstrap.StartCoroutine(DebugClicks.Run());
             IEnumerator stage = Stages(bootstrap);
