@@ -1,20 +1,20 @@
 {
     "schema":  1,
-    "released":  "2026-11-09T21:08:10.5883868-03:00",
-    "commit":  "ce72468",
-    "sha256":  "4e9ffd43e1dad4b7631a0b70c53c77c800055c59683779cf96c0fccaa85ec8ee",
-    "size":  133655787,
-    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.10-0008/MTGA-Forge.zip",
-    "notes":  "- New: Star Trek (TRK) drafts, with Forge\u0027s latest card updates from upstream.\n- New: phasing (Kaito Shizuki and friends) shows as the client expects.\n- Fix: Bitter Triumph asks whether to discard a card or pay 3 life instead of skipping the additional cost.\n- Fix: Offspring (Iridescent Vinelasher) asks whether to pay, and optional keyword costs such as Casualty, Squad and Replicate no longer pay themselves.\n- Fix: Gollum, Riddle Master asks odd or even; objects that appear mid-turn (mulligan redraws, emblems, copies) are announced correctly.",
+    "released":  "2026-11-13T15:08:44.1065765-03:00",
+    "commit":  "2587da7",
+    "sha256":  "eae7e0c89e29f1ad73732473ff29ce9fc5e7e2133643681d0bd55b5a83eefdb7",
+    "size":  133678329,
+    "url":  "https://github.com/Gerrard-Capashen/MTGA-Forge/releases/download/v2026.11.13-1808/MTGA-Forge.zip",
+    "notes":  "- New: best-of-three Ranked queues.\n- New: Timeless (All Cards) in friend challenges: play any decks against each other.\n- New: battles can be attacked, and revealed top cards (Oracle of Mul Daya, Lantern of Insight) show face up.\n- New: divide damage or counters among targets (Fury, Pyrokinesis, The Earth Crystal).\n- New: you pick the creature to tap for Station, Crew and costs like Relic of Legends; Station charge shows as a badge.\n- Fix: cost reductions (Goblin Anarchomancer) and mana Auras (Utopia Sprawl, Wild Growth) count for auto-tap and the Pay button; Reflecting Pool can be tapped by hand.\n- Fix: flavor text on cards without rules text, loyalty badges, Fuse and Aftermath cards.\n- Fix: a friend challenge between different versions of MTG Arena or MTGA Forge now says so in the game, with what to update, instead of hanging after the countdown.\n- Fix: missing text on buttons and menus on some installs (mostly Steam).\n- Fix: the launcher no longer closes without a word: it explains when it was opened from inside the zip or from a shared folder (Parallels), and saves any error to a log.",
     "scan":  {
-                 "at":  "2026-11-10T00:16:33.9206427Z",
-                 "zipReport":  "https://www.virustotal.com/gui/file/4e9ffd43e1dad4b7631a0b70c53c77c800055c59683779cf96c0fccaa85ec8ee",
-                 "zipEngines":  38,
+                 "at":  "2026-11-13T18:15:16.2851083Z",
+                 "zipReport":  "https://www.virustotal.com/gui/file/eae7e0c89e29f1ad73732473ff29ce9fc5e7e2133643681d0bd55b5a83eefdb7",
+                 "zipEngines":  35,
                  "zipMalicious":  1,
                  "zipSuspicious":  0,
-                 "exeReport":  "https://www.virustotal.com/gui/file/2bba0e7320fa35c077e2bafb19609d97cbd64cbc0f9c29da3bae89d18cd74997",
+                 "exeReport":  "https://www.virustotal.com/gui/file/cc0a356b5643b46f1d2fc13424323249e8d03fe2b5d2b9084434c82f776bec57",
                  "exeEngines":  71,
-                 "exeMalicious":  3,
+                 "exeMalicious":  2,
                  "exeSuspicious":  0
              }
 }
