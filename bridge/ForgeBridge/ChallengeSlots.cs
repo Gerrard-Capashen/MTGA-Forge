@@ -7,9 +7,9 @@ namespace ForgeBridge
 {
     /// <summary>
     /// The direct challenge screen offers a fixed set of deck types (Standard / Brawl / Limited / Alchemy). Its tables are plain
-    /// static collections, so at startup they are rebuilt to offer Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Premodern, Brawl and Historic, all under
-    /// "Challenge Match". Each deck type needs a match type name the client can parse (the server sends ChallengeName), so the nine
-    /// slots reuse nine existing ones: the server's ChallengeService.FORMAT_OF and ForgeFormats.DIRECT_SLOTS carry the same table.
+    /// static collections, so at startup they are rebuilt to offer Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Premodern, Brawl, Historic and Timeless (every card, no ban list), all under
+    /// "Challenge Match". Each deck type needs a match type name the client can parse (the server sends ChallengeName), so the ten
+    /// slots reuse ten existing ones: the server's ChallengeService.FORMAT_OF and ForgeFormats.DIRECT_SLOTS carry the same table.
     /// Labels: FormatLoc.
     /// </summary>
     public static class ChallengeSlots
@@ -26,6 +26,7 @@ namespace ForgeBridge
             (ChallengeMatchTypes.DirectGameTournamentHistoric, "DirectGamePremodern", "Forge/Challenge/DeckType_Premodern"),
             (ChallengeMatchTypes.DirectGameTournamentExplorer, "DirectGameBrawl", "Forge/Challenge/DeckType_Brawl"),
             (ChallengeMatchTypes.DirectGameTournamentTimeless, "DirectGameHistoric", "Forge/Challenge/DeckType_Historic"),
+            (ChallengeMatchTypes.DirectGameTournamentAlchemy, "DirectGameTimeless", "Forge/Challenge/DeckType_Timeless"),
         };
 
         public static void Install()

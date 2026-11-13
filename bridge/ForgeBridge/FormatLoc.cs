@@ -15,7 +15,7 @@ namespace ForgeBridge
     {
         private static readonly Dictionary<string, string> Text = new Dictionary<string, string>
         {
-            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper / Premodern / Brawl / Historic
+            // the direct challenge screen's deck types are rebuilt by ChallengeSlots: Standard / Pioneer / Modern / Legacy / Vintage / Pauper / Premodern / Brawl / Historic / Timeless
             { "MainNav/PrivateGame/DeckType_60_Card", "Standard" },
             { "MainNav/PrivateGame/DeckType_Brawl", "Pioneer" },
             { "MainNav/PrivateGame/DeckType_60_Card_Alchemy", "Modern" },
@@ -25,6 +25,8 @@ namespace ForgeBridge
             { "Forge/Challenge/DeckType_Premodern", "Premodern" },
             { "Forge/Challenge/DeckType_Brawl", "Brawl" },
             { "Forge/Challenge/DeckType_Historic", "Historic" },
+            { "Forge/Challenge/DeckType_Timeless", "Timeless (All Cards)" },
+            { "MainNav/DeckFormat/Timeless", "Timeless (All Cards)" },
             { "MainNav/DeckFormat/Pioneer", "Pioneer" },
             { "MainNav/DeckFormat/Modern", "Modern" },
             { "MainNav/DeckFormat/Legacy", "Legacy" },
@@ -53,7 +55,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Alchemy", "Every card Forge implements, rebalanced versions included." },
             { "MainNav/DeckFormatInfo/Ambiguous", "No format chosen yet: every card is shown." },
             { "MainNav/DeckFormatInfo/Draft", "A drafted deck kept in your decks: 40 cards, any card allowed." },
-            { "MainNav/DeckFormatInfo/Timeless", "Every card Forge implements. Bot matches accept decks of any format." },
+            { "MainNav/DeckFormatInfo/Timeless", "Every card Forge implements, with no ban or restricted list: play any decks against each other. Bot matches accept decks of any format." },
             // the draft events' prize for winning out (FrontDoor StartHook token definition Forge_EventChampion)
             { "Forge/Token/EventChampionSingular", "Event Champion" },
             { "Forge/Token/EventChampionPlural", "Event Champion" },
