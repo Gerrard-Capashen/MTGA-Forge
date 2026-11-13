@@ -58,6 +58,8 @@ The patcher's hooks name methods in `Core.dll`. After an MTGA update:
 4. Run `tools\gen-protos.ps1` against the new client and rebuild: new enum values appear, and placeholder names sometimes get real names.
 5. A new set brings new booster collations. `CollationIds` is kept by hand from the client's `CollationMapping` enum (`tools\decompile.ps1 -Assemblies SharedClientCore -Force`). Without the set's entries the event page shows no pack art.
 
+**UI text comes from one raw file.** Every label (Play, Decks, Profile, the deck builder's buttons) is looked up in `Raw_ClientLocalization_*.mtga`, which `LoadLocDatabaseUniTask` adds only if `AssetLoader.GetRawFilePath("ClientLocalization", ...)` names a file that exists. That call takes the first matching name from the active manifests. An install can hold an old `Manifest_Localization_*` next to the current one (Steam puts back what its depot shipped), and the old one's file may be gone: the game then runs with empty labels, while numbers and mana symbols still show. `LocalDoorbell` therefore offers one manifest per category, the one with the fewest missing files, and `LocalStartup` logs `localization DB NOT loaded` when the text database is missing.
+
 ## Merging upstream Forge
 
 `forge/` tracks Card-Forge/forge as the `upstream` remote; merge `upstream/master` into `mtga` with a merge commit (the clone is shallow, so commit counts against upstream are meaningless; use `git merge-tree --write-tree mtga upstream/master` for a dry run).

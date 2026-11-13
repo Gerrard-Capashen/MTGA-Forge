@@ -52,6 +52,19 @@ namespace ForgeBridge
         /// flag), so a player who switches the toggle off in Settings > Account stays off. The launcher blanks personal data
         /// (Windows user, profile name and id, IPs) in the log files when the game closes.
         /// </summary>
+        /// <summary>
+        /// The client adds the UI text database (Raw_ClientLocalization) to its CompositeLocProvider only when the active manifests name a
+        /// file that exists; without it every label in the game is empty and nothing else says why. See LocalDoorbell.
+        /// </summary>
+        private static void CheckLocDatabase()
+        {
+            var composite = Pantry.Get<Wotc.Mtga.Loc.IClientLocProvider>() as Core.Code.Localization.CompositeLocProvider;
+            string path = AssetLoader.GetRawFilePath("ClientLocalization", "ClientLocalization.sqlite");
+            if (composite != null && composite.ProviderCount >= 2) { Log.Info("localization DB loaded: " + path); return; }
+            Log.Error("localization DB NOT loaded (path '" + path + "', exists " + (!string.IsNullOrEmpty(path) && File.Exists(path))
+                + "): the game's labels will be empty. Start MTG Arena once so it finishes downloading, then prepare the game again in MTGA Forge.");
+        }
+
         private static void EnableDetailedLogs()
         {
             try
@@ -186,6 +199,7 @@ namespace ForgeBridge
             // client 2026.64 returned an IEnumerator; later builds do the work synchronously (void)
             var loginAssets = Call(bootstrap, "PrepareLoginAssets", assetPrepScene) as IEnumerator;
             if (loginAssets != null) while (loginAssets.MoveNext()) yield return loginAssets.Current;
+            CheckLocDatabase();
             FormatLoc.Install();
             ChallengeSlots.Install();
 
