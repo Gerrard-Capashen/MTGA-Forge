@@ -23,6 +23,7 @@ namespace MtgaForgeLauncher
         {
             var app = new App();
             app.InitializeComponent();
+            CatchCrashes(app);
             if (args.Length >= 2 && args[0] == "--shots") return Shots(app, args[1]);
             if (args.Length >= 2 && args[0] == "--ico") return MakeIcon(args[1]);
             if (args.Length >= 2 && args[0] == "--probe") return Probe(app, args[1], args.Length > 2 ? args[2] : null);
@@ -31,6 +32,47 @@ namespace MtgaForgeLauncher
             if (File.Exists(Path.Combine(own, "dist.json"))) Updater.CleanUp(own);
             var window = new MainWindow(new MainViewModel(false));
             return app.Run(window);
+        }
+
+        /// <summary>Where an unexpected error is written (%LOCALAPPDATA%\MTGA-Forge\launcher-crash.log).</summary>
+        static readonly string CrashLog = Path.Combine(Settings.Home, "launcher-crash.log");
+        static bool crashShown;
+
+        /// <summary>
+        /// An unexpected error is written to <see cref="CrashLog"/> and shown in a message box instead of closing the window without a word.
+        /// Errors on the window's thread are reported and the window stays open; anything else ends the program after the message.
+        /// </summary>
+        static void CatchCrashes(App app)
+        {
+            app.DispatcherUnhandledException += (s, e) => { Report(e.Exception, false); e.Handled = true; };
+            AppDomain.CurrentDomain.UnhandledException += (s, e) => Report(e.ExceptionObject as Exception, true);
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) => { WriteCrash(e.Exception); e.SetObserved(); };
+        }
+
+        static void WriteCrash(Exception e)
+        {
+            try
+            {
+                Directory.CreateDirectory(Settings.Home);
+                File.AppendAllText(CrashLog, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " MTGA-Forge " + typeof(Program).Assembly.GetName().Version + " on "
+                    + Environment.OSVersion + Environment.NewLine + e + Environment.NewLine + Environment.NewLine);
+            }
+            catch { }
+        }
+
+        static void Report(Exception e, bool fatal)
+        {
+            WriteCrash(e);
+            if (crashShown && !fatal) return;      // one box per start: a repeating error must not bury the window in dialogs
+            crashShown = true;
+            try
+            {
+                MessageBox.Show("MTGA Forge ran into an unexpected error" + (fatal ? " and has to close" : "") + ":\n\n"
+                    + (e == null ? "unknown error" : e.GetType().Name + ": " + e.Message)
+                    + "\n\nThe details are in " + CrashLog + ". Please include that file when you report this.",
+                    "MTGA Forge", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch { }
         }
 
         static int MakeIcon(string path)

@@ -7,7 +7,10 @@ $Root = (Resolve-Path "$PSScriptRoot\..").Path
 $Dist = Test-Path "$Root\dist.json"
 if ($Dist) {
     $JavaExe = "$Root\runtime\bin\java.exe"
-    $ServerCp = "$Root\server\lib\*;$Root\server\ext\*"
+    # every jar by name, not "lib\*": Java's wildcard expansion found nothing in a Mac folder shared by Parallels (\\Mac\Home\...),
+    # which failed the carddb step with "Could not find or load main class forge.mtga.CardDbBuilder"
+    $ServerCp = (@(Get-ChildItem "$Root\server\lib", "$Root\server\ext" -Filter *.jar | Sort-Object { $_.DirectoryName -notlike '*\lib' }, Name | ForEach-Object FullName)) -join ';'
+    if (-not $ServerCp) { $ServerCp = "$Root\server\lib\*;$Root\server\ext\*" }
     $GuiDir = "$Root\server\forge-gui"
     $PatcherExe = "$Root\patcher\Patcher.exe"
     $BridgeDll = "$Root\patcher\ForgeBridge.dll"

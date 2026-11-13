@@ -66,6 +66,7 @@ namespace MtgaForgeLauncher
         ScriptRunner runner;
         ServerLog serverLog;
         bool busy, editing;
+        string packageProblem;
 
         /// <summary>False for --probe runs, which must not touch the saved settings.</summary>
         public bool Persist { get; set; } = true;
@@ -124,8 +125,38 @@ namespace MtgaForgeLauncher
             folder = string.IsNullOrEmpty(folderOverride) ? settings.Folder : folderOverride; name = settings.Name; offline = settings.Offline; consoleOpen = settings.ConsoleOpen;
             profileNote = Profile.Note(folder);
             foreach (var s in PatchSteps) Steps.Add(new StepItem { Title = s[1] });
-            if (!demo) { RefreshFirewall(); ui.BeginInvoke(DispatcherPriority.ApplicationIdle, (Action)CheckForUpdate); }
-            if (!demo) Task.Run(() => MtgaLocator.Find()).ContinueWith(t => ui.BeginInvoke((Action)(() => OnSourcesFound(t.Result))));
+            if (demo) return;
+            packageProblem = PackageProblem(PackageRoot);
+            if (packageProblem != null) { ShowProblem("MTGA Forge can't run from here", packageProblem); return; }
+            RefreshFirewall(); ui.BeginInvoke(DispatcherPriority.ApplicationIdle, (Action)CheckForUpdate);
+            Task.Run(() => MtgaLocator.Find()).ContinueWith(t =>
+            {
+                var found = t.IsFaulted ? new List<string>() : t.Result;
+                ui.BeginInvoke((Action)(() =>
+                {
+                    if (t.IsFaulted) Log("Looking for MTGA failed: " + t.Exception.GetBaseException().Message);
+                    OnSourcesFound(found);
+                }));
+            });
+        }
+
+        /// <summary>
+        /// Why the package can't work where it is, or null. Started from inside the zip (Windows Explorer runs the exe alone from a temporary
+        /// folder, without tools\ and the rest), or from a network / shared folder: Java does not load the server from a Mac folder shared by
+        /// Parallels or VMware (\\Mac\Home\...), and the patch scripts were not made for one.
+        /// </summary>
+        static string PackageProblem(string root)
+        {
+            if (!File.Exists(Path.Combine(root, "tools", "forge-patch.ps1")) || !File.Exists(Path.Combine(root, "tools", "launcher.ps1")))
+                return "MTGA Forge was started without the rest of its files. This happens when MTGA-Forge.exe is opened from inside the zip file. "
+                     + "Close this window, right-click the zip file, choose Extract All, then open MTGA-Forge.exe in the extracted folder.";
+            bool network = root.StartsWith(@"\\");
+            if (!network)
+                try { network = new DriveInfo(Path.GetPathRoot(root)).DriveType == DriveType.Network; } catch { }
+            if (network)
+                return "MTGA Forge is in a network or shared folder (" + root + "), and the game engine can't run from there. That includes the Mac folders "
+                     + "that Parallels or VMware share with Windows. Move the whole MTGA-Forge folder to a drive of this PC, for example C:\\MTGA-Forge, and open it from there.";
+            return null;
         }
 
         // ------------------------------------------------------------------------------------------ bound properties
@@ -335,6 +366,7 @@ namespace MtgaForgeLauncher
         public void Recheck()
         {
             if (busy) return;
+            if (packageProblem != null) { ShowProblem("MTGA Forge can't run from here", packageProblem); return; }
             if (!HasSource)
             {
                 Stage = Stage.NeedSource;
@@ -611,7 +643,21 @@ namespace MtgaForgeLauncher
         void Run(string script, string args, Action<string> onLine, Action<int> onExit)
         {
             Log("> " + script + " " + args);
-            runner = new ScriptRunner(ui, Path.Combine(tools, script), args, l => { if (l.Trim() != "") Log(l.TrimEnd()); onLine(l); }, onExit);
+            try
+            {
+                runner = new ScriptRunner(ui, Path.Combine(tools, script), args, l => { if (l.Trim() != "") Log(l.TrimEnd()); onLine(l); }, onExit);
+            }
+            catch (Exception e)
+            {
+                // PowerShell missing or blocked (antivirus, policy), or the tools folder gone: the window says so instead of closing
+                runner = null;
+                busy = false;
+                Log("Could not start Windows PowerShell for " + script + ": " + e.Message);
+                ShowProblem("Windows PowerShell could not be started",
+                    "MTGA Forge runs its steps with Windows PowerShell, which Windows refused to start (" + e.Message + "). "
+                    + "Check that antivirus or a company policy does not block powershell.exe, then press Check again.");
+                ConsoleOpen = true;
+            }
         }
 
         void Log(string line)
