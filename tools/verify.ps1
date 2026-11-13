@@ -133,6 +133,8 @@ $recipes = [ordered]@{
         Capture = @('SERVER -> PayCostsReq', 'CLIENT -> .*ActionType_Activate_Mana', 'ModifiedLife'); Note = 'Full Control, target, manual mana' }
     'bolt-arrow' = @{ Rig = 'bolt'; Seconds = 90; Shots = '59,64,69,74'; Clicks = '45:keep,50:fullcontrol,56:cdc #101|dbl,59:arrows,62:player #2,64:arrows,66:promptbutton_primary,69:arrows,71:cdc #125|primary,74:arrows,78:promptbutton_primary'
         Capture = @('SERVER -> PayCostsReq', 'ModifiedLife'); Server = @('duel camera: Camera.main is Camera \(DuelScene\)'); Note = 'target arrow: shots + arrows_<t>.txt (cameras, spline, renderers) while Bolt is on the stack' }
+    'station' = @{ Rig = 'station'; Seconds = 90; Shots = '56,62,66,72'; Clicks = '45:keep,53:bf0|primary,58:bf2|primary,63:promptbutton_primary,70:dump'
+        Capture = @('SERVER -> PayCostsReq'); Player = @('StationLevelThreshold'); Note = 'Station: pick the creature to tap, then the charge badge on the Spacecraft (shots)' }
     'block' = @{ Rig = 'block'; Seconds = 90; Shots = '72,80'; Clicks = '45:keep,52:bf0|primary,55:bf1|primary,58:promptbutton_primary'
         Capture = @('SERVER -> DeclareBlockersReq', 'CLIENT -> .*DeclareBlockersResp'); Note = 'blocking' }
     'bf' = @{ Rig = 'bf'; Seconds = 140; Shots = '105,125'; Clicks = ('45:keep,52:cdc #101|dbl,' + (Pass-Clicks 55 135 3))
