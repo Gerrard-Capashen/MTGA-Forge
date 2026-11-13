@@ -52,6 +52,7 @@ namespace ForgeBridge
         private volatile bool _stopping;
         private bool _first = true;
         private long _lastMessage;
+        private long _lastNotice;
 
         public bool IsSocialEnabled => true;
         public bool Connected => _connected;
@@ -242,6 +243,18 @@ namespace ForgeBridge
                     OnDirectMessage?.Invoke(new MTGA.Social.DirectMessage { SenderPlayerId = from, SenderDisplayName = friend?.FullName ?? "", Message = payload.Substring(DmPrefix.Length) });
                 }
                 else OnGameMessage?.Invoke(new GameMessage(from, "", payload, null));
+            }
+
+            // the local server's notices (SocialClient.notice: a challenge that can't start, e.g. different versions), each shown once as a popup;
+            // kept for the next snapshot while the popup manager is not up yet
+            foreach (var j in Items(o, "notices"))
+            {
+                long seq = (long)j["seq"];
+                if (seq <= _lastNotice) continue;
+                if (SystemMessageManager.Instance == null) break;
+                _lastNotice = seq;
+                Log.Info("social: notice " + (string)j["title"]);
+                SystemMessageManager.ShowSystemMessage((string)j["title"] ?? "", (string)j["text"] ?? "");
             }
 
             bool connected = (bool)o["connected"];

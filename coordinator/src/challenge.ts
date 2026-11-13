@@ -6,6 +6,8 @@
  *   countdown {id, seconds}                the owner launched: the clients count down, then each one "issues"
  *   match     {id, match, role, token, opponent}   everybody issued: open the relay room /match/<match> as that role (the owner hosts)
  *   kick      {id}   close {id}
+ *   versions  {id, players: [{fullName, fp, v}]}   the players' servers run different card databases / peer protocols (another MTGA
+ *             build or MTGA Forge release), so their match could not start: each client shows a message instead of hanging silently
  * The invite itself travels between the two clients as an opaque friend message (Hub {"t":"game"}); joining needs the challenge id and a
  * friendship with the owner (checked in challenges.ts).
  */
@@ -18,6 +20,7 @@ interface Cosmetics { avatar: string; sleeve: string; pet: string; title: string
 export interface Member {
   playerId: string; fullName: string; dev?: boolean; ready: boolean; teamId: number;
   deckId: string; deckName: string; artId: number; tileId: number; cosmetics: Cosmetics;
+  fp?: string; v?: string;          // card database and peer protocol of the player's server (sent with "ready"; older releases send none)
 }
 export interface State {
   id: string; title: string; name: string; playFirst: string; winCondition: string; limit: number; owner: string;
@@ -32,6 +35,13 @@ const WIN = ["SingleElimination", "BestOf3"];
 const IDLE_MS = 3 * 3_600_000;
 const LAUNCH_MS = 90_000;            // everybody has this long to issue after the launch, else the challenge goes back to open
 const COUNTDOWN_SECONDS = 10;           // the client waits a fixed 7 s and then countdown - 7: anything under 8 breaks its launch routine
+
+/** Does this player's server run another card database or peer protocol than another player's? Unknown (an older release) never clashes. */
+function clash(s: State, me: Member): boolean {
+  if (!me.fp || !me.v) return false;
+  return s.players.some(p => p.playerId !== me.playerId && !!p.fp && !!p.v && (p.fp !== me.fp || p.v !== me.v));
+}
+const versions = (s: State) => ({ kind: "versions", id: s.id, players: s.players.map(p => ({ fullName: p.fullName, fp: p.fp ?? "", v: p.v ?? "" })) });
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.trunc(v) : 0);
@@ -110,8 +120,11 @@ export class Challenge implements DurableObject {
         me.ready = true;
         me.deckId = str(args.deckId, 64); me.deckName = str(args.deckName, 64); me.artId = num(args.artId); me.tileId = num(args.tileId);
         me.cosmetics = cosmetics(args.cosmetics);
+        if (args.fp !== undefined) me.fp = str(args.fp, 128);
+        if (args.v !== undefined) me.v = str(args.v, 16);
         await this.save(s);
         await this.broadcast(s, { kind: "status", challenge: s });
+        if (clash(s, me)) await this.broadcast(s, versions(s));        // both hear it now, not after the countdown
         return this.ok(s);
       case "unready":
         if (s.status !== "open") return this.err(409, "the match is starting");
@@ -124,6 +137,10 @@ export class Challenge implements DurableObject {
         if (s.status !== "open") return this.err(409, "already starting");
         if (s.players.length < 2) return this.err(409, "waiting for an opponent");
         if (!s.players.every(p => p.ready)) return this.err(409, "everybody has to be ready");
+        if (s.players.some(p => clash(s, p))) {
+          await this.notify([player.id], versions(s));
+          return this.err(409, "the players run different versions");
+        }
         s.status = "starting"; s.issued = []; s.launchedAt = Date.now();
         await this.save(s);
         await this.broadcast(s, { kind: "status", challenge: s });

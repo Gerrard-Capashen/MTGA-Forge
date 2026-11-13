@@ -157,6 +157,32 @@ check(r.status === 404, "a closed challenge is gone");
 r = await api("GET", "/challenges", undefined, B.token);
 check(r.body.challenges.length === 0, "nothing open any more");
 
+// different versions (card DB / peer protocol): both are told at ready, the launch is refused
+{
+  const v = (await api("POST", "/challenges", { name: "DirectGame" }, A.token)).body.challenge.id;
+  await api("POST", `/challenges/${v}/join`, {}, B.token);
+  sa.msgs.length = 0; sb.msgs.length = 0;
+  await api("POST", `/challenges/${v}/ready`, { deckId: "deck-a", fp: "Raw_CardDatabase_aaa.mtga", v: "7" }, A.token);
+  await sleep(300);
+  check(!sa.msgs.some(m => m.kind === "versions"), "one ready player: no version message");
+  await api("POST", `/challenges/${v}/ready`, { deckId: "deck-b", fp: "Raw_CardDatabase_bbb.mtga", v: "7" }, B.token);
+  const va = await sa.waitFor(isC("versions")), vb = await sb.waitFor(isC("versions"));
+  check(va?.id === v && vb?.players.some(p => p.fp === "Raw_CardDatabase_bbb.mtga") && vb.players.some(p => p.fp === "Raw_CardDatabase_aaa.mtga"), "different card DBs: both players get the versions message with both fingerprints");
+  r = await api("POST", `/challenges/${v}/launch`, {}, A.token);
+  check(r.status === 409 && !!await sa.waitFor(isC("versions")), "launch with different versions: refused, the owner is told again");
+  await api("POST", `/challenges/${v}/ready`, { deckId: "deck-b", fp: "Raw_CardDatabase_aaa.mtga", v: "7" }, B.token);
+  r = await api("POST", `/challenges/${v}/launch`, {}, A.token);
+  check(r.status === 200, "same versions: launch goes ahead");
+  await api("POST", `/challenges/${v}/close`, {}, A.token);
+  const w = (await api("POST", "/challenges", { name: "DirectGame" }, A.token)).body.challenge.id;
+  await api("POST", `/challenges/${w}/join`, {}, B.token);
+  await api("POST", `/challenges/${w}/ready`, { deckId: "deck-a", fp: "Raw_CardDatabase_aaa.mtga", v: "7" }, A.token);
+  await api("POST", `/challenges/${w}/ready`, { deckId: "deck-b" }, B.token);
+  r = await api("POST", `/challenges/${w}/launch`, {}, A.token);
+  check(r.status === 200, "a player of an older release (no fp sent) is not refused");
+  await api("POST", `/challenges/${w}/close`, {}, A.token);
+}
+
 // limit of open challenges
 const ids = [];
 for (let i = 0; i < 5; i++) ids.push((await api("POST", "/challenges", { name: "DirectGame" }, A.token)).body.challenge?.id);

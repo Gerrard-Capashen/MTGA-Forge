@@ -123,6 +123,7 @@ sequenceDiagram
 ```
 
 - Pairing needs the same queue, the same **card DB fingerprint** (same MTGA version and MTGA Forge release) and the same peer protocol version.
+  Queues only pair matching players. Direct challenges pair friends whatever they run, so each server sends its fingerprint and protocol with "ready": the coordinator pushes `versions` to both players when they differ and refuses the launch, and the server turns that into a popup in the game (`SocialClient.notice`, shown by the bridge's `CoordinatorSocialManager`) telling both players to update.
 - The player who waited longest hosts. Draft tables work the same way: the first player at the table hosts the draft and the bots.
 - **Results are two-sided.** Each seat reports its own outcome with its match token and session token, and a match counts only when both agree. With one report only: a reported loss is taken at its word, and a reported win counts only if the relay saw the opponent drop for good after 90 seconds of play. Contradicting reports are `disputed` and pay nothing (`coordinator/src/results.ts`). Closing the game mid-match counts as conceding: that player's own server reports the loss (`ForgeBackend.concedeByLeaving`, `RemoteSeatBackend.onDisconnect`), and the launcher waits for reports still on their way (`/results/pending`) before it stops the server.
 
