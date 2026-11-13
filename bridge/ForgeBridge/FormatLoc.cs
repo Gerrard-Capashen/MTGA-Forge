@@ -155,10 +155,12 @@ namespace ForgeBridge
                     + "Pay X mana and discard a card to create a copy of a random creature with mana value X, once each turn. Casual: Mastery XP only, no rank.";
                 return true;
             }
-            if (bo3 && (mode != "BotPlay" || format == "Brawl")) return false;       // Brawl is best of one
+            if (bo3 && (mode != "BotPlay" && mode != "RankedPlay" || format == "Brawl")) return false;       // Brawl is best of one
             if (mode == "RankedPlay" && format == "Brawl") return false;
             if (mode == "BotPlay" && bo3)
                 loc = title ? "Bot Play: " + format + " (Best of 3)" : "Play a best-of-three " + format + " match against the Forge AI, with sideboarding between games. Only decks legal in " + format + " can be chosen.";
+            else if (mode == "RankedPlay" && bo3)
+                loc = title ? "Ranked: " + format + " (Best of 3)" : "Climb the Constructed ladder in " + format + " with a best-of-three match against another player, with sideboarding between games. Every ranked format shares one rank. Only decks legal in " + format + " can be chosen.";
             else if (mode == "BotPlay")
                 loc = title ? "Bot Play: " + format : "Play a " + format + " deck against the Forge AI. Only decks legal in " + format + " can be chosen.";
             else if (mode == "CasualPlay")

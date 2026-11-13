@@ -28,7 +28,7 @@ Every card is free. Every cosmetic is earned by playing. Nothing is ever sold.
 | **Seven competitive formats** | Standard, Pioneer, Modern, Legacy, Vintage, Pauper and Premodern, ranked or casual, with ready-to-play decks for each |
 | **Every card is free** | Every card in your collection, four copies each. No wildcards, no packs, no grind |
 | **Ranked play** | Climb from Bronze to Mythic, then fight for a place on the Mythic leaderboard |
-| **Best of three** | Full matches with sideboarding against the Forge AI or a friend; the loser of each game chooses to play or draw |
+| **Best of three** | Full matches with sideboarding against the Forge AI, a friend or a ranked opponent; the loser of each game chooses to play or draw |
 | **Drafts** | Premier Draft at one table with other players (including the Vintage Cube, Power Nine included); Quick Draft against Forge bots, offline |
 | **Casual modes** | Brawl with your commander in the command zone, Momir Basic, and an Archenemy event against Sparky, the AI Archenemy |
 | **Mastery track** | Every avatar, sleeve, companion, emote and title in the client, two rewards per level, earned by playing |

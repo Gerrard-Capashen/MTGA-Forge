@@ -63,7 +63,7 @@ export function ladder(): { class: string; level: number; steps: number }[] {
 
 /** The ladder a ranked queue counts for, null if the queue is not ranked. Premier Draft matches count for the Limited (Draft) ladder. */
 export function poolOf(queue: string): string | null {
-  if (/^RankedPlay_[A-Za-z0-9]+$/.test(queue)) return "constructed";
+  if (/^RankedPlay_[A-Za-z0-9]+(_BO3)?$/.test(queue)) return "constructed";      // the best-of-three queue moves the same rank
   return /^PremierDraft_[A-Za-z0-9]+$/.test(queue) ? "limited" : null;
 }
 

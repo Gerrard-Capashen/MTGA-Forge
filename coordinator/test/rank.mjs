@@ -167,6 +167,15 @@ await report(E, a, "win", Q); await report(F, b, "loss", Q); rA.ws.close(); rB.w
 va = await verdict(E, a);
 check(va.status === "verified" && va.rank === undefined && pips(await rank(E)) === "Gold 3 2", "a casual match reported as ranked moves nothing");
 
+// the best-of-three ranked queue counts for the same ladder
+const Q3 = "RankedPlay_Standard_BO3";
+[a, b] = await paired(E, F, Q3);
+[rA, rB] = await bothIn(a, b); await sleep(450);
+await report(E, a, "win", Q3); await report(F, b, "loss", Q3); rA.ws.close(); rB.ws.close();
+va = await verdict(E, a);
+check(va.status === "verified" && va.rank?.reason === "applied" && va.rank?.result === "win", "a ranked best-of-three match moves the rank like a best-of-one one");
+setRank(E, "Gold", 3, 2); setRank(F, "Gold", 3, 2);
+
 // ---- forfeit: the leaver takes the loss
 setRank(E, "Gold", 3, 2); setRank(F, "Gold", 3, 2);
 [a, b] = await paired(E, F);

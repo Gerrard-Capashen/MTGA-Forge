@@ -1,11 +1,11 @@
 # Solo play session with full capture. No scripted clicks: you play, the server logs everything.
-# Usage: powershell -NoProfile -File tools\play.ps1 [-Minutes 30] [-NoBuild] [-AiDeck "MTGA Chaos and Mayhem"|random|path.dck]
+# Usage: powershell -NoProfile -File tools\play.ps1 [-Minutes 30] [-NoBuild] [-Coordinator ws://127.0.0.1:8787] [-AiDeck "MTGA Chaos and Mayhem"|random|path.dck]
 #        powershell -NoProfile -File tools\play.ps1 -Duel [-Deck playtest]     (old mode: straight into a duel, fixed decks)
 # Default (menu mode): the client boots into its normal home page through the local Front Door; build decks in the
 # deck builder (every card owned x4, decks saved under data\decks) and press Play -> Bot Match to play vs the Forge AI.
 # Capture file: tools\capture\session-<timestamp>.log (Front Door commands "FD ...", client/server GRE messages,
 # UNHANDLED markers, client exceptions appended at the end)
-param([string]$Deck = '', [switch]$Duel, [string]$AiDeck = '', [string]$Rig = '', [int]$Minutes = 30, [switch]$NoBuild)
+param([string]$Deck = '', [switch]$Duel, [string]$AiDeck = '', [string]$Rig = '', [int]$Minutes = 30, [switch]$NoBuild, [string]$Coordinator = '')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path "$PSScriptRoot\..").Path
 $m = "$root\client\MTGA_Data\Managed"
@@ -36,6 +36,7 @@ $javaArgs = @("-Dmtga.capture=`"$cap`"")
 if ($Duel) { $javaArgs += "-Dmtga.deck=$Deck" }
 if ($Rig) { $javaArgs += "-Dmtga.rig=$Rig" }
 if ($AiDeck) { $javaArgs += "-Dmtga.aideck=`"$AiDeck`"" }
+if ($Coordinator) { $javaArgs += "-Dmtga.coordinator=$Coordinator" }      # e.g. ws://127.0.0.1:8787 for a local `npm run dev` coordinator
 $javaArgs += '-cp', "`"$cp`"", 'forge.mtga.ForgeMtgaMain', "`"$guiDir`"", "`"$root\client`"", '30003'
 $java = Start-Process java -ArgumentList $javaArgs -WorkingDirectory $guiDir -RedirectStandardOutput $serverLog -RedirectStandardError "$serverLog.err" -PassThru -WindowStyle Hidden
 Write-Host "Server starting (pid $($java.Id)); waiting for it to listen..."
