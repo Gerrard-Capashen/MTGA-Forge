@@ -137,6 +137,8 @@ $recipes = [ordered]@{
         Capture = @('SERVER -> PayCostsReq'); Player = @('StationLevelThreshold'); Note = 'Station: pick the creature to tap, then the charge badge on the Spacecraft (shots)' }
     'topreveal' = @{ Rig = 'topreveal'; Seconds = 90; Shots = '55,62'; Clicks = '45:keep'
         Note = 'top of library revealed (Oracle of Mul Daya in play: our top card face-up; shots)' }
+    'battle' = @{ Rig = 'battle'; Seconds = 100; Shots = '64,72'; Clicks = ('45:keep,' + (Pass-Clicks 52 70 3))
+        Capture = @('SERVER -> DeclareAttackersReq'); Note = 'battles as attack targets: DeclareAttackersReq lists the AI''s protected Invasion of Zendikar as a legal recipient (attack it by hand: battle rig, turn 2)' }
     'block' = @{ Rig = 'block'; Seconds = 90; Shots = '72,80'; Clicks = '45:keep,52:bf0|primary,55:bf1|primary,58:promptbutton_primary'
         Capture = @('SERVER -> DeclareBlockersReq', 'CLIENT -> .*DeclareBlockersResp'); Note = 'blocking' }
     'bf' = @{ Rig = 'bf'; Seconds = 140; Shots = '105,125'; Clicks = ('45:keep,52:cdc #101|dbl,' + (Pass-Clicks 55 135 3))
