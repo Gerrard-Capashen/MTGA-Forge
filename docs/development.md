@@ -40,6 +40,7 @@ Every Forge decision that should be the player's goes through the `MtgaControlle
 - New rows clone a template card. Ids start at 9,000,000 (GrpId, ArtId, ability ids) and localization ids at 900,000,000, so they never clash with the client's.
 - Oracle text becomes one ability per line. A line equal to an existing client ability reuses it (icons, server mapping); otherwise a new ability row is made.
 - **Gotcha:** id-list columns (`ModalChildIds`, `HiddenByAbilityIds`, ...) must be NULL, never an empty string. The client parses every comma-separated part, and the deck builder crashes otherwise.
+- **Flavor text.** Forge's scripts have none, and the client draws it (`FlavorTextId` on the Cards row) only in the empty text box of a card without rules text. `FlavorText` fetches it from Scryfall for those cards only (batched, cached by name in `<carddata>\flavor.json`; offline builds just leave the box empty). Scryfall's `*italic*` marks are stripped.
 - The result is installed as a new `Raw_CardDatabase_<md5>.mtga` with a new main manifest listing it. The server reads the same file, so collections, formats, deck import and games pick the cards up.
 - Art for generated cards (ArtId 9,000,000+) is served by the local art server from Scryfall. Split cards and Rooms get one art id per half.
 - The database file name is the **card DB fingerprint** used for online pairing: two players only meet with the same MTGA build and the same builder.
