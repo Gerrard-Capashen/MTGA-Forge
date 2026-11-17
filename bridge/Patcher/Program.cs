@@ -342,6 +342,23 @@ gpp.InsertBefore(gpFirst, gpp.Create(OpCodes.Ret));
 gpp.InsertBefore(gpFirst, gpPop);
 Console.WriteLine("patched PromptTextProvider.GetPromptText(Prompt) -> " + promptCustom.FullName);
 
+//   6i. OptionalActionMessageWorkflow.SetButtons: before the OnUpdateButtons call, ForgeBridge.ButtonLabels.Relabel(this) renames the
+//      Take Action / Decline buttons of "Tap or untap target ...?" to Tap / Untap.
+var relabel = core.ImportReference(bridge.GetType("ForgeBridge.ButtonLabels").Methods.Single(m => m.Name == "Relabel"));
+var oaSetButtons = core.GetType("Wotc.Mtga.DuelScene.Interactions.OptionalAction.OptionalActionMessageWorkflow").Methods.Single(m => m.Name == "SetButtons");
+var oaUpdate = oaSetButtons.Body.Instructions.Single(i => i.OpCode == OpCodes.Call || i.OpCode == OpCodes.Callvirt
+    ? ((MethodReference)i.Operand).Name == "OnUpdateButtons" : false);
+var oap = oaSetButtons.Body.GetILProcessor();
+// this.OnUpdateButtons(this.Buttons) = ldarg.0, ldarg.0, call get_Buttons, call OnUpdateButtons; a branch targets the first ldarg.0,
+// so the hook goes right after it (the extra "this" is consumed by the hook, the stack is as before)
+var oaStart = oaUpdate.Previous?.Previous?.Previous;
+if (oaStart == null || oaStart.OpCode != OpCodes.Ldarg_0 || oaStart.Next.OpCode != OpCodes.Ldarg_0)
+    throw new InvalidOperationException("OptionalActionMessageWorkflow.SetButtons changed: update ButtonLabels");
+var oaCall = oap.Create(OpCodes.Call, relabel);
+oap.InsertAfter(oaStart, oaCall);
+oap.InsertAfter(oaStart, oap.Create(OpCodes.Ldarg_0));
+Console.WriteLine("patched OptionalActionMessageWorkflow.SetButtons -> " + relabel.FullName);
+
 //   6j. SqlArtCropProvider.GetCrop(artPath, format): at the start, ForgeBridge.CardArt.Crop(this, artPath, format); a non-null result is returned
 //      (art we serve keeps its proportions in frames of another shape, e.g. a scheme emblem on hover).
 var cropHook = core.ImportReference(bridge.GetType("ForgeBridge.CardArt").Methods.Single(m => m.Name == "Crop"));
