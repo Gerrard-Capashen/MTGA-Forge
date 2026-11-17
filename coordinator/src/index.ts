@@ -18,6 +18,7 @@
  * Rank (src/rank.ts): GET /me/rank; ranked matches move pips when their verdict settles.
  * Mastery (src/mastery.ts): GET /mastery/track, GET /me/mastery, POST /me/xp/bot; online matches pay XP when their verdict settles.
  * Daily quests (src/quests.ts): GET /me/quests, POST /me/quests/swap, POST /me/quests/progress.
+ * Stats (src/stats.ts): GET /stats, public counts for mtgaforge.com/stats (no names).
  * Accounts (src/accounts.ts): /register, /auth/*, /me, /players/by-name. Friends (src/friends.ts, src/hub.ts): /friends*, /blocks*,
  *   WS /session?token=... (presence and pushes). The relay inspects and stores nothing: the host's engine
  * stays authoritative (casual play).
@@ -30,6 +31,7 @@ import { handleMastery } from "./mastery";
 import { handleQuests } from "./quests";
 import { handleRank, poolOf, recordSeats } from "./rank";
 import { handleResults, leaveGraceMs, roomLeft, roomStarted, settleMatch, type ResultsEnv } from "./results";
+import { handleStats, reportWaiting, type StatsEnv } from "./stats";
 import { handleTables, type TablesEnv } from "./tables";
 import { matchToken, type Role } from "./tokens";
 
@@ -37,7 +39,7 @@ export { Hub } from "./hub";
 export { Challenge } from "./challenge";
 export { TableQueue, TableRoom } from "./tables";
 
-export interface Env extends FriendsEnv, ChallengesEnv, ResultsEnv, TablesEnv {
+export interface Env extends FriendsEnv, ChallengesEnv, ResultsEnv, TablesEnv, StatsEnv {
   QUEUE: DurableObjectNamespace;
   ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -59,9 +61,11 @@ function text(status: number, body: string): Response {
 }
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/health") return Response.json({ ok: true, service: "mtga-forge-coordinator" });
+    const stats = await handleStats(req, env, url, ctx);
+    if (stats) return stats;
 
     const account = await handleAccounts(req, env, url);
     if (account) return account;
@@ -147,12 +151,24 @@ export class Queue implements DurableObject {
       ...(row && signedIn ? { verified: { id: signedIn, tag: row.tag } } : {}),
     };
     await this.ctx.storage.put("queue", url.searchParams.get("q") ?? "");
+    await this.ctx.storage.put("public", !url.searchParams.get("code"));
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment(ticket);
     await this.tryPair(server, ticket);
+    this.ctx.waitUntil(this.report());
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** The public head count for GET /stats (friend-code queues are never reported). {@code gone} = a socket being closed. */
+  private async report(gone?: WebSocket): Promise<void> {
+    if (!await this.ctx.storage.get<boolean>("public")) return;
+    const now = Date.now();
+    const n = this.ctx.getWebSockets()
+      .filter(w => w !== gone && w.readyState === WebSocket.READY_STATE_OPEN)
+      .filter(w => { const t = w.deserializeAttachment() as Ticket | null; return t !== null && now - t.at < WAIT_MS; }).length;
+    await reportWaiting(this.env, this.ctx.id.toString(), "match", (await this.ctx.storage.get<string>("queue")) ?? "", n);
   }
 
   private async tryPair(ws: WebSocket, mine: Ticket): Promise<void> {
@@ -184,7 +200,10 @@ export class Queue implements DurableObject {
   }
 
   webSocketMessage(): void { /* pings are auto-answered; nothing else is expected */ }
-  webSocketClose(ws: WebSocket, code: number): void { try { ws.close(code === 1005 ? 1000 : code); } catch { /* already closed */ } }
+  async webSocketClose(ws: WebSocket, code: number): Promise<void> {
+    try { ws.close(code === 1005 ? 1000 : code); } catch { /* already closed */ }
+    await this.report(ws);
+  }
 }
 
 /** One instance per match: forwards messages between the host and the guest. */

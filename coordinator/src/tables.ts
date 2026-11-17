@@ -15,9 +15,11 @@
  *        A guest may reconnect to its slot with the same token while the table lasts. "ping" -> "pong" is auto-answered.
  */
 
+import type { FriendsEnv } from "./friends";
+import { reportWaiting } from "./stats";
 import { slotToken } from "./tokens";
 
-export interface TablesEnv {
+export interface TablesEnv extends FriendsEnv {
   TABLE_QUEUE: DurableObjectNamespace;
   TABLE_ROOM: DurableObjectNamespace;
   TOKEN_SECRET?: string;
@@ -89,9 +91,18 @@ export class TableQueue implements DurableObject {
     deadline = deadline && this.waiting().length > 1 ? deadline + ms(this.env.TABLE_JOIN_MS, JOIN_MS) : now + ms(this.env.TABLE_FIRST_MS, FIRST_MS);
     await this.ctx.storage.put("deadline", deadline);
     await this.ctx.storage.setAlarm(deadline);
+    await this.ctx.storage.put("queue", url.searchParams.get("q") ?? "");
+    await this.ctx.storage.put("public", !url.searchParams.get("code"));
     if (this.waiting().length >= CAP) await this.form();
     else this.announce();
+    this.ctx.waitUntil(this.report());
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** The public head count for GET /stats (friend-code tables are never reported). */
+  private async report(gone?: WebSocket): Promise<void> {
+    if (!await this.ctx.storage.get<boolean>("public")) return;
+    await reportWaiting(this.env, this.ctx.id.toString(), "table", (await this.ctx.storage.get<string>("queue")) ?? "", this.waiting(gone).length);
   }
 
   /** Open tickets, oldest first; {@code gone} is a socket being closed (it may still read as open in its close handler). */
@@ -130,7 +141,7 @@ export class TableQueue implements DurableObject {
     }
   }
 
-  async alarm(): Promise<void> { await this.form(); }
+  async alarm(): Promise<void> { await this.form(); await this.report(); }
 
   webSocketMessage(): void { /* pings are auto-answered; nothing else is expected */ }
 
@@ -141,6 +152,7 @@ export class TableQueue implements DurableObject {
     } else {
       this.announce(ws);                                   // leaving lowers the count; the deadline stays
     }
+    await this.report(ws);
   }
 
   webSocketError(ws: WebSocket): Promise<void> { return this.webSocketClose(ws, 1011); }

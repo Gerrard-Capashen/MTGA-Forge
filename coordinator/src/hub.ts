@@ -10,10 +10,13 @@
  *                the friend's sessions get {"t":"game","from":"<id>","payload":"..."}. Friends only, 16 KB, 60 a minute, dropped when the friend is offline.
  *   /notify    POST {to:[playerId], event}  send the event to those players' sessions
  *   /presence  POST {ids:[playerId]} -> {playerId: status}   ("Offline" when there is no session)
+ *   /waiting   POST {key, kind, queue, n}  a public queue's head count (src/stats.ts reportWaiting), kept in storage
+ *   /stats     GET -> {online: {status: count}, waiting: [{kind, queue, n, at}]}   counts only, for GET /stats
  *
  * A player has one session: a new one closes the older (code 4000). Status "Offline" keeps the socket but shows as offline.
  */
 import type { FriendsEnv } from "./friends";
+import { STALE_MS, type Waiting } from "./stats";
 
 const STATUSES = ["Available", "Busy", "Away", "Offline"];
 
@@ -42,6 +45,32 @@ export class Hub implements DurableObject {
     if (url.pathname === "/presence" && req.method === "POST") {
       const { ids } = await req.json() as { ids: string[] };
       return Response.json(Object.fromEntries(ids.map(id => [id, this.statusOf(id)])));
+    }
+
+    if (url.pathname === "/waiting" && req.method === "POST") {
+      const w = await req.json() as { key?: unknown; kind?: unknown; queue?: unknown; n?: unknown };
+      if (typeof w.key !== "string" || typeof w.queue !== "string" || typeof w.n !== "number" || (w.kind !== "match" && w.kind !== "table")) {
+        return new Response("bad", { status: 400 });
+      }
+      if (w.n > 0) await this.ctx.storage.put("w:" + w.key, { kind: w.kind, queue: w.queue.slice(0, 64), n: w.n, at: Date.now() } satisfies Waiting);
+      else await this.ctx.storage.delete("w:" + w.key);
+      return new Response("ok");
+    }
+
+    if (url.pathname === "/stats") {
+      const online: Record<string, number> = {};
+      for (const w of this.ctx.getWebSockets()) {
+        if (w.readyState !== WebSocket.READY_STATE_OPEN) continue;
+        const s = w.deserializeAttachment() as Session | null;
+        if (s) online[s.status] = (online[s.status] ?? 0) + 1;
+      }
+      const now = Date.now();
+      const waiting: Waiting[] = [];
+      for (const [k, w] of await this.ctx.storage.list<Waiting>({ prefix: "w:" })) {
+        if (now - w.at > STALE_MS) await this.ctx.storage.delete(k);
+        else waiting.push(w);
+      }
+      return Response.json({ online, waiting });
     }
 
     if (url.pathname === "/session") {

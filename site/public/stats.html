@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MTGA Forge - Player stats</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#14181d">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #f3f1ec; --panel: #e9e6df; --line: #d3cec3; --fg: #1c2026; --muted: #5a616b;
+  --accent: #bf3a0b; --link: #1f5f8a; --good: #2f7d4f;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14181d; --panel: #1d232a; --line: #2e3640; --fg: #e7e5e0; --muted: #98a1ab; --accent: #f5702c; --link: #7db4dc; --good: #5cc28a; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.5 var(--body); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 20px 48px; }
+a { color: var(--link); text-underline-offset: 3px; }
+h1, h2 { font-family: var(--display); line-height: 1.1; margin: 0; letter-spacing: -.015em; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); }
+h2 { font-size: 1.3rem; margin: 40px 0 14px; }
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; padding: 24px 0 28px; }
+.logo { font: 700 1.2rem var(--display); color: var(--fg); text-decoration: none; }
+.logo span { color: var(--accent); }
+.sub { color: var(--muted); margin: 8px 0 0; }
+.updated { color: var(--muted); font-size: .85rem; }
+.live::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--good); vertical-align: 1px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border-radius: 10px; padding: 14px 16px; }
+.tile .v { font: 700 2rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.tile .k { color: var(--muted); font-size: .88rem; margin-top: 4px; }
+.tile.hero .v { color: var(--accent); }
+
+.panel { background: var(--panel); border-radius: 10px; padding: 16px 18px; }
+.empty { color: var(--muted); margin: 0; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 0; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: .85rem; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; }
+.kind { color: var(--muted); font-size: .85rem; }
+
+.hbars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 8px 12px; align-items: center; }
+.hbars .lbl { font-size: .92rem; }
+.hbars .track { height: 14px; }
+.hbars .bar { height: 100%; min-width: 2px; background: var(--accent); border-radius: 0 4px 4px 0; }
+.hbars .num { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; text-align: right; }
+
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: 180px; overflow: visible; }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 11px; font-family: var(--body); }
+.chart .col { fill: var(--accent); }
+.chart .hit { fill: transparent; cursor: default; }
+.chart .hit:hover + .col, .chart .col.on { filter: brightness(1.15); }
+.tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); font-size: .82rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -110%); display: none; }
+details { margin-top: 10px; font-size: .88rem; color: var(--muted); }
+details table { margin-top: 6px; }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+@media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+footer { margin-top: 48px; color: var(--muted); font-size: .85rem; }
+.err { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="logo" href="/">MTGA <span>Forge</span></a>
+  <span class="updated" id="updated">Loading...</span>
+</header>
+
+<h1>Who is playing</h1>
+<p class="sub">Live counts from the matchmaking server, refreshed every minute.</p>
+
+<h2>Right now</h2>
+<div class="tiles">
+  <div class="tile hero"><div class="v" id="online">-</div><div class="k">online in the client</div></div>
+  <div class="tile"><div class="v" id="inQueue">-</div><div class="k">looking for a match</div></div>
+  <div class="tile"><div class="v" id="inDraft">-</div><div class="k">waiting for a draft table</div></div>
+  <div class="tile"><div class="v" id="h24">-</div><div class="k">online matches, last 24 h</div></div>
+</div>
+
+<h2>Open queues</h2>
+<div class="panel" id="queues"><p class="empty">Loading...</p></div>
+
+<h2>Players</h2>
+<div class="tiles">
+  <div class="tile"><div class="v" id="total">-</div><div class="k">accounts</div></div>
+  <div class="tile"><div class="v" id="a24">-</div><div class="k">active today</div></div>
+  <div class="tile"><div class="v" id="a7">-</div><div class="k">active this week</div></div>
+  <div class="tile"><div class="v" id="a30">-</div><div class="k">active this month</div></div>
+  <div class="tile"><div class="v" id="new7">-</div><div class="k">new this week</div></div>
+</div>
+
+<h2>Online matches per day</h2>
+<div class="panel">
+  <div class="chart" id="perDay"></div>
+  <details><summary>Table</summary><div id="perDayTable"></div></details>
+</div>
+
+<div class="cols">
+  <div>
+    <h2>Matches by queue, last 7 days</h2>
+    <div class="panel" id="byPool"></div>
+  </div>
+  <div>
+    <h2>Ranked: players per rank</h2>
+    <div class="panel" id="ranks"></div>
+  </div>
+</div>
+
+<h2>Bot games</h2>
+<div class="tiles">
+  <div class="tile"><div class="v" id="b24">-</div><div class="k">games against bots, last 24 h</div></div>
+  <div class="tile"><div class="v" id="b7">-</div><div class="k">games against bots, last 7 days</div></div>
+  <div class="tile"><div class="v" id="d30">-</div><div class="k">online matches, last 30 days</div></div>
+</div>
+
+<footer>
+  "Online" counts players signed in to the client whose status is not set to Offline. Queue counts cover public queues only, never friend-code games.
+  Matches are counted once both seats reported or the server settled the result. <a href="/">mtgaforge.com</a>
+</footer>
+</div>
+
+<script>
+(() => {
+  // ?api=http://127.0.0.1:8787 points the page at a local coordinator (testing).
+  const API = (new URLSearchParams(location.search).get("api") || "https://mm.mtga-forge.workers.dev").replace(/\/$/, "");
+  const $ = id => document.getElementById(id);
+  const fmt = n => Number(n || 0).toLocaleString("en-US");
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  const MODES = { RankedPlay: "Ranked", CasualPlay: "Play", PremierDraft: "Premier Draft", QuickDraft: "Quick Draft", Sealed: "Sealed", DirectGame: "Direct challenge" };
+  function queueName(q) {
+    const parts = String(q).split("_");
+    const mode = MODES[parts[0]] || parts[0];
+    let rest = parts.slice(1);
+    let bo3 = false;
+    if (rest[rest.length - 1] && /^bo3$/i.test(rest[rest.length - 1])) { bo3 = true; rest = rest.slice(0, -1); }
+    const fmtName = rest.join(" ");
+    return mode + (fmtName ? " · " + fmtName : "") + (bo3 ? " (Bo3)" : "");
+  }
+
+  function hbars(el, rows) {
+    if (!rows.length || rows.every(r => !r.n)) { el.innerHTML = '<p class="empty">Nothing yet.</p>'; return; }
+    const max = Math.max(...rows.map(r => r.n), 1);
+    el.innerHTML = '<div class="hbars">' + rows.map(r =>
+      `<span class="lbl">${esc(r.label)}</span><span class="track"><div class="bar" style="width:${(r.n / max * 100).toFixed(1)}%"></div></span><span class="num">${fmt(r.n)}</span>`
+    ).join("") + "</div>";
+  }
+
+  function columns(el, rows) {
+    const W = Math.max(el.clientWidth, 280), H = 180, top = 10, bottom = 22, left = 30;
+    const max = Math.max(...rows.map(r => r.n), 1);
+    const step = niceStep(max);
+    const yMax = Math.ceil(max / step) * step;
+    const plotH = H - top - bottom, plotW = W - left;
+    const bw = plotW / rows.length;
+    const y = v => top + plotH - (v / yMax) * plotH;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Online matches per day, last 30 days">`;
+    for (let v = 0; v <= yMax; v += step) s += `<line class="grid" x1="${left}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${left - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    rows.forEach((r, i) => {
+      const x = left + i * bw + 1, w = Math.max(bw - 2, 1), h = Math.max(top + plotH - y(r.n), r.n ? 2 : 0), yy = top + plotH - h;
+      const rad = Math.min(4, w / 2, h);
+      const path = h ? `M${x},${top + plotH}V${yy + rad}Q${x},${yy} ${x + rad},${yy}H${x + w - rad}Q${x + w},${yy} ${x + w},${yy + rad}V${top + plotH}Z` : "";
+      s += `<rect class="hit" data-i="${i}" x="${x - 1}" y="${top}" width="${bw}" height="${plotH}"/>`;
+      if (path) s += `<path class="col" data-c="${i}" d="${path}"/>`;
+      if ((rows.length - 1 - i) % 7 === 0) s += `<text class="axis" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${short(r.day)}</text>`;
+    });
+    s += "</svg>";
+    el.innerHTML = s + '<div class="tip"></div>';
+    const tip = el.querySelector(".tip"), svg = el.querySelector("svg");
+    el.querySelectorAll(".hit").forEach(h => {
+      h.addEventListener("mouseenter", () => {
+        const i = +h.dataset.i, r = rows[i];
+        el.querySelectorAll(".col.on").forEach(c => c.classList.remove("on"));
+        el.querySelector(`.col[data-c="${i}"]`)?.classList.add("on");
+        const box = svg.getBoundingClientRect(), sx = box.width / W, sy = box.height / H;
+        tip.textContent = `${long(r.day)}: ${fmt(r.n)} match${r.n === 1 ? "" : "es"}`;
+        tip.style.left = ((left + (i + .5) * bw) * sx) + "px";
+        tip.style.top = (Math.min(y(r.n), top + plotH - 4) * sy) + "px";
+        tip.style.display = "block";
+      });
+    });
+    svg.addEventListener("mouseleave", () => { tip.style.display = "none"; el.querySelectorAll(".col.on").forEach(c => c.classList.remove("on")); });
+  }
+  function niceStep(max) { const raw = max / 4, p = Math.pow(10, Math.floor(Math.log10(raw || 1))); return [1, 2, 5, 10].map(m => m * p).find(s => s >= raw) || 1; }
+  const short = d => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const long = d => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+
+  function render(s) {
+    const queues = s.waiting.filter(w => w.kind === "match"), tables = s.waiting.filter(w => w.kind === "table");
+    $("online").textContent = fmt(s.online.total);
+    $("inQueue").textContent = fmt(queues.reduce((a, w) => a + w.n, 0));
+    $("inDraft").textContent = fmt(tables.reduce((a, w) => a + w.n, 0));
+    $("h24").textContent = fmt(s.matches.h24);
+    $("total").textContent = fmt(s.players.total);
+    $("a24").textContent = fmt(s.players.active24h);
+    $("a7").textContent = fmt(s.players.active7d);
+    $("a30").textContent = fmt(s.players.active30d);
+    $("new7").textContent = fmt(s.players.new7d);
+    $("b24").textContent = fmt(s.bots.h24);
+    $("b7").textContent = fmt(s.bots.d7);
+    $("d30").textContent = fmt(s.matches.d30);
+
+    $("queues").innerHTML = s.waiting.length
+      ? "<table><thead><tr><th>Queue</th><th class=\"n\">Waiting</th></tr></thead><tbody>" + s.waiting.map(w =>
+          `<tr><td>${esc(queueName(w.queue))} <span class="kind">${w.kind === "table" ? "draft table, up to 8" : ""}</span></td><td class="n">${fmt(w.n)}</td></tr>`).join("") + "</tbody></table>"
+      : '<p class="empty">Nobody is waiting in a public queue right now. Join one and you will show up here.</p>';
+
+    columns($("perDay"), s.matches.perDay);
+    $("perDayTable").innerHTML = "<table><thead><tr><th>Day (UTC)</th><th class=\"n\">Matches</th></tr></thead><tbody>" +
+      s.matches.perDay.slice().reverse().map(r => `<tr><td>${long(r.day)}</td><td class="n">${fmt(r.n)}</td></tr>`).join("") + "</tbody></table>";
+    hbars($("byPool"), s.matches.byPool7d.map(r => ({ label: queueName(r.pool), n: r.n })));
+    hbars($("ranks"), s.rank.classes.map(r => ({ label: r.class, n: r.n })));
+
+    $("updated").className = "updated live";
+    $("updated").textContent = "Updated " + new Date(s.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  async function load() {
+    try {
+      const r = await fetch(API + "/stats", { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      last = await r.json();
+      render(last);
+    } catch (e) {
+      $("updated").className = "updated err";
+      $("updated").textContent = "Could not reach the server, retrying...";
+    }
+  }
+  let last = null;
+  addEventListener("resize", () => { if (last) columns($("perDay"), last.matches.perDay); });
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 60_000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>
