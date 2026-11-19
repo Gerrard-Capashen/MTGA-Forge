@@ -376,6 +376,25 @@ gcp.InsertBefore(gcFirst, gcp.Create(OpCodes.Ret));
 gcp.InsertBefore(gcFirst, gcPop);
 Console.WriteLine("patched SqlArtCropProvider.GetCrop -> " + cropHook.FullName);
 
+//   6m. UnifiedChallengeBladeWidget.SetChallengeOption_ChallengeType: Arena hard-codes the deck type spinner to position 0 for
+//      DirectGameTournamentHistoric and 3 for DirectGameTournamentAlchemy. ChallengeSlots reuses those match types for Premodern and
+//      Timeless, so picking either snapped the spinner back to Standard / Legacy. The two constant "_deckTypeSpinner.ValueIndex = n"
+//      stores are turned into nops (the spinner keeps the position from ChallengeUtils.MatchTypeToInfo, set just before).
+var chType = core.GetType("UnifiedChallengeBladeWidget").Methods.Single(m => m.Name == "SetChallengeOption_ChallengeType");
+var forced = chType.Body.Instructions.Where(i => (i.OpCode == OpCodes.Callvirt || i.OpCode == OpCodes.Call)
+        && ((MethodReference)i.Operand).Name == "set_ValueIndex"
+        && i.Previous != null && (i.Previous.OpCode == OpCodes.Ldc_I4_0 || i.Previous.OpCode == OpCodes.Ldc_I4_3)
+        && i.Previous.Previous != null && i.Previous.Previous.OpCode == OpCodes.Ldfld
+        && ((FieldReference)i.Previous.Previous.Operand).Name == "_deckTypeSpinner"
+        && i.Previous.Previous.Previous != null && i.Previous.Previous.Previous.OpCode == OpCodes.Ldarg_0).ToList();
+if (forced.Count != 2) throw new InvalidOperationException("UnifiedChallengeBladeWidget.SetChallengeOption_ChallengeType changed (" + forced.Count + " forced deck types): update ChallengeSlots");
+foreach (var setter in forced)
+{
+    var cur = setter.Previous.Previous.Previous;   // ldarg.0 (a branch target: keep the instruction object, change its opcode)
+    for (int k = 0; k < 4; k++) { var next = cur.Next; cur.OpCode = OpCodes.Nop; cur.Operand = null; cur = next; }
+}
+Console.WriteLine("patched UnifiedChallengeBladeWidget.SetChallengeOption_ChallengeType -> no forced deck type");
+
 core.Write(corePath);
 Console.WriteLine("wrote " + corePath);
 
