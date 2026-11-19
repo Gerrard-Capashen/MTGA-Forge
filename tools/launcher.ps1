@@ -93,7 +93,7 @@ try {
             else { Stop-WithMessage "MTGA is not installed (or not where Steam says). Install it (Steam or the standalone installer), or pick its folder in MTGA-Forge.exe (command line: -Source <folder that holds MTGA.exe>)." } }
         5 { Stop-WithMessage 'Steam is still updating MTGA. Close this window, wait for the update to finish, then start again.' }
         6 { if ($haveClient) { Write-Host 'MTGA is still downloading an update: starting the client as it is.' -ForegroundColor Yellow; $code = 0 }
-            else { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' } }
+            else { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest (card art, UI text, sounds) before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' } }
         default { Stop-WithMessage "Could not check the install (exit code $code)." }
     }
     if ($code -eq 3) {
@@ -108,7 +108,7 @@ try {
         & powershell @pa
         $paExit = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
-        if ($paExit -eq 6) { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' }
+        if ($paExit -eq 6) { Stop-WithMessage 'MTGA has not finished downloading its game files. Start MTG Arena once and sign in: it downloads the rest (card art, UI text, sounds) before it shows the main menu. Once you see the main menu, close it and start MTGA-Forge again.' }
         if ($paExit -ne 0) { Stop-WithMessage "Patching failed (see above). Nothing was started; the original game is untouched. After an MTGA update this can mean the patch needs a new version of MTGA-Forge." }
     } elseif ($Firewall) { & powershell @patchArgs -Only firewall -Firewall }
     if ($PatchOnly) { Write-Host 'Patched. Nothing started (-PatchOnly).'; exit 0 }

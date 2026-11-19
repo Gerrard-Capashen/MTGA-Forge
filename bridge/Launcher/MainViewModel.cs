@@ -397,7 +397,7 @@ namespace MtgaForgeLauncher
                     case 3: ShowNeedsPrepare(last); break;
                     case 4: Stage = Stage.NeedSource; Headline = "MTGA was not found"; Body = "Choose the folder that contains MTGA.exe."; break;
                     case 5: ShowProblem("Steam is still updating MTGA", "Wait until Steam has finished, then press Check again."); break;
-                    case 6: ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database) after you sign in, before it shows the main menu. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); break;
+                    case 6: ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database, the UI text and the sounds) after you sign in, before it shows the main menu. Without them MTGA Forge would run with empty labels and no sound. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); break;
                     default: ShowProblem("Could not check your game", "The check failed (exit code " + code + "): " + last + " Open the details below for the full output."); break;
                 }
             });
@@ -442,7 +442,7 @@ namespace MtgaForgeLauncher
                 var lines = runner == null ? new List<string>() : runner.Lines.Where(x => x.Trim() != "").Reverse().Take(3).Reverse().ToList();
                 runner = null;
                 if (code == 0) { foreach (var s in Steps) s.State = 2; Progress = PatchSteps.Length; Recheck(); return; }
-                if (code == 6) { ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database) after you sign in, before it shows the main menu. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); return; }
+                if (code == 6) { ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database, the UI text and the sounds) after you sign in, before it shows the main menu. Without them MTGA Forge would run with empty labels and no sound. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); return; }
                 ShowProblem("Preparing the game failed", "Nothing was started and your MTGA install is untouched. " + string.Join(" ", lines));
                 ConsoleOpen = true;
             });

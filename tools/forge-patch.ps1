@@ -136,18 +136,38 @@ function Get-CurrentManifest {
 }
 # The standalone (Wizards installer) version ships ~0.5 GB and MTGA downloads the rest (card art, the card database, audio) at its
 # first start; the patched copy never downloads anything itself, so every file of the main manifest must be on disk before the copy.
-function Get-MissingAssets {
-    $d = "$Source\MTGA_Data\Downloads"
+# The UI text and the sounds come from their own manifests (Manifest_Localization_<hash>, Manifest_Audio_<hash>), which MTGA also
+# fetches only after sign-in: without them the copy runs with empty labels and no sound. Of several manifests of a category the
+# bridge (LocalDoorbell) uses the one with the fewest missing files, so the same is counted here.
+$RequiredCategories = @('Localization', 'Audio')
+function Get-MissingAssets($root = $Source, [switch]$CategoriesOnly) {
+    $d = "$root\MTGA_Data\Downloads"
     $have = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
     foreach ($sub in Get-ChildItem $d -Directory) { foreach ($f in [IO.Directory]::EnumerateFiles($sub.FullName)) { [void]$have.Add($sub.Name + '\' + [IO.Path]::GetFileName($f)) } }
-    $all = @((Read-Manifest "$d\$($fp.mainManifest)").Assets)
-    $miss = @($all | Where-Object { -not $have.Contains($(if ($_.AssetType) { $_.AssetType } else { 'AssetBundle' }) + '\' + $_.Name) }).Count
-    @{ missing = $miss; total = $all.Count }
+    $count = {
+        param($m)
+        $all = @((Read-Manifest $m).Assets | Where-Object { $_.Name })
+        @{ missing = @($all | Where-Object { -not $have.Contains($(if ($_.AssetType) { $_.AssetType } else { 'AssetBundle' }) + '\' + $_.Name) }).Count; total = $all.Count }
+    }
+    $miss = 0; $total = 0; $parts = @()
+    if (-not $CategoriesOnly) { $main = & $count "$d\$($fp.mainManifest)"; $miss = $main.missing; $total = $main.total }
+    foreach ($cat in $RequiredCategories) {
+        $best = $null
+        foreach ($m in Get-ChildItem $d -Filter "Manifest_$($cat)_*.mtga" -ErrorAction SilentlyContinue) {
+            $c = & $count $m.FullName
+            if (-not $best -or $c.missing -lt $best.missing) { $best = $c }
+        }
+        if (-not $best) { $parts += "$cat (not downloaded)"; $miss += 1; $total += 1; continue }
+        if ($best.missing) { $parts += "$cat ($($best.missing) files)" }
+        $miss += $best.missing; $total += $best.total
+    }
+    @{ missing = $miss; total = $total; categories = $parts }
 }
 function Exit-IfIncomplete {
     $a = Get-MissingAssets
     if ($a.missing -eq 0) { return }
-    Write-Host "MTGA has not finished downloading its game files ($($a.missing) of $($a.total) missing in $Source). Start MTG Arena once and sign in: it downloads the rest before it shows the main menu. Once you see the main menu, close it and try again."
+    $what = if ($a.categories) { ", incl. $($a.categories -join ', ')" } else { '' }
+    Write-Host "MTGA has not finished downloading its game files ($($a.missing) of $($a.total) missing in $Source$what). Start MTG Arena once and sign in: it downloads the rest (card art, UI text, sounds) before it shows the main menu. Once you see the main menu, close it and try again."
     exit 6
 }
 
@@ -191,6 +211,14 @@ if (Test-Path $statePath) {
     }
     else { Write-Host "source install changed since the last run -> every step again`n  was: $($old.fingerprint)`n  now: $fpJson" }
 }
+# a copy made before MTGA had downloaded its UI text and sounds (same main manifest, so the same fingerprint): copy again once the
+# install has them
+$staleCopy = $false
+if ($state.steps.Contains('refresh') -and (Test-Path "$Target\MTGA_Data\Downloads") -and (Get-MissingAssets $Target -CategoriesOnly).missing -gt 0 -and (Get-MissingAssets $Source -CategoriesOnly).missing -eq 0) {
+    Write-Host 'the copy lacks UI text or sounds that MTGA has downloaded since -> every step again'
+    $staleCopy = $true
+    foreach ($k in @($state.steps.Keys)) { $state.steps.Remove($k) }
+}
 # -Check: is Target patched for exactly this install? (the launcher decides between "start" and "patch again" with this)
 if ($Check) {
     $why = ''
@@ -199,7 +227,8 @@ if ($Check) {
     elseif ((Get-Content $statePath -Raw | ConvertFrom-Json).fingerprint -ne $fpJson) { $why = "MTGA was updated (now $($fp.mainManifest), $($fp.steamBuildId))" }
     else {
         $todo = @('refresh', 'orig', 'identity', 'unityconnect', 'bootlogo', 'loadingbg', 'storeconfig', 'bridge', 'patch', 'carddb', 'manifest') | Where-Object { -not ($state.steps.Contains($_) -and $state.steps[$_].ok) }
-        if ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
+        if ($staleCopy) { $why = 'MTGA has downloaded UI text or sounds since the last copy' }
+        elseif ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
         elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
     }
     if ($why) { Exit-IfIncomplete; Write-Host "needs patching: $why"; exit 3 }
