@@ -16,6 +16,7 @@ import { authenticate, type AccountEnv } from "./accounts";
 
 export interface FriendsEnv extends AccountEnv {
   HUB: DurableObjectNamespace;
+  SESSION_TAKEOVER_MS?: string;
 }
 
 const MAX_FRIENDS = 100;

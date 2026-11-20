@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --port 8787 --var RESULT_MIN_MS:300 --var MASTERY_BOT_GAP_MS:1500 --var RESULT_GRACE_MS:600 --var TABLE_FIRST_MS:1500 --var TABLE_JOIN_MS:1000 --var STATS_CACHE_S:0",
+    "dev": "wrangler dev --port 8787 --var RESULT_MIN_MS:300 --var MASTERY_BOT_GAP_MS:1500 --var RESULT_GRACE_MS:600 --var TABLE_FIRST_MS:1500 --var TABLE_JOIN_MS:1000 --var STATS_CACHE_S:0 --var SESSION_TAKEOVER_MS:800",
     "deploy": "wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply mtga-forge --remote",
     "db:migrate:local": "wrangler d1 migrations apply mtga-forge --local",

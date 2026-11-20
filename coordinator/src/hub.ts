@@ -13,14 +13,19 @@
  *   /waiting   POST {key, kind, queue, n}  a public queue's head count (src/stats.ts reportWaiting), kept in storage
  *   /stats     GET -> {online: {status: count}, waiting: [{kind, queue, n, at}]}   counts only, for GET /stats
  *
- * A player has one session: a new one closes the older (code 4000). Status "Offline" keeps the socket but shows as offline.
+ * A player has one session: a new one closes the older (code 4000), unless the older one opened less than TAKEOVER_MS ago, then
+ * the new one is refused (409). Two copies running one profile would otherwise close each other every few seconds, and each
+ * reconnect is a sign-in plus a friends read. Status "Offline" keeps the socket but shows as offline.
  */
 import type { FriendsEnv } from "./friends";
 import { STALE_MS, type Waiting } from "./stats";
 
 const STATUSES = ["Available", "Busy", "Away", "Offline"];
 
-interface Session { playerId: string; status: string }
+interface Session { playerId: string; status: string; at?: number }
+
+/** How long a new session keeps a second one for the same player from taking over (SESSION_TAKEOVER_MS overrides it). */
+const TAKEOVER_MS = 60_000;
 
 const GAME_MAX = 16 * 1024;
 const GAME_PER_MINUTE = 60;
@@ -78,11 +83,17 @@ export class Hub implements DurableObject {
       if (!playerId) return new Response("no player", { status: 400 });
       const wanted = url.searchParams.get("status") ?? "Available";
       const status = STATUSES.includes(wanted) ? wanted : "Available";
-      for (const old of this.live(playerId)) { try { old.close(4000, "signed in elsewhere"); } catch { /* gone */ } }
+      const now = Date.now();
+      const others = this.live(playerId);
+      const takeover = Number(this.env.SESSION_TAKEOVER_MS ?? TAKEOVER_MS);
+      if (others.some(w => now - ((w.deserializeAttachment() as Session | null)?.at ?? 0) < takeover)) {
+        return new Response("signed in elsewhere", { status: 409 });
+      }
+      for (const old of others) { try { old.close(4000, "signed in elsewhere"); } catch { /* gone */ } }
       const pair = new WebSocketPair();
       const [client, server] = [pair[0], pair[1]];
       this.ctx.acceptWebSocket(server, [playerId]);
-      server.serializeAttachment({ playerId, status } satisfies Session);
+      server.serializeAttachment({ playerId, status, at: now } satisfies Session);
       server.send(JSON.stringify({ t: "hello", status }));
       await this.announce(playerId);
       return new Response(null, { status: 101, webSocket: client });

@@ -99,8 +99,13 @@ check(r.body.friends[0].status === "Offline", "A's list shows B Offline");
 const sb2 = session(B); await sb2.opened;
 p = await sa.waitFor(m => m.t === "presence" && m.playerId === B.id);
 check(p?.status === "Available", "B signs in again: A is told Available");
+{
+  const early = session(B);
+  check(await early.opened.then(() => false, () => true), "a second session right after the first is refused (no kick loop)");
+}
+await sleep(900);                                          // past SESSION_TAKEOVER_MS (800 under npm run dev)
 const sb3 = session(B); await sb3.opened;
-check(await sb2.closed === 4000, "a second session replaces the first");
+check(await sb2.closed === 4000, "a later second session replaces the first");
 await sleep(300);
 
 // a stranger gets no presence of people who are not friends
