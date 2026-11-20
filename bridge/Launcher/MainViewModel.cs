@@ -398,6 +398,7 @@ namespace MtgaForgeLauncher
                     case 4: Stage = Stage.NeedSource; Headline = "MTGA was not found"; Body = "Choose the folder that contains MTGA.exe."; break;
                     case 5: ShowProblem("Steam is still updating MTGA", "Wait until Steam has finished, then press Check again."); break;
                     case 6: ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database, the UI text and the sounds) after you sign in, before it shows the main menu. Without them MTGA Forge would run with empty labels and no sound. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); break;
+                    case 7: ShowSoundsMismatch(last); break;
                     default: ShowProblem("Could not check your game", "The check failed (exit code " + code + "): " + last + " Open the details below for the full output."); break;
                 }
             });
@@ -416,6 +417,16 @@ namespace MtgaForgeLauncher
         }
 
         void ShowProblem(string title, string text) { Headline = title; Body = text; Stage = Stage.Problem; }
+
+        // forge-patch.ps1 exit 7: its line names the install (Steam or standalone, and its folder) whose sounds are for another MTGA version
+        void ShowSoundsMismatch(string line)
+        {
+            string text = line.Trim();
+            int cut = text.IndexOf(" Start MTG Arena", StringComparison.Ordinal);
+            if (cut > 0) text = text.Substring(0, cut);
+            if (text == "") text = "The sounds of your MTGA install are for another MTGA version.";
+            ShowProblem("MTGA's sounds are out of date", text + " Without matching sounds MTGA Forge would have no sound. Start MTG Arena from that folder once and sign in: it downloads its current sounds before it shows the main menu. Once you see the main menu, close it and press Check again.");
+        }
 
         // ------------------------------------------------------------------------------------------ prepare
         void Prepare()
@@ -443,6 +454,7 @@ namespace MtgaForgeLauncher
                 runner = null;
                 if (code == 0) { foreach (var s in Steps) s.State = 2; Progress = PatchSteps.Length; Recheck(); return; }
                 if (code == 6) { ShowProblem("MTGA has not finished downloading", "MTG Arena downloads most of its game files (card art, the card database, the UI text and the sounds) after you sign in, before it shows the main menu. Without them MTGA Forge would run with empty labels and no sound. Start MTG Arena once and sign in. Once you see the main menu, close it and press Check again."); return; }
+                if (code == 7) { ShowSoundsMismatch(lines.FirstOrDefault(x => x.Trim().StartsWith("The sounds in")) ?? ""); return; }
                 ShowProblem("Preparing the game failed", "Nothing was started and your MTGA install is untouched. " + string.Join(" ", lines));
                 ConsoleOpen = true;
             });

@@ -27,7 +27,8 @@
 #   manifest      asserts the main manifest is plain JSON (the builder writes it decompressed) and lists the generated DB
 #   firewall      outbound block rule for Target\MTGA.exe; needs elevation, runs ONLY with -Firewall (prints the command otherwise)
 # -Check only compares the install with Target\forge-patch\state.json (exit 0 = patched and current, 3 = needs patching, 4 = no install found, 5 = Steam is updating MTGA,
-#   6 = the install has not finished downloading its game files: MTGA downloads them after sign-in, before its main menu).
+#   6 = the install has not finished downloading its game files: MTGA downloads them after sign-in, before its main menu,
+#   7 = the install's sounds are for another MTGA version; the last output line names the install, Steam or standalone).
 # Needs (dist): robocopy + Windows PowerShell 5.1 + the package (runtime\, server\, patcher\); (dev): dotnet SDK, java 17+, tools\cp.txt, built forge-gui-mtga (-BuildServer compiles it).
 param(
     [Parameter(Mandatory)][string]$Target,
@@ -140,6 +141,38 @@ function Get-CurrentManifest {
 # fetches only after sign-in: without them the copy runs with empty labels and no sound. Of several manifests of a category the
 # bridge (LocalDoorbell) uses the one with the fewest missing files, so the same is counted here.
 $RequiredCategories = @('Localization', 'Audio')
+# Complete is not enough for the sounds: every Wwise bank carries the version of the Wwise SDK that built it (the uint32 after
+# 'BKHD' + chunk size), and the sound engine of the install refuses any other (AK_WrongBankVersion for every bank: a silent game).
+# An install can hold a complete Audio manifest of another MTGA version (its program files updated, the sounds not yet), so an
+# Audio manifest counts only when its packages carry the version of the install's own Init.bnk, which ships with the program files.
+function Get-BankVersion([string]$file) {
+    try {
+        $fs = [IO.File]::OpenRead($file)
+        try { $buf = New-Object byte[] ([Math]::Min($fs.Length, 262144)); $n = $fs.Read($buf, 0, $buf.Length) } finally { $fs.Dispose() }
+        $i = [Text.Encoding]::GetEncoding(28591).GetString($buf, 0, $n).IndexOf('BKHD', [StringComparison]::Ordinal)
+        if ($i -ge 0 -and $i + 12 -le $n) { return [BitConverter]::ToUInt32($buf, $i + 8) }
+    } catch { }
+    return $null
+}
+function Get-InitBankVersion($root) {
+    $f = "$root\MTGA_Data\StreamingAssets\Audio\GeneratedSoundBanks\Windows\Init.bnk"
+    if (Test-Path -LiteralPath $f) { Get-BankVersion $f } else { $null }
+}
+# The bank version of an Audio manifest: that of the first of its packages on disk that holds a bank ($null: none on disk)
+function Get-ManifestBankVersion($d, $assets) {
+    foreach ($a in $assets) {
+        $f = "$d\Audio\$($a.Name)"
+        if ($a.Name -notlike '*.pck' -or -not (Test-Path -LiteralPath $f)) { continue }
+        $v = Get-BankVersion $f
+        if ($null -ne $v) { return $v }
+    }
+    return $null
+}
+# Which MTGA this is, for messages: the Steam version or the standalone (Wizards installer) one, and its folder
+function Get-InstallLabel($root) {
+    $steam = ($root -match '\\steamapps\\') -or (Test-Path "$root\MTGA_Data\Plugins\x86_64\steam_api64.dll") -or (Test-Path "$root\steam_appid.txt")
+    if ($steam) { "the Steam version of MTG Arena ($root)" } else { "the standalone version of MTG Arena ($root)" }
+}
 function Get-MissingAssets($root = $Source, [switch]$CategoriesOnly) {
     $d = "$root\MTGA_Data\Downloads"
     $have = New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
@@ -147,25 +180,42 @@ function Get-MissingAssets($root = $Source, [switch]$CategoriesOnly) {
     $count = {
         param($m)
         $all = @((Read-Manifest $m).Assets | Where-Object { $_.Name })
-        @{ missing = @($all | Where-Object { -not $have.Contains($(if ($_.AssetType) { $_.AssetType } else { 'AssetBundle' }) + '\' + $_.Name) }).Count; total = $all.Count }
+        @{ missing = @($all | Where-Object { -not $have.Contains($(if ($_.AssetType) { $_.AssetType } else { 'AssetBundle' }) + '\' + $_.Name) }).Count; total = $all.Count; assets = $all }
     }
-    $miss = 0; $total = 0; $parts = @()
+    $miss = 0; $total = 0; $parts = @(); $soundsMismatch = ''
     if (-not $CategoriesOnly) { $main = & $count "$d\$($fp.mainManifest)"; $miss = $main.missing; $total = $main.total }
+    $initVersion = Get-InitBankVersion $root
     foreach ($cat in $RequiredCategories) {
-        $best = $null
+        $best = $null; $wrong = @()
         foreach ($m in Get-ChildItem $d -Filter "Manifest_$($cat)_*.mtga" -ErrorAction SilentlyContinue) {
             $c = & $count $m.FullName
+            if ($cat -eq 'Audio' -and $null -ne $initVersion) {
+                $v = Get-ManifestBankVersion $d $c.assets
+                if ($null -ne $v -and $v -ne $initVersion) { $wrong += "$($m.Name) has bank version $v"; continue }
+            }
             if (-not $best -or $c.missing -lt $best.missing) { $best = $c }
         }
-        if (-not $best) { $parts += "$cat (not downloaded)"; $miss += 1; $total += 1; continue }
+        if (-not $best) {
+            if ($wrong) {
+                $parts += "$cat (for another MTGA version)"
+                $soundsMismatch = "The sounds in $(Get-InstallLabel $root) are for another MTGA version (the game needs Wwise bank version $initVersion; $($wrong -join ', '))."
+            }
+            else { $parts += "$cat (not downloaded)" }
+            $miss += 1; $total += 1; continue
+        }
         if ($best.missing) { $parts += "$cat ($($best.missing) files)" }
         $miss += $best.missing; $total += $best.total
     }
-    @{ missing = $miss; total = $total; categories = $parts }
+    @{ missing = $miss; total = $total; categories = $parts; soundsMismatch = $soundsMismatch }
 }
+# exit 6: files missing; exit 7: complete, but the sounds are for another MTGA version (the first output line says which install)
 function Exit-IfIncomplete {
     $a = Get-MissingAssets
     if ($a.missing -eq 0) { return }
+    if ($a.soundsMismatch -and $a.missing -eq 1) {
+        Write-Host "$($a.soundsMismatch) Start MTG Arena from that folder once and sign in: it downloads the sounds of its current version before it shows the main menu. Once you see the main menu, close it and try again."
+        exit 7
+    }
     $what = if ($a.categories) { ", incl. $($a.categories -join ', ')" } else { '' }
     Write-Host "MTGA has not finished downloading its game files ($($a.missing) of $($a.total) missing in $Source$what). Start MTG Arena once and sign in: it downloads the rest (card art, UI text, sounds) before it shows the main menu. Once you see the main menu, close it and try again."
     exit 6
@@ -211,11 +261,11 @@ if (Test-Path $statePath) {
     }
     else { Write-Host "source install changed since the last run -> every step again`n  was: $($old.fingerprint)`n  now: $fpJson" }
 }
-# a copy made before MTGA had downloaded its UI text and sounds (same main manifest, so the same fingerprint): copy again once the
-# install has them
+# a copy made before MTGA had downloaded its UI text and sounds, or while it held the sounds of another MTGA version (same main
+# manifest, so the same fingerprint): copy again once the install has them
 $staleCopy = $false
 if ($state.steps.Contains('refresh') -and (Test-Path "$Target\MTGA_Data\Downloads") -and (Get-MissingAssets $Target -CategoriesOnly).missing -gt 0 -and (Get-MissingAssets $Source -CategoriesOnly).missing -eq 0) {
-    Write-Host 'the copy lacks UI text or sounds that MTGA has downloaded since -> every step again'
+    Write-Host 'the copy lacks UI text or sounds (or has sounds of another MTGA version) that MTGA has downloaded since -> every step again'
     $staleCopy = $true
     foreach ($k in @($state.steps.Keys)) { $state.steps.Remove($k) }
 }
@@ -230,6 +280,8 @@ if ($Check) {
         if ($staleCopy) { $why = 'MTGA has downloaded UI text or sounds since the last copy' }
         elseif ($todo) { $why = if ($staleTools) { "tools changed ($($staleTools -join ', ')): $($todo -join ', ') again" } else { "unfinished steps: $($todo -join ', ')" } }
         elseif ($state.steps['identity'].detail -ne "Forge Bridge Project/$Product") { $why = "identity is $($state.steps['identity'].detail), wanted $Product" }
+        # the copy lacks UI text or sounds (or has sounds of another MTGA version) and so does the install: say what to do
+        elseif ((Get-MissingAssets $Target -CategoriesOnly).missing -gt 0) { $why = 'the copy lacks UI text or sounds for this MTGA version' }
     }
     if ($why) { Exit-IfIncomplete; Write-Host "needs patching: $why"; exit 3 }
     Write-Host "up to date ($($fp.mainManifest))"

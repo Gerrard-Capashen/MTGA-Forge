@@ -18,7 +18,8 @@ namespace ForgeBridge
     /// One manifest per category: an install can hold an old one next to the current one (Steam puts back the manifests its
     /// depot shipped while MTGA has already moved on). The client resolves a raw file such as the UI text database
     /// (Raw_ClientLocalization) by taking the first matching name, so an old Localization manifest whose file is gone left
-    /// every label of the game empty. Of several, the one with the fewest missing files wins, then the newest.
+    /// every label of the game empty. Of several, the one with the fewest missing files wins, then the newest. Audio manifests
+    /// whose sound banks were built for another client version (see Pick) lose to any other.
     /// </summary>
     public static class LocalDoorbell
     {
@@ -56,28 +57,75 @@ namespace ForgeBridge
 
         private static string Pick(string dir, string cat, List<string> files)
         {
-            var scored = files.Select(f => new { File = f, Missing = MissingFiles(dir, f), Time = File.GetLastWriteTimeUtc(f) })
-                              .OrderBy(x => x.Missing).ThenByDescending(x => x.Time).ToList();
+            // Audio: Wwise refuses banks built by another SDK version than the client's own Init.bnk (AK_WrongBankVersion for
+            // every bank, a silent game), so a manifest whose packages carry another version only wins when nothing else is there
+            uint? want = cat == "Audio" ? BankVersion(Path.Combine(UnityEngine.Application.streamingAssetsPath, "Audio", "GeneratedSoundBanks", "Windows", "Init.bnk")) : null;
+            var scored = files.Select(f =>
+                              {
+                                  int missing = MissingFiles(dir, f, out var assets);
+                                  uint? version = want.HasValue ? ManifestBankVersion(dir, assets) : null;
+                                  return new { File = f, Missing = missing, Version = version, Wrong = want.HasValue && version.HasValue && version != want, Time = File.GetLastWriteTimeUtc(f) };
+                              })
+                              .OrderBy(x => x.Wrong).ThenBy(x => x.Missing).ThenByDescending(x => x.Time).ToList();
             var best = scored[0];
             if (scored.Count > 1)
                 Log.Info("LocalDoorbell: " + scored.Count + " manifests for category '" + cat + "' ("
-                    + string.Join(", ", scored.Select(x => Path.GetFileName(x.File) + " missing " + x.Missing)) + "); using " + Path.GetFileName(best.File));
-            if (best.Missing > 0)
+                    + string.Join(", ", scored.Select(x => Path.GetFileName(x.File) + " missing " + x.Missing + (x.Version.HasValue ? " bank version " + x.Version : ""))) + "); using " + Path.GetFileName(best.File));
+            if (best.Wrong)
+                Log.Error("LocalDoorbell: the sounds (" + Path.GetFileName(best.File) + ", Wwise bank version " + best.Version + ") are for another MTGA version than this client (Init.bnk "
+                    + want + "): the game stays silent. Start MTG Arena once so it downloads its current sounds, then prepare the game again in MTGA Forge");
+            else if (best.Missing > 0)
                 Log.Error("LocalDoorbell: category '" + cat + "' (" + Path.GetFileName(best.File) + ") misses " + best.Missing
                     + " file(s); start MTG Arena once so it finishes downloading, then prepare the game again in MTGA Forge");
             return best.File;
         }
 
-        /// <summary>How many files the manifest lists that are not on disk (int.MaxValue when it can't be read).</summary>
-        private static int MissingFiles(string dir, string manifest)
+        /// <summary>The Wwise SDK version a bank (or the first bank of a package) was built with: the uint32 after 'BKHD' and its chunk size.</summary>
+        private static uint? BankVersion(string file)
         {
+            try
+            {
+                if (!File.Exists(file)) return null;
+                byte[] buf;
+                using (var fs = File.OpenRead(file))
+                {
+                    buf = new byte[(int)Math.Min(fs.Length, 262144)];
+                    int n = 0, r;
+                    while (n < buf.Length && (r = fs.Read(buf, n, buf.Length - n)) > 0) n += r;
+                }
+                for (int i = 0; i + 12 <= buf.Length; i++)
+                    if (buf[i] == (byte)'B' && buf[i + 1] == (byte)'K' && buf[i + 2] == (byte)'H' && buf[i + 3] == (byte)'D')
+                        return BitConverter.ToUInt32(buf, i + 8);
+            }
+            catch (Exception e) { Log.Error("LocalDoorbell: can't read " + Path.GetFileName(file) + ": " + e.Message); }
+            return null;
+        }
+
+        /// <summary>The bank version of the first package of the manifest that is on disk and holds a bank.</summary>
+        private static uint? ManifestBankVersion(string dir, JArray assets)
+        {
+            if (assets == null) return null;
+            foreach (var a in assets)
+            {
+                string name = (string)a["Name"];
+                if (string.IsNullOrEmpty(name) || !name.EndsWith(".pck", StringComparison.OrdinalIgnoreCase)) continue;
+                var v = BankVersion(Path.Combine(dir, "Audio", name));
+                if (v.HasValue) return v;
+            }
+            return null;
+        }
+
+        /// <summary>How many files the manifest lists that are not on disk (int.MaxValue when it can't be read).</summary>
+        private static int MissingFiles(string dir, string manifest, out JArray assets)
+        {
+            assets = null;
             try
             {
                 byte[] b = File.ReadAllBytes(manifest);
                 if (b.Length > 2 && b[0] == 0x1f && b[1] == 0x8b)
                     using (var gz = new GZipStream(new MemoryStream(b), CompressionMode.Decompress))
                     using (var o = new MemoryStream()) { gz.CopyTo(o); b = o.ToArray(); }
-                var assets = JObject.Parse(Encoding.UTF8.GetString(b).TrimStart('﻿'))["Assets"] as JArray;
+                assets = JObject.Parse(Encoding.UTF8.GetString(b).TrimStart('﻿'))["Assets"] as JArray;
                 if (assets == null) return int.MaxValue;
                 int missing = 0;
                 foreach (var a in assets)
