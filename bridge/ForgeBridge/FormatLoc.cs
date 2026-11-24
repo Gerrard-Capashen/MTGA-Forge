@@ -26,6 +26,7 @@ namespace ForgeBridge
             { "Forge/Challenge/DeckType_Brawl", "Brawl" },
             { "Forge/Challenge/DeckType_Historic", "Historic" },
             { "Forge/Challenge/DeckType_Timeless", "Timeless (All Cards)" },
+            { "Forge/Challenge/DeckType_Forty", "40-Card Deck" },
             { "MainNav/DeckFormat/Timeless", "Timeless (All Cards)" },
             { "MainNav/DeckFormat/Pioneer", "Pioneer" },
             { "MainNav/DeckFormat/Modern", "Modern" },
@@ -34,6 +35,7 @@ namespace ForgeBridge
             { "MainNav/DeckFormat/Premodern", "Premodern" },
             { "MainNav/DeckFormat/Commander", "Commander" },
             { "MainNav/DeckFormat/Brawl", "Brawl" },
+            { "MainNav/DeckFormat/Archenemy", "Brawl or Commander" },
             { "MainNav/DeckFormat/Momir", "Momir Basic" },
             { "MainNav/DeckFormat/Draft", "Draft" },
             { "MainNav/DeckFormat/Ambiguous", "All cards" },
@@ -47,10 +49,13 @@ namespace ForgeBridge
             { "MainNav/DeckFormatInfo/Legacy", "Every card, with Forge's Legacy ban list." },
             { "MainNav/DeckFormatInfo/Vintage", "Every card, with Forge's Vintage restricted list (one copy)." },
             { "MainNav/DeckFormatInfo/Premodern", "Cards from Fourth Edition to Scourge (the 1995-2003 card frame), with Forge's Premodern ban list." },
-            { "MainNav/DeckFormatInfo/Brawl", "Commander for two: a legendary creature or planeswalker plus 99 other cards of its colors, one copy of each (basic lands excepted), no sideboard. 25 life, free first mulligan. Commander's card pool and ban list; Commander decks can play it too." },
+            { "MainNav/DeckFormatInfo/Brawl", "Arena's Brawl: a legendary creature or planeswalker plus 99 other cards of its colors, one copy of each (basic lands excepted), no sideboard. 25 life, free first mulligan. Every card on Arena, with Arena's Brawl ban list." },
+            { "MainNav/DeckFormatInfo/Archenemy", "Archenemy: Sparky takes a Brawl deck or a Commander deck: any card legal in either, led by a commander either allows." },
             { "MainNav/DeckFormatInfo/Momir", "Momir Basic: 60 basic lands, nothing else. Momir Vig's avatar turns lands into creatures." },
             { "MainNav/DeckFormatInfo/Pauper", "Cards printed at common, with Forge's Pauper ban list." },
-            { "MainNav/DeckFormatInfo/Commander", "100-card singleton deck led by a legendary commander. Deck building only: matches ignore the command zone." },
+            { "MainNav/DeckFormatInfo/Commander", "Commander (EDH): a legendary creature plus 99 other cards of its colors, one copy of each (basic lands excepted). 40 life, 21 commander damage. Every card Forge implements, with the Commander ban list." },
+            // the play blade's Brawl tab holds the Brawl and Commander queues
+            { "PlayBlade/FindMatch/PlayBlade_FindMatch_Title_Brawl", "EDH" },
             { "MainNav/DeckFormatInfo/Historic", "Historic as Forge defines it." },
             { "MainNav/DeckFormatInfo/Alchemy", "Every card Forge implements, rebalanced versions included." },
             { "MainNav/DeckFormatInfo/Ambiguous", "No format chosen yet: every card is shown." },
@@ -127,7 +132,7 @@ namespace ForgeBridge
         private const string EventTitle = "Events/Event_Title_";
         private const string EventDesc = "Events/Event_Desc_";
 
-        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Brawl", "Momir" };
+        private static readonly string[] QueueFormats = { "Standard", "Pioneer", "Modern", "Legacy", "Vintage", "Pauper", "Premodern", "Brawl", "Commander", "Momir" };
 
         /// <summary>
         /// Play blade queues are events named BotPlay_&lt;Format&gt; / CasualPlay_&lt;Format&gt; / RankedPlay_&lt;Format&gt; (formats: <see cref="QueueFormats"/>, the server's PlayQueues.FORMATS):
@@ -155,8 +160,9 @@ namespace ForgeBridge
                     + "Pay X mana and discard a card to create a copy of a random creature with mana value X, once each turn. Casual: Mastery XP only, no rank.";
                 return true;
             }
-            if (bo3 && (mode != "BotPlay" && mode != "RankedPlay" || format == "Brawl")) return false;       // Brawl is best of one
-            if (mode == "RankedPlay" && format == "Brawl") return false;
+            bool edh = format == "Brawl" || format == "Commander";
+            if (bo3 && (mode != "BotPlay" && mode != "RankedPlay" || edh)) return false;       // Brawl and Commander are best of one
+            if (mode == "RankedPlay" && edh) return false;
             if (mode == "BotPlay" && bo3)
                 loc = title ? "Bot Play: " + format + " (Best of 3)" : "Play a best-of-three " + format + " match against the Forge AI, with sideboarding between games. Only decks legal in " + format + " can be chosen.";
             else if (mode == "RankedPlay" && bo3)
