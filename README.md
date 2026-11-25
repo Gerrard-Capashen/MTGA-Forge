@@ -10,7 +10,7 @@ Every card is free. Every cosmetic is earned by playing. Nothing is ever sold.
 [![Latest release](https://img.shields.io/github/v/release/Gerrard-Capashen/MTGA-Forge?label=release&color=e8632b)](https://github.com/Gerrard-Capashen/MTGA-Forge/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Gerrard-Capashen/MTGA-Forge/total?color=e8632b)](https://github.com/Gerrard-Capashen/MTGA-Forge/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/xQSgHsEnQ)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/ZFtxAkBmpG)
 ![Windows 10/11](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6)
 
 [**Download**](https://mtgaforge.com) · [Features](#features) · [Install](#install) · [How it works](#how-it-works) · [FAQ](#faq) · [Contributing](CONTRIBUTING.md)
@@ -35,7 +35,7 @@ Every card is free. Every cosmetic is earned by playing. Nothing is ever sold.
 | **Daily quests** | Three a day, each with a free swap, all paying mastery XP |
 | **Friends and challenges** | The client's own Friends list, invites, and direct challenges in every format, best of one or best of three |
 
-It's an early project: expect rough edges and some missing or broken cards. Bugs, questions and opponents: [Discord](https://discord.gg/xQSgHsEnQ).
+It's an early project: expect rough edges and some missing or broken cards. Bugs, questions and opponents: [Discord](https://discord.gg/ZFtxAkBmpG).
 
 ## Install
 

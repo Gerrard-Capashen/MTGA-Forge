@@ -98,4 +98,4 @@ Leave AI co-author trailers out of commit messages; the commit is yours.
 ## Talk to us
 
 - Bugs and feature requests: GitHub issues. Include your MTGA Forge version and a redacted Player.log.
-- Questions and coordination: the [Discord](https://discord.gg/xQSgHsEnQ).
+- Questions and coordination: the [Discord](https://discord.gg/ZFtxAkBmpG).
